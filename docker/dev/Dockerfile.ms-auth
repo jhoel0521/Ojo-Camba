@@ -1,19 +1,34 @@
 FROM node:22-alpine
 
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
+RUN corepack enable && corepack prepare pnpm@9 --activate
+
 WORKDIR /app
 
-RUN npm install -g pnpm@9
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
+COPY libs/common/package.json                     libs/common/
+COPY backend/ms-auth/package.json                 backend/ms-auth/
+COPY backend/ms-register/package.json             backend/ms-register/
+COPY backend/ms-admin/package.json                backend/ms-admin/
+COPY backend/ms-gamify/package.json               backend/ms-gamify/
+COPY backend/gateway-principal/package.json       backend/gateway-principal/
+COPY backend/gateway-status/package.json          backend/gateway-status/
+COPY frontend/app-reporte/package.json            frontend/app-reporte/
+COPY frontend/app-backoffice/package.json         frontend/app-backoffice/
+COPY frontend/app-tecnico/package.json            frontend/app-tecnico/
+COPY frontend/app-status/package.json             frontend/app-status/
 
-# Manifests separados para aprovechar caché de capas
-COPY pnpm-workspace.yaml package.json .npmrc ./
-COPY libs/common/package.json libs/common/
-COPY backend/ms-auth/package.json backend/ms-auth/
-
-RUN pnpm install
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
+    pnpm install --frozen-lockfile
 
 COPY tsconfig.base.json ./
+COPY libs/common/tsconfig.json libs/common/
+COPY libs/common/src/          libs/common/src/
+COPY backend/ms-auth/tsconfig.json  backend/ms-auth/
+COPY backend/ms-auth/nest-cli.json  backend/ms-auth/
 
-# El código fuente se monta como volumen en dev (ver docker-compose.yml)
+RUN cd /app/libs/common && pnpm build
 
 WORKDIR /app/backend/ms-auth
 
