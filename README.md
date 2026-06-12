@@ -27,12 +27,12 @@ docker/prod/      Stack de producción (multi-stage builds)
 
 ### Aplicaciones frontend
 
-| App | Descripción |
-|---|---|
-| app-reporte | Ciudadanos: reportar + mapa de calor |
-| app-backoffice | Administradores: moderar, agrupar reportes |
-| app-tecnico | Técnicos en campo: bitácora, avances |
-| app-status | Health check público |
+| App | Descripción | Puerto dev |
+|---|---|---|
+| app-reporte | Ciudadanos: reportar + mapa de calor | http://localhost:5173 |
+| app-backoffice | Administradores: moderar, agrupar reportes | http://localhost:5174 |
+| app-tecnico | Técnicos en campo: bitácora, avances | http://localhost:5175 |
+| app-status | Health check público | http://localhost:5176 |
 
 ## Prerrequisitos
 
@@ -43,29 +43,35 @@ docker/prod/      Stack de producción (multi-stage builds)
 ## Inicio rápido
 
 ```bash
-# Instalar dependencias de todo el monorepo
+# 1. Instalar dependencias
 pnpm install
 
-# Levantar stack completo de desarrollo (PostgreSQL, MinIO y todos los servicios)
-pnpm docker:dev
+# 2. Levantar infraestructura (PostgreSQL + MinIO)
+pnpm docker:up
 
-# Desarrollar un servicio específico en local
-pnpm --filter @ojo-camba/gateway-principal dev
-pnpm --filter @ojo-camba/ms-auth dev
-pnpm --filter @ojo-camba/app-reporte dev
+# 3. Arrancar todos los servicios en modo dev
+pnpm dev
+
+# 4. Verificar que todo esté corriendo
+pnpm health
 ```
 
 ## Comandos útiles
 
 ```bash
-# Build todos los backends
-pnpm build:backend
+# Solo backend o solo frontend
+pnpm dev:backend
+pnpm dev:frontend
 
-# Build todos los frontends
+# Builds
+pnpm build:backend
 pnpm build:frontend
 
-# Docker producción
-pnpm docker:prod:build
+# Verificar servicios
+pnpm health
+
+# CI / reset completo: mata todo, arranca, verifica, mata todo
+pnpm dev:check
 ```
 
 ## Almacenamiento
