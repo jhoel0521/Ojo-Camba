@@ -1,0 +1,40 @@
+# ── Stage 1: Build ──────────────────────────────────────────
+FROM node:22-alpine AS builder
+
+WORKDIR /app
+
+RUN npm install -g pnpm@9
+
+COPY pnpm-workspace.yaml package.json .npmrc ./
+COPY libs/common/package.json libs/common/
+COPY backend/gateway-principal/package.json backend/gateway-principal/
+
+RUN pnpm install --frozen-lockfile
+
+COPY tsconfig.base.json ./
+COPY libs/common/ libs/common/
+COPY backend/gateway-principal/ backend/gateway-principal/
+
+WORKDIR /app/backend/gateway-principal
+RUN pnpm build
+
+# ── Stage 2: Run ─────────────────────────────────────────────
+FROM node:22-alpine AS runner
+
+WORKDIR /app
+
+RUN npm install -g pnpm@9
+
+COPY pnpm-workspace.yaml package.json .npmrc ./
+COPY libs/common/package.json libs/common/
+COPY backend/gateway-principal/package.json backend/gateway-principal/
+
+RUN pnpm install --frozen-lockfile --prod
+
+COPY --from=builder /app/backend/gateway-principal/dist backend/gateway-principal/dist
+
+WORKDIR /app/backend/gateway-principal
+
+EXPOSE 3000
+
+CMD ["node", "dist/main"]

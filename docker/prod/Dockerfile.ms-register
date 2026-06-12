@@ -1,0 +1,40 @@
+# ── Stage 1: Build ──────────────────────────────────────────
+FROM node:22-alpine AS builder
+
+WORKDIR /app
+
+RUN npm install -g pnpm@9
+
+COPY pnpm-workspace.yaml package.json .npmrc ./
+COPY libs/common/package.json libs/common/
+COPY backend/ms-register/package.json backend/ms-register/
+
+RUN pnpm install --frozen-lockfile
+
+COPY tsconfig.base.json ./
+COPY libs/common/ libs/common/
+COPY backend/ms-register/ backend/ms-register/
+
+WORKDIR /app/backend/ms-register
+RUN pnpm build
+
+# ── Stage 2: Run ─────────────────────────────────────────────
+FROM node:22-alpine AS runner
+
+WORKDIR /app
+
+RUN npm install -g pnpm@9
+
+COPY pnpm-workspace.yaml package.json .npmrc ./
+COPY libs/common/package.json libs/common/
+COPY backend/ms-register/package.json backend/ms-register/
+
+RUN pnpm install --frozen-lockfile --prod
+
+COPY --from=builder /app/backend/ms-register/dist backend/ms-register/dist
+
+WORKDIR /app/backend/ms-register
+
+EXPOSE 3002
+
+CMD ["node", "dist/main"]

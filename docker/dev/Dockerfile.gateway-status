@@ -1,0 +1,17 @@
+FROM node:22-alpine
+
+WORKDIR /app
+
+RUN npm install -g pnpm@9
+
+COPY pnpm-workspace.yaml package.json .npmrc ./
+COPY libs/common/package.json libs/common/
+COPY backend/gateway-status/package.json backend/gateway-status/
+
+RUN pnpm install
+
+COPY tsconfig.base.json ./
+
+WORKDIR /app/backend/gateway-status
+
+CMD ["pnpm", "dev"]

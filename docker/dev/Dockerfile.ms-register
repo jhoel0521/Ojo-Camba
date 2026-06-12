@@ -1,0 +1,17 @@
+FROM node:22-alpine
+
+WORKDIR /app
+
+RUN npm install -g pnpm@9
+
+COPY pnpm-workspace.yaml package.json .npmrc ./
+COPY libs/common/package.json libs/common/
+COPY backend/ms-register/package.json backend/ms-register/
+
+RUN pnpm install
+
+COPY tsconfig.base.json ./
+
+WORKDIR /app/backend/ms-register
+
+CMD ["pnpm", "dev"]

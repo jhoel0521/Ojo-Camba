@@ -1,0 +1,177 @@
+name: ojo-camba-dev
+
+networks:
+  ojo-camba-net:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  minio_data:
+
+services:
+
+  # ── Infraestructura ─────────────────────────────────────────
+  postgres:
+    image: postgis/postgis:16-3.4-alpine
+    environment:
+      POSTGRES_DB: ojocamba
+      POSTGRES_USER: ojocamba
+      POSTGRES_PASSWORD: ojocamba_secret
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - ojo-camba-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ojocamba"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ojocamba
+      MINIO_ROOT_PASSWORD: ojocamba_secret
+    volumes:
+      - minio_data:/data
+    ports:
+      - "9000:9000"   # API S3
+      - "9001:9001"   # Consola web
+    networks:
+      - ojo-camba-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ── Microservicios TCP (no exponen puerto al host) ──────────
+  ms-auth:
+    build:
+      context: ../../
+      dockerfile: docker/dev/Dockerfile.ms-auth
+    volumes:
+      - ../../libs/common:/app/libs/common
+      - ../../backend/ms-auth/src:/app/backend/ms-auth/src
+    environment:
+      TCP_PORT: 3001
+      DATABASE_URL: postgresql://ojocamba:ojocamba_secret@postgres:5432/ojocamba
+      JWT_SECRET: dev_jwt_secret_change_in_prod
+      JWT_EXPIRES_IN: 7d
+    networks:
+      - ojo-camba-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  ms-register:
+    build:
+      context: ../../
+      dockerfile: docker/dev/Dockerfile.ms-register
+    volumes:
+      - ../../libs/common:/app/libs/common
+      - ../../backend/ms-register/src:/app/backend/ms-register/src
+    environment:
+      TCP_PORT: 3002
+      DATABASE_URL: postgresql://ojocamba:ojocamba_secret@postgres:5432/ojocamba
+      MINIO_ENDPOINT: minio
+      MINIO_PORT: 9000
+      MINIO_USE_SSL: "false"
+      MINIO_ACCESS_KEY: ojocamba
+      MINIO_SECRET_KEY: ojocamba_secret
+      MINIO_BUCKET: reportes
+    networks:
+      - ojo-camba-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+
+  ms-admin:
+    build:
+      context: ../../
+      dockerfile: docker/dev/Dockerfile.ms-admin
+    volumes:
+      - ../../libs/common:/app/libs/common
+      - ../../backend/ms-admin/src:/app/backend/ms-admin/src
+    environment:
+      TCP_PORT: 3003
+      DATABASE_URL: postgresql://ojocamba:ojocamba_secret@postgres:5432/ojocamba
+    networks:
+      - ojo-camba-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  ms-gamify:
+    build:
+      context: ../../
+      dockerfile: docker/dev/Dockerfile.ms-gamify
+    volumes:
+      - ../../libs/common:/app/libs/common
+      - ../../backend/ms-gamify/src:/app/backend/ms-gamify/src
+    environment:
+      TCP_PORT: 3004
+      DATABASE_URL: postgresql://ojocamba:ojocamba_secret@postgres:5432/ojocamba
+    networks:
+      - ojo-camba-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # ── API Gateways HTTP (exponen puerto al host) ──────────────
+  gateway-principal:
+    build:
+      context: ../../
+      dockerfile: docker/dev/Dockerfile.gateway-principal
+    volumes:
+      - ../../libs/common:/app/libs/common
+      - ../../backend/gateway-principal/src:/app/backend/gateway-principal/src
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: 3000
+      MS_AUTH_HOST: ms-auth
+      MS_AUTH_PORT: 3001
+      MS_REGISTER_HOST: ms-register
+      MS_REGISTER_PORT: 3002
+      MS_ADMIN_HOST: ms-admin
+      MS_ADMIN_PORT: 3003
+      MS_GAMIFY_HOST: ms-gamify
+      MS_GAMIFY_PORT: 3004
+    networks:
+      - ojo-camba-net
+    depends_on:
+      - ms-auth
+      - ms-register
+      - ms-admin
+      - ms-gamify
+
+  gateway-status:
+    build:
+      context: ../../
+      dockerfile: docker/dev/Dockerfile.gateway-status
+    volumes:
+      - ../../libs/common:/app/libs/common
+      - ../../backend/gateway-status/src:/app/backend/gateway-status/src
+    ports:
+      - "3005:3005"
+    environment:
+      PORT: 3005
+      MS_AUTH_HOST: ms-auth
+      MS_AUTH_PORT: 3001
+      MS_REGISTER_HOST: ms-register
+      MS_REGISTER_PORT: 3002
+      MS_ADMIN_HOST: ms-admin
+      MS_ADMIN_PORT: 3003
+      MS_GAMIFY_HOST: ms-gamify
+      MS_GAMIFY_PORT: 3004
+    networks:
+      - ojo-camba-net
+    depends_on:
+      - ms-auth
+      - ms-register
+      - ms-admin
+      - ms-gamify

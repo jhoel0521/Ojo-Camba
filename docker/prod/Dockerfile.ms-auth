@@ -1,0 +1,40 @@
+# ── Stage 1: Build ──────────────────────────────────────────
+FROM node:22-alpine AS builder
+
+WORKDIR /app
+
+RUN npm install -g pnpm@9
+
+COPY pnpm-workspace.yaml package.json .npmrc ./
+COPY libs/common/package.json libs/common/
+COPY backend/ms-auth/package.json backend/ms-auth/
+
+RUN pnpm install --frozen-lockfile
+
+COPY tsconfig.base.json ./
+COPY libs/common/ libs/common/
+COPY backend/ms-auth/ backend/ms-auth/
+
+WORKDIR /app/backend/ms-auth
+RUN pnpm build
+
+# ── Stage 2: Run ─────────────────────────────────────────────
+FROM node:22-alpine AS runner
+
+WORKDIR /app
+
+RUN npm install -g pnpm@9
+
+COPY pnpm-workspace.yaml package.json .npmrc ./
+COPY libs/common/package.json libs/common/
+COPY backend/ms-auth/package.json backend/ms-auth/
+
+RUN pnpm install --frozen-lockfile --prod
+
+COPY --from=builder /app/backend/ms-auth/dist backend/ms-auth/dist
+
+WORKDIR /app/backend/ms-auth
+
+EXPOSE 3001
+
+CMD ["node", "dist/main"]
