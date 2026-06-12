@@ -1,15 +1,18 @@
 # ── Stage 1: Build ──────────────────────────────────────────
 FROM node:22-alpine AS builder
 
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
+RUN corepack enable && corepack prepare pnpm@9 --activate
+
 WORKDIR /app
 
-RUN npm install -g pnpm@9
-
-COPY pnpm-workspace.yaml package.json .npmrc ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
 COPY libs/common/package.json libs/common/
 COPY backend/ms-auth/package.json backend/ms-auth/
 
-RUN pnpm install --frozen-lockfile
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
+    pnpm install --frozen-lockfile
 
 COPY tsconfig.base.json ./
 COPY libs/common/ libs/common/
@@ -21,15 +24,18 @@ RUN pnpm build
 # ── Stage 2: Run ─────────────────────────────────────────────
 FROM node:22-alpine AS runner
 
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
+RUN corepack enable && corepack prepare pnpm@9 --activate
+
 WORKDIR /app
 
-RUN npm install -g pnpm@9
-
-COPY pnpm-workspace.yaml package.json .npmrc ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
 COPY libs/common/package.json libs/common/
 COPY backend/ms-auth/package.json backend/ms-auth/
 
-RUN pnpm install --frozen-lockfile --prod
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
+    pnpm install --frozen-lockfile --prod
 
 COPY --from=builder /app/backend/ms-auth/dist backend/ms-auth/dist
 
