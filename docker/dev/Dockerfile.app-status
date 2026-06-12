@@ -1,0 +1,27 @@
+FROM node:22-alpine
+
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
+RUN corepack enable && corepack prepare pnpm@9 --activate
+
+WORKDIR /app
+
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
+COPY libs/common/package.json                     libs/common/
+COPY backend/ms-auth/package.json                 backend/ms-auth/
+COPY backend/ms-register/package.json             backend/ms-register/
+COPY backend/ms-admin/package.json                backend/ms-admin/
+COPY backend/ms-gamify/package.json               backend/ms-gamify/
+COPY backend/gateway-principal/package.json       backend/gateway-principal/
+COPY backend/gateway-status/package.json          backend/gateway-status/
+COPY frontend/app-reporte/package.json            frontend/app-reporte/
+COPY frontend/app-backoffice/package.json         frontend/app-backoffice/
+COPY frontend/app-tecnico/package.json            frontend/app-tecnico/
+COPY frontend/app-status/package.json             frontend/app-status/
+
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
+    pnpm install --frozen-lockfile
+
+WORKDIR /app/frontend/app-status
+
+CMD ["pnpm", "dev", "--", "--host"]
