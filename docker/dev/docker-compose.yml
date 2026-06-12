@@ -36,8 +36,8 @@ services:
     volumes:
       - minio_data:/data
     ports:
-      - "9000:9000"   # API S3
-      - "9001:9001"   # Consola web
+      - "9010:9000"   # API S3 (9010 en host para no chocar con pnpm docker:up)
+      - "9011:9001"   # Consola web
     networks:
       - ojo-camba-net
     healthcheck:
@@ -52,7 +52,6 @@ services:
       context: ../../
       dockerfile: docker/dev/Dockerfile.ms-auth
     volumes:
-      - ../../libs/common:/app/libs/common
       - ../../backend/ms-auth/src:/app/backend/ms-auth/src
     environment:
       TCP_PORT: 3001
@@ -70,7 +69,6 @@ services:
       context: ../../
       dockerfile: docker/dev/Dockerfile.ms-register
     volumes:
-      - ../../libs/common:/app/libs/common
       - ../../backend/ms-register/src:/app/backend/ms-register/src
     environment:
       TCP_PORT: 3002
@@ -94,7 +92,6 @@ services:
       context: ../../
       dockerfile: docker/dev/Dockerfile.ms-admin
     volumes:
-      - ../../libs/common:/app/libs/common
       - ../../backend/ms-admin/src:/app/backend/ms-admin/src
     environment:
       TCP_PORT: 3003
@@ -110,7 +107,6 @@ services:
       context: ../../
       dockerfile: docker/dev/Dockerfile.ms-gamify
     volumes:
-      - ../../libs/common:/app/libs/common
       - ../../backend/ms-gamify/src:/app/backend/ms-gamify/src
     environment:
       TCP_PORT: 3004
@@ -127,7 +123,6 @@ services:
       context: ../../
       dockerfile: docker/dev/Dockerfile.gateway-principal
     volumes:
-      - ../../libs/common:/app/libs/common
       - ../../backend/gateway-principal/src:/app/backend/gateway-principal/src
     ports:
       - "3000:3000"
@@ -154,7 +149,6 @@ services:
       context: ../../
       dockerfile: docker/dev/Dockerfile.gateway-status
     volumes:
-      - ../../libs/common:/app/libs/common
       - ../../backend/gateway-status/src:/app/backend/gateway-status/src
     ports:
       - "3005:3005"
@@ -175,3 +169,52 @@ services:
       - ms-register
       - ms-admin
       - ms-gamify
+
+  # ── Frontend Vite dev servers ────────────────────────────────
+  app-reporte:
+    build:
+      context: ../../
+      dockerfile: docker/dev/Dockerfile.app-reporte
+    volumes:
+      - ../../frontend/app-reporte/src:/app/frontend/app-reporte/src
+      - ../../frontend/app-reporte/public:/app/frontend/app-reporte/public
+    ports:
+      - "5173:5173"
+    networks:
+      - ojo-camba-net
+
+  app-backoffice:
+    build:
+      context: ../../
+      dockerfile: docker/dev/Dockerfile.app-backoffice
+    volumes:
+      - ../../frontend/app-backoffice/src:/app/frontend/app-backoffice/src
+      - ../../frontend/app-backoffice/public:/app/frontend/app-backoffice/public
+    ports:
+      - "5174:5174"
+    networks:
+      - ojo-camba-net
+
+  app-tecnico:
+    build:
+      context: ../../
+      dockerfile: docker/dev/Dockerfile.app-tecnico
+    volumes:
+      - ../../frontend/app-tecnico/src:/app/frontend/app-tecnico/src
+      - ../../frontend/app-tecnico/public:/app/frontend/app-tecnico/public
+    ports:
+      - "5175:5175"
+    networks:
+      - ojo-camba-net
+
+  app-status:
+    build:
+      context: ../../
+      dockerfile: docker/dev/Dockerfile.app-status
+    volumes:
+      - ../../frontend/app-status/src:/app/frontend/app-status/src
+      - ../../frontend/app-status/public:/app/frontend/app-status/public
+    ports:
+      - "5176:5176"
+    networks:
+      - ojo-camba-net
