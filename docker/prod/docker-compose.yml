@@ -162,3 +162,52 @@ services:
       - ms-register
       - ms-admin
       - ms-gamify
+
+  # ── Frontend (nginx + static) ────────────────────────────────
+  app-reporte:
+    build:
+      context: ../../
+      dockerfile: docker/prod/Dockerfile.app-reporte
+      args:
+        VITE_API_URL: ${VITE_API_URL:?required}
+    restart: unless-stopped
+    ports:
+      - "${REPORTE_PORT:-8080}:80"
+    networks:
+      - ojo-camba-net
+
+  app-backoffice:
+    build:
+      context: ../../
+      dockerfile: docker/prod/Dockerfile.app-backoffice
+      args:
+        VITE_API_URL: ${VITE_API_URL:?required}
+    restart: unless-stopped
+    ports:
+      - "${BACKOFFICE_PORT:-8081}:80"
+    networks:
+      - ojo-camba-net
+
+  app-tecnico:
+    build:
+      context: ../../
+      dockerfile: docker/prod/Dockerfile.app-tecnico
+      args:
+        VITE_API_URL: ${VITE_API_URL:?required}
+    restart: unless-stopped
+    ports:
+      - "${TECNICO_PORT:-8082}:80"
+    networks:
+      - ojo-camba-net
+
+  app-status:
+    build:
+      context: ../../
+      dockerfile: docker/prod/Dockerfile.app-status
+      args:
+        VITE_API_URL: ${VITE_API_URL:?required}
+    restart: unless-stopped
+    ports:
+      - "${STATUS_FRONTEND_PORT:-8083}:80"
+    networks:
+      - ojo-camba-net
