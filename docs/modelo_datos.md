@@ -4,6 +4,98 @@
 
 **Descripción:** Este documento contiene el esquema físico y lógico de la base de datos para la plataforma Ojo Camba, modelado mediante DBML. Define las enumeraciones de estados, el sistema de roles por usuario, el manejo de reportes ciudadanos (incluyendo usuarios anónimos mediante `device_id`), la indexación espacial H3 y la lógica de "Casos de Obra" para agrupar múltiples reportes bajo una misma bitácora de actualizaciones en campo.
 
+## Diagrama Entidad-Relación (ERD)
+
+```mermaid
+erDiagram
+    NIVELES {
+        int id PK
+        varchar nombre
+        int puntos_requeridos
+        varchar url_sticker
+    }
+    ROLES {
+        int id PK
+        varchar nombre
+    }
+    USUARIOS {
+        int id PK
+        varchar nombre
+        varchar email
+        varchar password_hash
+        int puntos
+        int nivel_id FK
+        timestamp creado_en
+    }
+    USUARIO_ROLES {
+        int usuario_id FK
+        int rol_id FK
+    }
+    DISPOSITIVOS {
+        varchar device_id PK
+        boolean is_banned
+        varchar motivo_ban
+        timestamp ultimo_uso
+    }
+    CATEGORIAS {
+        int id PK
+        varchar nombre
+        varchar icono
+    }
+    GRUPOS_REPORTES {
+        int id PK
+        varchar codigo_obra
+        varchar estado_actual
+        date fecha_estimada_fin
+        int creado_por_usuario_id FK
+        timestamp creado_en
+    }
+    REPORTES {
+        int id PK
+        varchar device_id FK
+        int usuario_id FK
+        int categoria_id FK
+        int grupo_id FK
+        decimal lat
+        decimal lng
+        varchar h3_res_8
+        varchar h3_res_11
+        varchar h3_res_13
+        varchar estado
+        varchar gravedad
+        varchar url_imagen
+        timestamp creado_en
+    }
+    ACTUALIZACIONES_CASO {
+        int id PK
+        int reporte_id FK
+        int grupo_id FK
+        int usuario_id FK
+        varchar estado_nuevo
+        text comentario
+        varchar recursos_solicitados
+        date fecha_estimada_fin
+        decimal lat_actualizada
+        decimal lng_actualizada
+        varchar url_imagen
+        timestamp creado_en
+    }
+
+    NIVELES ||--o{ USUARIOS : "alcanza"
+    USUARIOS ||--o{ USUARIO_ROLES : "tiene"
+    ROLES ||--o{ USUARIO_ROLES : "asignado a"
+    DISPOSITIVOS ||--o{ REPORTES : "genera"
+    USUARIOS |o--o{ REPORTES : "registra"
+    CATEGORIAS ||--o{ REPORTES : "clasifica"
+    GRUPOS_REPORTES ||--o{ REPORTES : "agrupa"
+    USUARIOS ||--o{ GRUPOS_REPORTES : "crea"
+    REPORTES |o--o{ ACTUALIZACIONES_CASO : "actualiza"
+    GRUPOS_REPORTES |o--o{ ACTUALIZACIONES_CASO : "actualiza"
+    USUARIOS ||--o{ ACTUALIZACIONES_CASO : "registra"
+```
+
+---
+
 ## Código DBML
 
 ```dbml

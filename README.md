@@ -34,6 +34,19 @@ docker/prod/      Stack de producción (multi-stage builds)
 | app-tecnico | Técnicos en campo: bitácora, avances | http://localhost:5175 |
 | app-status | Health check público | http://localhost:5176 |
 
+## Documentación
+
+| Documento | Descripción |
+|-----------|-------------|
+| [docs/ROADMAP.md](docs/ROADMAP.md) | Road to MVP — fases e issues ISSUE-01..21 |
+| [docs/arquitectura.md](docs/arquitectura.md) | Diagrama de arquitectura general (Mermaid) |
+| [docs/backlog.md](docs/backlog.md) | Historias de Usuario HU-01..06 con criterios de aceptación y escenarios Gherkin |
+| [docs/casos_de_uso.md](docs/casos_de_uso.md) | Casos de uso CU-01..15 por actor |
+| [docs/modelo_datos.md](docs/modelo_datos.md) | ERD visual + esquema DBML de la base de datos |
+| [docs/diagramas_uml.md](docs/diagramas_uml.md) | Diagramas UML 2.5: Clases, Casos de Uso, Actividades, Secuencia y Despliegue |
+| [docs/guia_entrevista.md](docs/guia_entrevista.md) | Guía de entrevista municipal (Paso 3 ✅ / Paso 4 ⏳) |
+| [DEPLOY.md](DEPLOY.md) | Instrucciones de despliegue en producción |
+
 ## Prerrequisitos
 
 - Node.js >= 22
