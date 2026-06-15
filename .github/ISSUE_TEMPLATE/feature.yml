@@ -1,0 +1,63 @@
+name: "Feature — Nueva funcionalidad"
+description: Solicitar o proponer una nueva funcionalidad del sistema.
+labels: ["feature"]
+body:
+  - type: dropdown
+    id: fase
+    attributes:
+      label: Fase del Roadmap
+      description: ¿A qué fase del Road to MVP pertenece esta feature?
+      options:
+        - "Fase 0 — Modelado y Documentación"
+        - "Fase 1 — Infraestructura y Despliegue"
+        - "Fase 2 — Desarrollo Core y Lógica"
+        - "Fase 3 — Interfaces de Usuario"
+        - "Fase 4 — Pruebas y QA"
+    validations:
+      required: true
+
+  - type: input
+    id: issue_roadmap
+    attributes:
+      label: Issue del Roadmap relacionado
+      description: Ej. ISSUE-11
+      placeholder: ISSUE-XX
+    validations:
+      required: false
+
+  - type: input
+    id: historia_usuario
+    attributes:
+      label: Historia de Usuario relacionada
+      description: Ej. HU-01
+      placeholder: HU-XX
+    validations:
+      required: false
+
+  - type: textarea
+    id: descripcion
+    attributes:
+      label: Descripción
+      description: ¿Qué se quiere lograr? ¿Por qué es necesario?
+      placeholder: Como [rol], quiero [acción], para [beneficio].
+    validations:
+      required: true
+
+  - type: textarea
+    id: criterios
+    attributes:
+      label: Criterios de Aceptación
+      description: Condiciones mínimas para considerar esta feature completa.
+      placeholder: |
+        - [ ] Criterio 1
+        - [ ] Criterio 2
+    validations:
+      required: true
+
+  - type: textarea
+    id: notas_tecnicas
+    attributes:
+      label: Notas Técnicas
+      description: Microservicio afectado, endpoints, tablas, índices H3, etc.
+    validations:
+      required: false

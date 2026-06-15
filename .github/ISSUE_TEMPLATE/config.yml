@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Pregunta general
+    url: https://github.com/jhoel0521/Ojo-Camba/discussions
+    about: Para dudas y discusiones que no son bugs ni features usa Discussions.

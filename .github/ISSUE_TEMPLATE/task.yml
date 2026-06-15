@@ -1,0 +1,42 @@
+name: "Task — Tarea técnica"
+description: Tarea de DevOps, Documentación, QA o Refactor sin entregable de usuario final.
+labels: ["task"]
+body:
+  - type: dropdown
+    id: area
+    attributes:
+      label: Área
+      options:
+        - "DevOps"
+        - "Docs"
+        - "QA"
+        - "Refactor"
+    validations:
+      required: true
+
+  - type: input
+    id: issue_roadmap
+    attributes:
+      label: Issue del Roadmap relacionado
+      placeholder: ISSUE-XX
+    validations:
+      required: false
+
+  - type: textarea
+    id: descripcion
+    attributes:
+      label: Descripción
+      description: ¿Qué hay que hacer y por qué?
+    validations:
+      required: true
+
+  - type: textarea
+    id: dod
+    attributes:
+      label: Definition of Done
+      description: ¿Cómo sabemos que esta tarea está completa?
+      placeholder: |
+        - [ ] Condición 1
+        - [ ] Condición 2
+    validations:
+      required: true
