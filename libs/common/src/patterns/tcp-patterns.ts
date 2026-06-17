@@ -5,6 +5,8 @@ export const TCP_PATTERNS = {
     REGISTER: 'auth.register',
     VALIDATE_TOKEN: 'auth.validate_token',
     GET_PROFILE: 'auth.get_profile',
+    REFRESH: 'auth.refresh',
+    LOGOUT: 'auth.logout',
   },
   REGISTER: {
     PING: 'register.ping',
