@@ -51,3 +51,31 @@ graph TD
     MS_Admin --> DB
     MS_Gamify --> DB
 ```
+
+## Endpoints HTTP — Gateway Principal (puerto 3000)
+
+| Método | Ruta | Microservicio | Patrón TCP |
+|--------|------|--------------|------------|
+| `POST` | `/auth/register` | ms-auth | `auth.register` |
+| `POST` | `/auth/login` | ms-auth | `auth.login` |
+| `POST` | `/auth/refresh` | ms-auth | `auth.refresh` |
+| `POST` | `/auth/logout` | ms-auth | `auth.logout` |
+| `POST` | `/auth/validate` | ms-auth | `auth.validate_token` |
+| `GET`  | `/auth/profile/:id` | ms-auth | `auth.get_profile` |
+| `POST` | `/reportes` | ms-register | `register.create_report` |
+| `GET`  | `/reportes` | ms-register | `register.list_reports` |
+| `GET`  | `/reportes/heatmap` | ms-register | `register.get_heatmap` |
+| `GET`  | `/reportes/:id` | ms-register | `register.get_report` |
+| `GET`  | `/admin/reports/pending` | ms-admin | `admin.list_pending` |
+| `POST` | `/admin/reports/:id/accept` | ms-admin | `admin.accept_report` |
+| `POST` | `/admin/reports/:id/reject` | ms-admin | `admin.reject_report` |
+| `POST` | `/admin/groups` | ms-admin | `admin.create_group` |
+| `POST` | `/admin/groups/:id/updates` | ms-admin | `admin.update_case` |
+| `POST` | `/admin/devices/ban` | ms-admin | `admin.ban_device` |
+| `GET`  | `/admin/groups` | ms-admin | `admin.list_groups` |
+| `GET`  | `/admin/groups/:id` | ms-admin | `admin.get_group` |
+| `GET`  | `/admin/groups/:id/timeline` | ms-admin | `admin.get_case_timeline` |
+| `POST` | `/gamify/award` | ms-gamify | `gamify.award_points` |
+| `GET`  | `/gamify/stats/:id` | ms-gamify | `gamify.get_user_stats` |
+| `GET`  | `/gamify/levels` | ms-gamify | `gamify.get_levels` |
+| `GET`  | `/health` | — | — |

@@ -150,6 +150,52 @@ Característica: Bitácora de trabajo del técnico
 
 
 
+**HU-07: Visualización de Casos Cercanos (Radio H3)**
+
+* **Como** técnico en campo, **quiero** ver los reportes y Casos de Obra en un radio cercano a mi ubicación actual, **para** saber qué problemas atender primero.
+* **Criterios de Aceptación:**
+* La app obtiene los hexágonos H3 vecinos a la posición GPS del técnico en resolución 13.
+* El sistema devuelve los reportes agrupados por Caso de Obra dentro de esos hexágonos.
+* Se muestran ordenados por proximidad al punto actual.
+
+```gherkin
+Característica: Visualización de casos cercanos
+
+  Escenario: Técnico consulta casos en su zona
+    Dado que el técnico está en una ubicación con coordenadas GPS específicas
+    Cuando abre la app y solicita casos cercanos
+    Entonces el sistema calcula los hexágonos H3 resolución 13 vecinos
+    Y devuelve los Casos de Obra y reportes en esos hexágonos
+    Y se ordenan por distancia al punto actual
+```
+
+
+
+**HU-08: Cambio de Estado del Caso de Obra**
+
+* **Como** técnico en campo, **quiero** cambiar el estado de un Caso de Obra a "En Trabajo" o "Finalizado", **para** reflejar el progreso real de la obra.
+* **Criterios de Aceptación:**
+* El sistema permite transicionar el estado del grupo entre los valores del enum EstadoReporte.
+* Al cambiar a "Finalizado", todos los reportes del grupo heredan el nuevo estado.
+* La transición queda registrada en la bitácora de actualizaciones.
+
+```gherkin
+Característica: Cambio de estado del Caso de Obra
+
+  Escenario: Técnico inicia el trabajo en un caso
+    Dado que existe un Caso de Obra en estado "Aceptado"
+    Cuando el técnico registra una actualización con estado_nuevo "EnTrabajo"
+    Entonces el grupo y todos sus reportes cambian a estado "EnTrabajo"
+    Y la transición queda registrada en la bitácora con timestamp
+
+  Escenario: Técnico finaliza el caso
+    Dado que un Caso de Obra está en estado "EnTrabajo"
+    Cuando el técnico registra una actualización con estado_nuevo "Finalizado"
+    Entonces el grupo y todos sus reportes cambian a estado "Finalizado"
+```
+
+
+
 ## Módulo 4: Gamificación y Cultura Local
 
 **HU-06: Recompensas por Reportes Aceptados**
