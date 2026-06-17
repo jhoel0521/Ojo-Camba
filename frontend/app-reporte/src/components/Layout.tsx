@@ -6,12 +6,13 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const { device } = useAppStore();
   const isHome = location.pathname === '/';
+  const isReporte = location.pathname === '/nuevo';
   const canReport = device?.canReport ?? false;
   const isMobile = device?.isMobile ?? true;
 
   return (
-    <div className="min-h-screen bg-lienzo font-pirai">
-      <header className="sticky top-0 z-10 bg-catedral">
+    <div className="h-dvh flex flex-col bg-lienzo font-pirai overflow-hidden">
+      <header className="shrink-0 z-10 bg-catedral">
         <div
           className={`mx-auto px-4 py-3.5 flex items-center justify-between ${isMobile ? 'max-w-sm' : ''}`}
         >
@@ -39,16 +40,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             </nav>
           )}
 
-          {canReport && isMobile && (
-            <Link
-              to="/nuevo"
-              className="w-12 h-12 bg-sol-camba text-catedral rounded-pill font-bold shadow-lg active:scale-95 transition-all flex items-center justify-center"
-            >
-              <Plus className="w-6 h-6" />
-            </Link>
-          )}
-
-          {canReport && !isMobile && (
+          {canReport && !isMobile && !isReporte && (
             <Link
               to="/nuevo"
               className="px-5 py-2.5 bg-sol-camba text-catedral text-sm font-bold rounded-pill hover:shadow-lg transition-all"
@@ -59,10 +51,19 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         </div>
       </header>
 
-      <main className={isMobile ? 'max-w-sm mx-auto' : ''}>{children}</main>
+      <div className="flex-1 overflow-hidden">{children}</div>
+
+      {canReport && !isReporte && (
+        <Link
+          to="/nuevo"
+          className="fixed bottom-20 md:bottom-6 right-4 z-[9999] w-14 h-14 bg-sol-camba text-catedral rounded-pill shadow-lg active:scale-95 transition-all flex items-center justify-center"
+        >
+          <Plus className="w-7 h-7" />
+        </Link>
+      )}
 
       {isMobile && (
-        <nav className="fixed bottom-0 left-0 right-0 bg-perla border-t border-arcilla z-20">
+        <nav className="shrink-0 z-10 bg-perla border-t border-arcilla">
           <div className="max-w-sm mx-auto flex items-center justify-around py-2.5">
             <Link
               to="/"
