@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { useGeolocation } from '../hooks/useGeolocation';
 import { getDeviceId } from '../lib/device';
 import { fetchAPI } from '../lib/api';
+import { friendlyError } from '../lib/errors';
 import { useState, useRef } from 'react';
 import {
   ArrowLeft,
@@ -65,7 +66,7 @@ export default function ReportePage() {
       });
       setEnviado(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al enviar');
+      setError(friendlyError(err));
     } finally {
       setEnviando(false);
     }
@@ -226,9 +227,9 @@ export default function ReportePage() {
         </div>
 
         {error && (
-          <div className="bg-rosa-toborochi/10 border border-rosa-toborochi/20 text-catedral text-sm p-4 rounded-3xl-2 mb-4 flex items-start gap-2">
-            <AlertCircle className="w-5 h-5 text-rosa-toborochi flex-shrink-0 mt-0.5" />
-            {error}
+          <div className="bg-yeso rounded-3xl-3 p-5 mb-4 text-center">
+            <AlertCircle className="w-8 h-8 text-sol-camba mx-auto mb-2" />
+            <p className="text-sm text-catedral font-medium">{error}</p>
           </div>
         )}
 
