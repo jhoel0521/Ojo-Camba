@@ -12,12 +12,14 @@ WORKDIR /tmp
 RUN git clone --depth 1 --branch v4.1.0 https://github.com/uber/h3.git
 WORKDIR /tmp/h3
 RUN cmake -B build -DCMAKE_BUILD_TYPE=Release && \
-    cmake --build build --target h3 -j$(nproc) && \
+    cmake --build build -j$(nproc) && \
     cmake --install build
 
 WORKDIR /tmp
-RUN git clone --depth 1 --branch v4.1.3 https://github.com/zachasme/h3-pg.git
+RUN git clone --depth 1 https://github.com/zachasme/h3-pg.git
 WORKDIR /tmp/h3-pg
+RUN git fetch --depth 1 origin 04227cb62a7338eb2a655fff875b125de2f043f4 && \
+    git checkout 04227cb62a7338eb2a655fff875b125de2f043f4
 RUN make && make install
 
 FROM postgis/postgis:16-3.4-alpine
