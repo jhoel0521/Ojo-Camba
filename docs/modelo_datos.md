@@ -37,6 +37,14 @@ erDiagram
         varchar motivo_ban
         timestamp ultimo_uso
     }
+    REFRESH_TOKENS {
+        int id PK
+        int usuario_id FK
+        varchar token
+        timestamp expires_at
+        boolean revoked
+        timestamp creado_en
+    }
     CATEGORIAS {
         int id PK
         varchar nombre
@@ -84,6 +92,7 @@ erDiagram
     NIVELES ||--o{ USUARIOS : "alcanza"
     USUARIOS ||--o{ USUARIO_ROLES : "tiene"
     ROLES ||--o{ USUARIO_ROLES : "asignado a"
+    USUARIOS ||--o{ REFRESH_TOKENS : "posee"
     DISPOSITIVOS ||--o{ REPORTES : "genera"
     USUARIOS |o--o{ REPORTES : "registra"
     CATEGORIAS ||--o{ REPORTES : "clasifica"
@@ -156,6 +165,15 @@ Table dispositivos {
   is_banned boolean [default: false]
   motivo_ban varchar
   ultimo_uso timestamp
+}
+
+Table refresh_tokens {
+  id int [pk, increment]
+  usuario_id int [ref: > usuarios.id, not null]
+  token varchar [unique, not null]
+  expires_at timestamp [not null]
+  revoked boolean [default: false]
+  creado_en timestamp [default: `now()`]
 }
 
 Table categorias {
