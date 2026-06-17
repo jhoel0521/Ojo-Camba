@@ -11,7 +11,9 @@ volumes:
 services:
 
   postgres:
-    image: postgis/postgis:16-3.4-alpine
+    build:
+      context: ../..
+      dockerfile: docker/infra/Dockerfile.postgres-h3
     restart: unless-stopped
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
@@ -20,6 +22,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-ojocamba}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?required}
     volumes:
+      - ../../docker/infra/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
       - postgres_data:/var/lib/postgresql/data
     networks:
       - infra-net
