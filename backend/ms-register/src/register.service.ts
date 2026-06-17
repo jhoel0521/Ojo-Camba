@@ -10,9 +10,7 @@ import { Repository } from 'typeorm';
 import * as h3 from 'h3-js';
 import * as crypto from 'crypto';
 import { Client as MinioClient } from 'minio';
-import { Reporte } from './entities/reporte.entity';
-import { Dispositivo } from './entities/dispositivo.entity';
-import { Categoria } from './entities/categoria.entity';
+import { Reporte, Dispositivo, Categoria } from '@ojo-camba/common';
 import { CreateReporteDto } from './dto/create-reporte.dto';
 import { ListReportesDto } from './dto/list-reportes.dto';
 

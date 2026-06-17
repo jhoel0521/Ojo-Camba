@@ -2,9 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { RegisterController } from './register.controller';
 import { RegisterService } from './register.service';
-import { Reporte } from './entities/reporte.entity';
-import { Dispositivo } from './entities/dispositivo.entity';
-import { Categoria } from './entities/categoria.entity';
+import { Reporte, Dispositivo, Categoria } from '@ojo-camba/common';
 
 @Module({
   imports: [TypeOrmModule.forFeature([Reporte, Dispositivo, Categoria])],

@@ -1,5 +1,5 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn } from 'typeorm';
-import { EstadoReporte, Gravedad } from '@ojo-camba/common';
+import { EstadoReporte, Gravedad } from '../enums/estado-reporte.enum';
 
 @Entity('reportes')
 export class Reporte {
