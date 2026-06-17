@@ -1,9 +1,4 @@
-import {
-  Injectable,
-  BadRequestException,
-  NotFoundException,
-  Logger,
-} from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import {
@@ -13,12 +8,7 @@ import {
   ActualizacionCaso,
   EstadoReporte,
 } from '@ojo-camba/common';
-import {
-  CreateGroupDto,
-  UpdateCaseDto,
-  AcceptReportDto,
-  BanDeviceDto,
-} from './dto';
+import { CreateGroupDto, UpdateCaseDto, AcceptReportDto, BanDeviceDto } from './dto';
 
 @Injectable()
 export class AdminService {
@@ -165,10 +155,7 @@ export class AdminService {
       }
       await this.grupoRepo.save(grupo);
 
-      await this.reporteRepo.update(
-        { grupo_id: dto.grupo_id },
-        { estado: dto.estado_nuevo },
-      );
+      await this.reporteRepo.update({ grupo_id: dto.grupo_id }, { estado: dto.estado_nuevo });
     }
 
     return {

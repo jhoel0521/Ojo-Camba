@@ -5,9 +5,7 @@ import { TCP_PATTERNS } from '@ojo-camba/common';
 
 @Controller('auth')
 export class AuthController {
-  constructor(
-    @Inject('MS_AUTH') private readonly client: ClientProxy,
-  ) {}
+  constructor(@Inject('MS_AUTH') private readonly client: ClientProxy) {}
 
   @Post('register')
   register(@Body() dto: { nombre: string; email: string; password: string }) {
@@ -36,6 +34,8 @@ export class AuthController {
 
   @Get('profile/:id')
   profile(@Param('id') id: string) {
-    return firstValueFrom(this.client.send(TCP_PATTERNS.AUTH.GET_PROFILE, { user_id: parseInt(id, 10) }));
+    return firstValueFrom(
+      this.client.send(TCP_PATTERNS.AUTH.GET_PROFILE, { user_id: parseInt(id, 10) }),
+    );
   }
 }

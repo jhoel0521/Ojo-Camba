@@ -2,12 +2,7 @@ import { Controller } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import { TCP_PATTERNS } from '@ojo-camba/common';
 import { AdminService } from './admin.service';
-import {
-  CreateGroupDto,
-  UpdateCaseDto,
-  AcceptReportDto,
-  BanDeviceDto,
-} from './dto';
+import { CreateGroupDto, UpdateCaseDto, AcceptReportDto, BanDeviceDto } from './dto';
 
 @Controller()
 export class AdminController {
