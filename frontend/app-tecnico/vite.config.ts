@@ -1,16 +1,18 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import tailwindcss from '@tailwindcss/vite';
 import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig({
   plugins: [
+    tailwindcss(),
     react(),
     VitePWA({
       registerType: 'autoUpdate',
       manifest: {
-        name: 'Ojo Camba - Técnicos',
-        short_name: 'OC Técnico',
-        description: 'App para técnicos en campo: bitácora y avances de obras',
+        name: 'Ojo Camba - Tecnicos',
+        short_name: 'OC Tecnico',
+        description: 'App para tecnicos en campo: bitacora y avances de obras',
         theme_color: '#388e3c',
         background_color: '#ffffff',
         display: 'standalone',
