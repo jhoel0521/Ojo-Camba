@@ -23,6 +23,9 @@ export const TCP_PATTERNS = {
     CREATE_GROUP: 'admin.create_group',
     UPDATE_CASE: 'admin.update_case',
     BAN_DEVICE: 'admin.ban_device',
+    GET_GROUP: 'admin.get_group',
+    LIST_GROUPS: 'admin.list_groups',
+    GET_CASE_TIMELINE: 'admin.get_case_timeline',
   },
   GAMIFY: {
     PING: 'gamify.ping',
