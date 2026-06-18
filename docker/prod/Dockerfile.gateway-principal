@@ -40,6 +40,7 @@ COPY backend/gateway-principal/package.json backend/gateway-principal/
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
     pnpm install --frozen-lockfile --prod
 
+COPY --from=builder /app/libs/common/dist libs/common/dist
 COPY --from=builder /app/backend/gateway-principal/dist backend/gateway-principal/dist
 
 WORKDIR /app/backend/gateway-principal
