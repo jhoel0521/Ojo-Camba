@@ -9,6 +9,26 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
+      workbox: {
+        runtimeCaching: [
+          {
+            urlPattern: /^https:\/\/.*\.tile\.openstreetmap\.org\/.*/,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'osm-tiles',
+              expiration: { maxEntries: 200, maxAgeSeconds: 60 * 60 * 24 * 30 },
+            },
+          },
+          {
+            urlPattern: /^https?:\/\/.*\/reportes\/heatmap/,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'heatmap-api',
+              expiration: { maxEntries: 5, maxAgeSeconds: 300 },
+            },
+          },
+        ],
+      },
       manifest: {
         name: 'Ojo Camba - Reportes',
         short_name: 'OjoCamba',
