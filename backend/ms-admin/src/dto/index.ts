@@ -51,5 +51,6 @@ export class BanDeviceDto {
   @IsNotEmpty()
   device_id: string;
 
+  @IsNotEmpty()
   motivo: string;
 }

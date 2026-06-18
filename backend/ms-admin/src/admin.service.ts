@@ -47,7 +47,6 @@ export class AdminService {
     }
 
     reporte.estado = EstadoReporte.Aceptado;
-    reporte.usuario_id = dto.moderador_id;
 
     const year = new Date().getFullYear();
     const count = (await this.grupoRepo.count()) + 1;

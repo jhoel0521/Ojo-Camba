@@ -41,7 +41,7 @@ export class RegisterController {
   }
 
   @MessagePattern(TCP_PATTERNS.REGISTER.VINCULAR_DEVICE)
-  vincularDevice(@Payload() dto: { user_id: number; device_id: string }) {
-    return this.registerService.vincularDevice(dto.user_id, dto.device_id);
+  vincularDevice(@Payload() dto: { usuario_id: number; device_id: string }) {
+    return this.registerService.vincularDevice(dto.usuario_id, dto.device_id);
   }
 }

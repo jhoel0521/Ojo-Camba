@@ -85,7 +85,7 @@ export class ReportesController {
   }
 
   @Post('vincular')
-  vincular(@Body() dto: { user_id: number; device_id: string }) {
+  vincular(@Body() dto: { usuario_id: number; device_id: string }) {
     return sendRpc(this.client.send(TCP_PATTERNS.REGISTER.VINCULAR_DEVICE, dto));
   }
 }
