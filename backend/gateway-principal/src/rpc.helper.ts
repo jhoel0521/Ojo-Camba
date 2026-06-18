@@ -1,5 +1,4 @@
 import {
-  HttpException,
   InternalServerErrorException,
   ConflictException,
   UnauthorizedException,
