@@ -59,7 +59,9 @@ export class AdminController {
   }
 
   @MessagePattern(TCP_PATTERNS.ADMIN.LIST_GROUPS_BY_CELL)
-  listGroupsByCell(@Payload() dto: { h3_cell: string; h3_resolution: number; solo_activos?: boolean }) {
+  listGroupsByCell(
+    @Payload() dto: { h3_cell: string; h3_resolution: number; solo_activos?: boolean },
+  ) {
     return this.adminService.listGroupsByCell(dto.h3_cell, dto.h3_resolution, dto.solo_activos);
   }
 
