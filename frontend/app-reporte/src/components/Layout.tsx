@@ -5,6 +5,8 @@ import { useAuthStore } from '../store/authStore';
 import FilterModal from './FilterModal';
 import AuthModal from './AuthModal';
 import UserMenu from './UserMenu';
+import { useOfflineWatcher } from '../hooks/useOfflineWatcher';
+import { Toaster } from 'sonner';
 import { useState, useEffect } from 'react';
 
 export default function Layout({ children }: { children: React.ReactNode }) {
@@ -17,6 +19,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     loadFromStorage();
   }, [loadFromStorage]);
+  useOfflineWatcher();
 
   const isHome = location.pathname === '/';
   const isReporte = location.pathname === '/nuevo';
@@ -129,6 +132,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
       <FilterModal />
       <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} />
+      <Toaster position="top-center" richColors closeButton />
     </div>
   );
 }

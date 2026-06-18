@@ -2,7 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { useGeolocation } from '../hooks/useGeolocation';
 import { getDeviceId } from '../lib/device';
 import { fetchAPI } from '../lib/api';
-import { friendlyError } from '../lib/errors';
+import { enqueue, getQueue } from '../lib/offlineQueue';
 import { useAuthStore } from '../store/authStore';
 import { useState, useRef } from 'react';
 import {
@@ -52,22 +52,30 @@ export default function ReportePage() {
     if (geo.status !== 'granted' || !imagen || !categoriaId) return;
     setEnviando(true);
     setError(null);
-    try {
-      await fetchAPI('/reportes', {
-        method: 'POST',
-        body: JSON.stringify({
-          device_id: getDeviceId(),
-          lat: geo.lat,
-          lng: geo.lng,
-          categoria_id: categoriaId,
-          gravedad,
-          imagen_base64: imagen,
-          usuario_id: user?.id,
-        }),
-      });
+
+    const body = {
+      device_id: getDeviceId(),
+      lat: geo.lat,
+      lng: geo.lng,
+      categoria_id: categoriaId,
+      gravedad,
+      imagen_base64: imagen,
+      usuario_id: user?.id ?? undefined,
+    };
+
+    if (!navigator.onLine) {
+      enqueue(body);
       setEnviado(true);
-    } catch (err) {
-      setError(friendlyError(err));
+      setEnviando(false);
+      return;
+    }
+
+    try {
+      await fetchAPI('/reportes', { method: 'POST', body: JSON.stringify(body) });
+      setEnviado(true);
+    } catch {
+      enqueue(body);
+      setEnviado(true);
     } finally {
       setEnviando(false);
     }
@@ -76,17 +84,44 @@ export default function ReportePage() {
   const puedeEnviar = geo.status === 'granted' && imagen && categoriaId && !enviando;
 
   if (enviado) {
+    const pendientes = getQueue().length;
+    const offline = !navigator.onLine;
+
+    const resetForm = () => {
+      setImagen(null);
+      setCategoriaId(null);
+      setGravedad('Media');
+      setEnviado(false);
+      setError(null);
+    };
+
     return (
       <div className="flex-1 flex flex-col items-center justify-center p-4 text-center">
         <CheckCircle2 className="w-12 h-12 text-sol-camba mb-3" />
-        <h2 className="font-semibold text-lg text-tierra mb-1">Reporte Enviado</h2>
-        <p className="text-xs text-caoba mb-4">Gracias por ayudar a Santa Cruz.</p>
-        <button
-          onClick={() => navigate('/')}
-          className="px-5 py-2.5 bg-catedral text-perla text-sm font-medium rounded-pill"
-        >
-          Volver
-        </button>
+        <h2 className="font-semibold text-lg text-tierra mb-1">
+          {pendientes > 0 ? 'Reporte Guardado' : 'Reporte Enviado'}
+        </h2>
+        <p className="text-xs text-caoba mb-4 max-w-xs">
+          {pendientes > 0
+            ? `${pendientes} reporte${pendientes !== 1 ? 's' : ''} en cola. Se enviara${pendientes !== 1 ? 'n' : ''} al reconectar.`
+            : 'Gracias por ayudar a Santa Cruz.'}
+        </p>
+        <div className="flex gap-3">
+          <button
+            onClick={resetForm}
+            className="px-5 py-2.5 bg-catedral text-perla text-sm font-medium rounded-pill"
+          >
+            Seguir reportando
+          </button>
+          {!offline && (
+            <button
+              onClick={() => navigate('/')}
+              className="px-5 py-2.5 bg-perla border border-arcilla text-tierra text-sm font-medium rounded-pill"
+            >
+              Volver al mapa
+            </button>
+          )}
+        </div>
       </div>
     );
   }
@@ -123,6 +158,12 @@ export default function ReportePage() {
           <div className="flex items-center justify-center gap-2 py-4 text-caoba">
             <Loader2 className="w-4 h-4 animate-spin" />
             <span className="text-xs">Ubicacion...</span>
+          </div>
+        )}
+
+        {!navigator.onLine && geo.status === 'granted' && (
+          <div className="bg-arcilla/50 rounded-2xl p-2 text-[10px] text-caoba text-center">
+            Sin conexion — verifica que la ubicacion sea correcta
           </div>
         )}
 
