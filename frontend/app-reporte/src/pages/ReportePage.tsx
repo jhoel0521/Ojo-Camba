@@ -7,16 +7,15 @@ import { useState, useRef } from 'react';
 import {
   ArrowLeft,
   Camera,
-  MapPin,
+  CheckCircle2,
+  Loader2,
+  AlertCircle,
   Construction,
   Lightbulb,
   Trash2,
   Droplets,
   TrafficCone,
   HelpCircle,
-  Loader2,
-  AlertCircle,
-  CheckCircle2,
 } from 'lucide-react';
 
 const CATEGORIAS = [
@@ -31,14 +30,13 @@ const CATEGORIAS = [
 export default function ReportePage() {
   const navigate = useNavigate();
   const geo = useGeolocation();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [imagen, setImagen] = useState<string | null>(null);
   const [categoriaId, setCategoriaId] = useState<number | null>(null);
   const [gravedad, setGravedad] = useState('Media');
   const [enviando, setEnviando] = useState(false);
   const [enviado, setEnviado] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleImageCapture = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -76,82 +74,66 @@ export default function ReportePage() {
 
   if (enviado) {
     return (
-      <div className="min-h-[80vh] flex flex-col items-center justify-center px-6 text-center">
-        <div className="w-24 h-24 bg-sol-camba/20 rounded-3xl-3 flex items-center justify-center mb-6">
-          <CheckCircle2 className="w-12 h-12 text-sol-camba" />
-        </div>
-        <h2 className="font-semibold text-2xl text-tierra mb-2">Reporte Enviado</h2>
-        <p className="text-sm text-caoba mb-8 max-w-xs">
-          Tu reporte fue registrado exitosamente. Gracias por ayudar a mejorar Santa Cruz.
-        </p>
+      <div className="flex-1 flex flex-col items-center justify-center p-4 text-center">
+        <CheckCircle2 className="w-12 h-12 text-sol-camba mb-3" />
+        <h2 className="font-semibold text-lg text-tierra mb-1">Reporte Enviado</h2>
+        <p className="text-xs text-caoba mb-4">Gracias por ayudar a Santa Cruz.</p>
         <button
           onClick={() => navigate('/')}
-          className="px-8 py-3 bg-catedral text-perla font-medium rounded-pill"
+          className="px-5 py-2.5 bg-catedral text-perla text-sm font-medium rounded-pill"
         >
-          Volver al Mapa
+          Volver
         </button>
       </div>
     );
   }
 
   return (
-    <div>
-      <div className="bg-catedral text-lienzo px-4 py-6">
-        <div className="max-w-sm mx-auto">
-          <button
-            onClick={() => navigate(-1)}
-            className="flex items-center gap-1.5 text-arena text-sm mb-3"
-          >
-            <ArrowLeft className="w-4 h-4" /> Volver
-          </button>
-          <h2 className="font-semibold text-2xl">Nuevo Reporte</h2>
-          {geo.status === 'granted' && (
-            <div className="flex items-center gap-2 mt-2 text-sm text-arena">
-              <MapPin className="w-4 h-4" />
-              {geo.lat.toFixed(4)}, {geo.lng.toFixed(4)}
-            </div>
-          )}
+    <div className="flex flex-col" style={{ height: 'calc(100dvh - 56px)' }}>
+      <div className="shrink-0 flex items-center gap-2 px-4 py-2.5 border-b border-arcilla bg-perla">
+        <button
+          onClick={() => navigate(-1)}
+          className="w-7 h-7 flex items-center justify-center shrink-0"
+        >
+          <ArrowLeft className="w-4 h-4 text-caoba" />
+        </button>
+        <div className="min-w-0 flex-1">
+          <h2 className="font-semibold text-sm text-tierra truncate">Nuevo Reporte</h2>
         </div>
+        {geo.status === 'granted' && (
+          <span className="text-[10px] text-arena shrink-0">
+            {geo.lat.toFixed(4)}, {geo.lng.toFixed(4)}
+          </span>
+        )}
       </div>
 
-      <div className="px-4 py-5 pb-24">
+      <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
         {geo.status === 'denied' && (
-          <div className="bg-sol-camba/15 rounded-3xl-3 p-4 mb-5 flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-sol-camba flex-shrink-0 mt-0.5" />
-            <div>
-              <p className="text-sm font-semibold text-catedral">GPS requerido</p>
-              <p className="text-xs text-caoba mt-1">
-                Activa la ubicacion en Configuracion para reportar.
-              </p>
-            </div>
+          <div className="bg-sol-camba/10 rounded-2xl p-2.5 flex items-start gap-2">
+            <AlertCircle className="w-4 h-4 text-sol-camba shrink-0 mt-0.5" />
+            <p className="text-[11px] text-catedral font-medium leading-snug">
+              Activa el GPS en Configuracion para reportar.
+            </p>
           </div>
         )}
-
         {geo.status === 'loading' && (
-          <div className="flex items-center justify-center gap-2 py-8 text-caoba">
-            <Loader2 className="w-5 h-5 animate-spin" />
-            <span className="text-sm">Obteniendo ubicacion...</span>
+          <div className="flex items-center justify-center gap-2 py-4 text-caoba">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            <span className="text-xs">Ubicacion...</span>
           </div>
         )}
 
-        <div className="mb-5">
-          <p className="text-xs font-semibold text-arena uppercase tracking-wider mb-3">
-            1. Foto del problema
-          </p>
+        <div>
           {imagen ? (
             <div className="relative">
-              <img
-                src={imagen}
-                alt="Preview"
-                className="w-full aspect-[4/3] object-cover rounded-3xl-3"
-              />
+              <img src={imagen} alt="Preview" className="w-full rounded-3xl-3" />
               <button
                 type="button"
                 onClick={(e) => {
                   e.preventDefault();
                   setImagen(null);
                 }}
-                className="absolute top-3 right-3 w-9 h-9 bg-catedral/80 backdrop-blur text-perla rounded-2xl flex items-center justify-center"
+                className="absolute top-2 right-2 w-6 h-6 bg-catedral/80 text-perla rounded-full flex items-center justify-center text-[10px]"
               >
                 ✕
               </button>
@@ -162,13 +144,10 @@ export default function ReportePage() {
                 e.preventDefault();
                 fileInputRef.current?.click();
               }}
-              className="w-full aspect-[4/3] bg-perla rounded-3xl-3 flex flex-col items-center justify-center gap-3 border-2 border-dashed border-arcilla hover:border-caoba transition-colors cursor-pointer"
+              className="bg-perla rounded-3xl-3 flex flex-col items-center justify-center gap-2 py-12 border-2 border-dashed border-arcilla cursor-pointer"
             >
-              <div className="w-16 h-16 bg-lienzo rounded-3xl-2 flex items-center justify-center">
-                <Camera className="w-8 h-8 text-ladrillo" />
-              </div>
-              <span className="text-sm font-medium text-caoba">Tocar para tomar foto</span>
-              <span className="text-xs text-arena">Obligatorio</span>
+              <Camera className="w-8 h-8 text-caoba min-h-[135px]" />
+              <span className="text-sm font-medium text-caoba">Tomar foto</span>
             </div>
           )}
           <input
@@ -181,75 +160,62 @@ export default function ReportePage() {
           />
         </div>
 
-        <div className="mb-5">
-          <p className="text-xs font-semibold text-arena uppercase tracking-wider mb-3">
-            2. Categoria
-          </p>
-          <div className="grid grid-cols-3 gap-3">
-            {CATEGORIAS.map(({ id, nombre, Icon }) => (
+        <p className="text-[10px] text-arena font-medium uppercase tracking-wide">Categoria</p>
+        <div className="grid grid-cols-3 rounded-3xl-2 overflow-hidden border border-arcilla">
+          {CATEGORIAS.map(({ id, nombre, Icon }, i) => {
+            const active = categoriaId === id;
+            const isLastCol = (i + 1) % 3 === 0;
+            const isLastRow = i >= 3;
+            return (
               <button
                 key={id}
                 onClick={() => setCategoriaId(id)}
-                className={`flex flex-col items-center gap-2 py-3.5 rounded-3xl-2 border transition-all ${
-                  categoriaId === id
-                    ? 'bg-catedral text-perla border-catedral'
-                    : 'bg-perla text-tierra border-arcilla hover:border-caoba'
-                }`}
+                className={`flex flex-col items-center gap-1 py-2.5 transition-all ${!isLastCol ? 'border-r border-arcilla' : ''} ${!isLastRow ? 'border-b border-arcilla' : ''} ${active ? 'bg-catedral text-perla' : 'bg-perla text-tierra'}`}
               >
-                <Icon
-                  className={`w-6 h-6 ${categoriaId === id ? 'text-perla' : 'text-ladrillo'}`}
-                />
-                <span className="text-xs font-semibold">{nombre}</span>
+                <Icon className={`w-5 h-5 ${active ? 'text-perla' : 'text-ladrillo'}`} />
+                <span className="text-[10px] font-semibold">{nombre}</span>
               </button>
-            ))}
-          </div>
+            );
+          })}
         </div>
 
-        <div className="mb-8">
-          <p className="text-xs font-semibold text-arena uppercase tracking-wider mb-3">
-            3. Gravedad
-          </p>
-          <div className="flex gap-2">
-            {['Baja', 'Media', 'Alta', 'Emergencia'].map((g) => (
-              <button
-                key={g}
-                onClick={() => setGravedad(g)}
-                className={`px-4 py-2.5 rounded-pill text-xs font-semibold border transition-all ${
-                  gravedad === g
-                    ? 'bg-catedral text-perla border-catedral'
-                    : 'bg-perla text-tierra border-arcilla hover:border-caoba'
-                }`}
-              >
-                {g}
-              </button>
-            ))}
-          </div>
+        <p className="text-[10px] text-arena font-medium uppercase tracking-wide">Gravedad</p>
+        <div className="grid grid-cols-4 rounded-3xl-2 overflow-hidden border border-arcilla">
+          {['Baja', 'Media', 'Alta', 'Emergencia'].map((g, i) => (
+            <button
+              key={g}
+              onClick={() => setGravedad(g)}
+              className={`py-2 text-[11px] font-medium transition-all ${i < 3 ? 'border-r border-arcilla' : ''} ${gravedad === g ? 'bg-catedral text-perla' : 'bg-perla text-tierra'}`}
+            >
+              {g}
+            </button>
+          ))}
         </div>
 
         {error && (
-          <div className="bg-yeso rounded-3xl-3 p-5 mb-4 text-center">
-            <AlertCircle className="w-8 h-8 text-sol-camba mx-auto mb-2" />
-            <p className="text-sm text-catedral font-medium">{error}</p>
+          <div className="bg-yeso rounded-2xl p-3 text-center">
+            <AlertCircle className="w-5 h-5 text-sol-camba mx-auto mb-1" />
+            <p className="text-[11px] text-catedral font-medium">{error}</p>
           </div>
         )}
+      </div>
 
+      <div className="shrink-0 px-4 py-3 border-t border-arcilla bg-lienzo">
         <button
           onClick={handleSubmit}
           disabled={!puedeEnviar}
-          className="w-full bg-catedral text-perla font-semibold text-base py-4 rounded-pill disabled:opacity-30 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+          className="w-full bg-catedral text-perla font-semibold text-sm py-3 rounded-pill disabled:opacity-30 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
         >
           {enviando ? (
             <>
-              <Loader2 className="w-5 h-5 animate-spin" />
-              Enviando...
+              <Loader2 className="w-4 h-4 animate-spin" /> Enviando...
             </>
           ) : (
             'Enviar Reporte'
           )}
         </button>
-
         {!puedeEnviar && !enviando && (
-          <p className="text-xs text-arena text-center mt-3">
+          <p className="text-[10px] text-arena text-center mt-1">
             {geo.status !== 'granted' ? 'GPS · ' : ''}
             {!imagen ? 'Foto · ' : ''}
             {!categoriaId ? 'Categoria' : ''}
