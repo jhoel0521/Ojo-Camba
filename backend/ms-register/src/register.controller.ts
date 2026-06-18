@@ -39,4 +39,9 @@ export class RegisterController {
   getHeatmapDetailed(@Payload() dto: { resolution?: number; solo_activos?: boolean }) {
     return this.registerService.heatmapDetailed(dto.resolution, dto.solo_activos);
   }
+
+  @MessagePattern(TCP_PATTERNS.REGISTER.VINCULAR_DEVICE)
+  vincularDevice(@Payload() dto: { user_id: number; device_id: string }) {
+    return this.registerService.vincularDevice(dto.user_id, dto.device_id);
+  }
 }

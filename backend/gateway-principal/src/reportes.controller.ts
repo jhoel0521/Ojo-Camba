@@ -34,6 +34,9 @@ export class ReportesController {
       h3_res_8?: string;
       device_id?: string;
       usuario_id?: string;
+      h3_cell?: string;
+      h3_resolution?: string;
+      grupo_id?: string;
     },
   ) {
     return sendRpc(
@@ -45,6 +48,9 @@ export class ReportesController {
         h3_res_8: query.h3_res_8,
         device_id: query.device_id,
         usuario_id: query.usuario_id ? parseInt(query.usuario_id, 10) : undefined,
+        h3_cell: query.h3_cell,
+        h3_resolution: query.h3_resolution ? parseInt(query.h3_resolution, 10) : undefined,
+        grupo_id: query.grupo_id ? parseInt(query.grupo_id, 10) : undefined,
       }),
     );
   }
@@ -76,5 +82,10 @@ export class ReportesController {
     return sendRpc(
       this.client.send(TCP_PATTERNS.REGISTER.GET_REPORT, { report_id: parseInt(id, 10) }),
     );
+  }
+
+  @Post('vincular')
+  vincular(@Body() dto: { user_id: number; device_id: string }) {
+    return sendRpc(this.client.send(TCP_PATTERNS.REGISTER.VINCULAR_DEVICE, dto));
   }
 }
