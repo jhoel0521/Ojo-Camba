@@ -1,10 +1,12 @@
 import { Link, useLocation } from 'react-router-dom';
-import { MapPin, Plus } from 'lucide-react';
+import { MapPin, Plus, SlidersHorizontal } from 'lucide-react';
 import { useAppStore } from '../store/appStore';
+import FilterModal from './FilterModal';
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const { device } = useAppStore();
+  const setFilterOpen = useAppStore((s) => s.setFilterOpen);
   const isHome = location.pathname === '/';
   const isReporte = location.pathname === '/nuevo';
   const canReport = device?.canReport ?? false;
@@ -23,35 +25,46 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             <span className="font-semibold text-base text-lienzo tracking-tight">Ojo Camba</span>
           </Link>
 
-          {!isMobile && (
-            <nav className="flex items-center gap-6 text-sm text-arena">
-              <Link
-                to="/"
-                className={`hover:text-lienzo transition-colors ${isHome ? 'text-lienzo font-medium' : ''}`}
-              >
-                Mapa
-              </Link>
-              <Link to="/mis-reportes" className="hover:text-lienzo transition-colors">
-                Mis Reportes
-              </Link>
-              <Link to="/perfil" className="hover:text-lienzo transition-colors">
-                Perfil
-              </Link>
-            </nav>
-          )}
+          <div className="flex items-center gap-3">
+            {!isMobile && (
+              <nav className="flex items-center gap-6 text-sm text-arena">
+                <Link
+                  to="/"
+                  className={`hover:text-lienzo transition-colors ${isHome ? 'text-lienzo font-medium' : ''}`}
+                >
+                  Mapa
+                </Link>
+                <Link to="/mis-reportes" className="hover:text-lienzo transition-colors">
+                  Mis Reportes
+                </Link>
+                <Link to="/perfil" className="hover:text-lienzo transition-colors">
+                  Perfil
+                </Link>
+              </nav>
+            )}
 
-          {canReport && !isMobile && !isReporte && (
-            <Link
-              to="/nuevo"
-              className="px-5 py-2.5 bg-sol-camba text-catedral text-sm font-bold rounded-pill hover:shadow-lg transition-all"
-            >
-              Reportar
-            </Link>
-          )}
+            {isHome && (
+              <button
+                onClick={() => setFilterOpen(true)}
+                className="w-9 h-9 flex items-center justify-center text-arena hover:text-lienzo transition-colors"
+              >
+                <SlidersHorizontal className="w-5 h-5" />
+              </button>
+            )}
+
+            {canReport && !isMobile && !isReporte && (
+              <Link
+                to="/nuevo"
+                className="px-5 py-2.5 bg-sol-camba text-catedral text-sm font-bold rounded-pill hover:shadow-lg transition-all"
+              >
+                Reportar
+              </Link>
+            )}
+          </div>
         </div>
       </header>
 
-      <div className="flex-1 overflow-hidden">{children}</div>
+      <div className="flex-1 min-h-0">{children}</div>
 
       {canReport && !isReporte && (
         <Link
@@ -62,7 +75,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         </Link>
       )}
 
-      {isMobile && (
+      {isMobile && !isReporte && (
         <nav className="shrink-0 z-10 bg-perla border-t border-arcilla">
           <div className="max-w-sm mx-auto flex items-center justify-around py-2.5">
             <Link
@@ -75,6 +88,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           </div>
         </nav>
       )}
+
+      <FilterModal />
     </div>
   );
 }
