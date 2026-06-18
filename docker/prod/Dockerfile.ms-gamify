@@ -18,6 +18,9 @@ COPY tsconfig.base.json ./
 COPY libs/common/ libs/common/
 COPY backend/ms-gamify/ backend/ms-gamify/
 
+WORKDIR /app/libs/common
+RUN pnpm build
+
 WORKDIR /app/backend/ms-gamify
 RUN pnpm build
 
