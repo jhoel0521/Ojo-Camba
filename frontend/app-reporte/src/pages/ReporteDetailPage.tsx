@@ -23,6 +23,7 @@ export default function ReporteDetailPage() {
   const [timeline, setTimeline] = useState<
     {
       id: number;
+      usuario_id: number;
       comentario: string;
       estado_nuevo: string | null;
       url_imagen: string | null;
@@ -41,6 +42,7 @@ export default function ReporteDetailPage() {
           const tl = await fetchAPI<
             {
               id: number;
+              usuario_id: number;
               comentario: string;
               estado_nuevo: string | null;
               url_imagen: string | null;

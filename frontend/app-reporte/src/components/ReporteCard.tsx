@@ -33,7 +33,7 @@ export default function ReporteCard({
       <img
         src={url_imagen}
         alt=""
-        className="w-14 h-14 object-cover rounded-2xl shrink-0 bg-yeso"
+        className="w-14 h-14 object-cover rounded-2xl shrink-0 bg-yeso flex-shrink-0"
       />
       <div className="min-w-0 flex-1">
         <StatusBadge estado={estado} />

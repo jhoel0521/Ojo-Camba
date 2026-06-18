@@ -1,5 +1,6 @@
 interface Actualizacion {
   id: number;
+  usuario_id: number;
   comentario: string;
   estado_nuevo: string | null;
   url_imagen: string | null;
@@ -8,7 +9,7 @@ interface Actualizacion {
 
 export default function ReportTimeline({ items }: { items: Actualizacion[] }) {
   if (items.length === 0)
-    return <p className="text-sm text-arena text-center py-4">Sin actualizaciones aun.</p>;
+    return <p className="text-sm text-arena text-center py-4">Sin actualizaciones aún.</p>;
 
   return (
     <div className="space-y-0">
@@ -27,7 +28,7 @@ export default function ReportTimeline({ items }: { items: Actualizacion[] }) {
               />
               {i < items.length - 1 && <div className="w-px flex-1 bg-arcilla mt-1" />}
             </div>
-            <div className={`pb-4 ${i === items.length - 1 ? '' : ''}`}>
+            <div className="pb-4 min-w-0 flex-1">
               {a.estado_nuevo && (
                 <span className="text-[10px] font-semibold text-sol-camba uppercase tracking-wide">
                   {a.estado_nuevo}
@@ -35,9 +36,15 @@ export default function ReportTimeline({ items }: { items: Actualizacion[] }) {
               )}
               <p className="text-sm text-tierra mt-0.5">{a.comentario}</p>
               {a.url_imagen && (
-                <img src={a.url_imagen} alt="" className="w-full rounded-2xl mt-2" />
+                <img
+                  src={a.url_imagen}
+                  alt=""
+                  className="rounded-3xl-2 mt-2 max-w-full max-h-[260px] object-cover"
+                />
               )}
-              <p className="text-[10px] text-arena mt-1">{fecha}</p>
+              <p className="text-[10px] text-arena mt-1">
+                Mod. #{a.usuario_id} · {fecha}
+              </p>
             </div>
           </div>
         );
