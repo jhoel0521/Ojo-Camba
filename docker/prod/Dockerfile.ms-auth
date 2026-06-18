@@ -37,11 +37,11 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
 COPY libs/common/package.json libs/common/
 COPY backend/ms-auth/package.json backend/ms-auth/
 
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
-    pnpm install --frozen-lockfile --prod
-
 COPY --from=builder /app/libs/common/dist libs/common/dist
 COPY --from=builder /app/backend/ms-auth/dist backend/ms-auth/dist
+
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
+    pnpm install --frozen-lockfile --prod
 
 WORKDIR /app/backend/ms-auth
 

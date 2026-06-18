@@ -37,11 +37,11 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
 COPY libs/common/package.json libs/common/
 COPY backend/ms-register/package.json backend/ms-register/
 
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
-    pnpm install --frozen-lockfile --prod
-
 COPY --from=builder /app/libs/common/dist libs/common/dist
 COPY --from=builder /app/backend/ms-register/dist backend/ms-register/dist
+
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
+    pnpm install --frozen-lockfile --prod
 
 WORKDIR /app/backend/ms-register
 

@@ -37,11 +37,11 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
 COPY libs/common/package.json libs/common/
 COPY backend/gateway-principal/package.json backend/gateway-principal/
 
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
-    pnpm install --frozen-lockfile --prod
-
 COPY --from=builder /app/libs/common/dist libs/common/dist
 COPY --from=builder /app/backend/gateway-principal/dist backend/gateway-principal/dist
+
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
+    pnpm install --frozen-lockfile --prod
 
 WORKDIR /app/backend/gateway-principal
 
