@@ -18,11 +18,15 @@ export class AdminController {
   }
 
   @Post('reports/:id/accept')
-  acceptReport(@Param('id') id: string, @Body() dto: { moderador_id: number }) {
+  acceptReport(
+    @Param('id') id: string,
+    @Body() dto: { moderador_id: number; categoria_id?: number },
+  ) {
     return sendRpc(
       this.client.send(TCP_PATTERNS.ADMIN.ACCEPT_REPORT, {
         report_id: parseInt(id, 10),
         moderador_id: dto.moderador_id,
+        categoria_id: dto.categoria_id,
       }),
     );
   }
@@ -65,6 +69,30 @@ export class AdminController {
   @Post('devices/ban')
   banDevice(@Body() dto: { device_id: string; motivo?: string }) {
     return sendRpc(this.client.send(TCP_PATTERNS.ADMIN.BAN_DEVICE, dto));
+  }
+
+  @Get('groups/heatmap')
+  getGroupsHeatmap(
+    @Query('resolution') resolution?: string,
+    @Query('solo_activos') soloActivos?: string,
+  ) {
+    return sendRpc(
+      this.client.send(TCP_PATTERNS.ADMIN.GET_GROUPS_HEATMAP, {
+        resolution: resolution ? parseInt(resolution, 10) : undefined,
+        solo_activos: soloActivos !== 'false',
+      }),
+    );
+  }
+
+  @Get('groups/by-cell')
+  listGroupsByCell(@Query() q: { h3_cell: string; h3_resolution?: string; solo_activos?: string }) {
+    return sendRpc(
+      this.client.send(TCP_PATTERNS.ADMIN.LIST_GROUPS_BY_CELL, {
+        h3_cell: q.h3_cell,
+        h3_resolution: q.h3_resolution ? parseInt(q.h3_resolution, 10) : 8,
+        solo_activos: q.solo_activos !== 'false',
+      }),
+    );
   }
 
   @Get('groups')

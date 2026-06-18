@@ -1,4 +1,4 @@
-import { IsArray, IsInt, IsNotEmpty, ArrayMinSize } from 'class-validator';
+import { IsArray, IsInt, IsNotEmpty, ArrayMinSize, IsOptional } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class CreateGroupDto {
@@ -36,6 +36,10 @@ export class AcceptReportDto {
 
   @IsInt()
   moderador_id: number;
+
+  @IsOptional()
+  @IsInt()
+  categoria_id?: number;
 }
 
 export class RejectReportDto {
