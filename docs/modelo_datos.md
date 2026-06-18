@@ -8,7 +8,7 @@
 
 ```mermaid
 erDiagram
-    NIVELES {
+    NIVELES["NIVELES (pendiente)"] {
         int id PK
         varchar nombre
         int puntos_requeridos
@@ -37,6 +37,14 @@ erDiagram
         varchar motivo_ban
         timestamp ultimo_uso
     }
+    REFRESH_TOKENS {
+        int id PK
+        int usuario_id FK
+        varchar token
+        timestamp expires_at
+        boolean revoked
+        timestamp creado_en
+    }
     CATEGORIAS {
         int id PK
         varchar nombre
@@ -46,6 +54,7 @@ erDiagram
         int id PK
         varchar codigo_obra
         varchar estado_actual
+        int categoria_id FK
         date fecha_estimada_fin
         int creado_por_usuario_id FK
         timestamp creado_en
@@ -84,6 +93,7 @@ erDiagram
     NIVELES ||--o{ USUARIOS : "alcanza"
     USUARIOS ||--o{ USUARIO_ROLES : "tiene"
     ROLES ||--o{ USUARIO_ROLES : "asignado a"
+    USUARIOS ||--o{ REFRESH_TOKENS : "posee"
     DISPOSITIVOS ||--o{ REPORTES : "genera"
     USUARIOS |o--o{ REPORTES : "registra"
     CATEGORIAS ||--o{ REPORTES : "clasifica"
@@ -126,6 +136,7 @@ Table roles {
   nombre varchar [not null]
 }
 
+// ⏳ PENDIENTE — entidad de gamificación, no implementada aún (ver HU-06)
 Table niveles {
   id int [pk, increment]
   nombre varchar [not null]
@@ -158,6 +169,15 @@ Table dispositivos {
   ultimo_uso timestamp
 }
 
+Table refresh_tokens {
+  id int [pk, increment]
+  usuario_id int [ref: > usuarios.id, not null]
+  token varchar [unique, not null]
+  expires_at timestamp [not null]
+  revoked boolean [default: false]
+  creado_en timestamp [default: `now()`]
+}
+
 Table categorias {
   id int [pk, increment]
   nombre varchar [not null]
@@ -170,8 +190,9 @@ Table grupos_reportes {
   id int [pk, increment, note: 'Entidad que agrupa múltiples reportes iguales']
   codigo_obra varchar [unique, note: 'Ej: OBRA-2026-001']
   estado_actual EstadoReporte [default: 'Aceptado']
+  categoria_id int [ref: > categorias.id, null, note: 'Confirmada o corregida por el moderador al aceptar']
   fecha_estimada_fin date [note: 'ETA general de la obra']
-  creado_por_usuario_id int [ref: > usuarios.id, note: 'Técnico o Backoffice que creó el grupo']
+  creado_por_usuario_id int [ref: > usuarios.id, note: 'Moderador o técnico que creó el grupo']
   creado_en timestamp [default: `now()`]
 }
 

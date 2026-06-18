@@ -1,9 +1,12 @@
 import { Module } from '@nestjs/common';
 import { ClientsModule, Transport } from '@nestjs/microservices';
+import { ScheduleModule } from '@nestjs/schedule';
 import { StatusController } from './status.controller';
+import { StatusService } from './status.service';
 
 @Module({
   imports: [
+    ScheduleModule.forRoot(),
     ClientsModule.register([
       {
         name: 'MS_AUTH',
@@ -40,5 +43,6 @@ import { StatusController } from './status.controller';
     ]),
   ],
   controllers: [StatusController],
+  providers: [StatusService],
 })
 export class AppModule {}

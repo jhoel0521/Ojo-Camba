@@ -1,16 +1,18 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import tailwindcss from '@tailwindcss/vite';
 import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig({
   plugins: [
+    tailwindcss(),
     react(),
     VitePWA({
       registerType: 'autoUpdate',
       manifest: {
         name: 'Ojo Camba - BackOffice',
         short_name: 'OC Admin',
-        description: 'Panel de administración y moderación de reportes',
+        description: 'Panel de administracion y moderacion de reportes',
         theme_color: '#d32f2f',
         background_color: '#ffffff',
         display: 'standalone',

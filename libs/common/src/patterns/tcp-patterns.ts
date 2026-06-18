@@ -5,6 +5,8 @@ export const TCP_PATTERNS = {
     REGISTER: 'auth.register',
     VALIDATE_TOKEN: 'auth.validate_token',
     GET_PROFILE: 'auth.get_profile',
+    REFRESH: 'auth.refresh',
+    LOGOUT: 'auth.logout',
   },
   REGISTER: {
     PING: 'register.ping',
@@ -12,6 +14,8 @@ export const TCP_PATTERNS = {
     GET_REPORT: 'register.get_report',
     LIST_REPORTS: 'register.list_reports',
     GET_HEATMAP: 'register.get_heatmap',
+    GET_HEATMAP_DETAILED: 'register.get_heatmap_detailed',
+    VINCULAR_DEVICE: 'register.vincular_device',
   },
   ADMIN: {
     PING: 'admin.ping',
@@ -21,6 +25,11 @@ export const TCP_PATTERNS = {
     CREATE_GROUP: 'admin.create_group',
     UPDATE_CASE: 'admin.update_case',
     BAN_DEVICE: 'admin.ban_device',
+    GET_GROUP: 'admin.get_group',
+    LIST_GROUPS: 'admin.list_groups',
+    LIST_GROUPS_BY_CELL: 'admin.list_groups_by_cell',
+    GET_GROUPS_HEATMAP: 'admin.get_groups_heatmap',
+    GET_CASE_TIMELINE: 'admin.get_case_timeline',
   },
   GAMIFY: {
     PING: 'gamify.ping',

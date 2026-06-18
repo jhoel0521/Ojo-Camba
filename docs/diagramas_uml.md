@@ -256,7 +256,7 @@ graph TD
     subgraph Docker_Cluster["Clúster Docker — Ojo Camba Network"]
         subgraph Gateways["API Gateways (HTTP)"]
             GWP["gateway-principal\n:3000"]
-            GWS["gateway-status\n:3001"]
+            GWS["gateway-status\n:3005"]
         end
 
         subgraph Microservicios["Microservicios NestJS (TCP interno)"]
