@@ -15,8 +15,8 @@
 ## Actor: Moderador Comunitario / Administrador
 
 * **CU-06:** Visualizar la bandeja de entrada de reportes en estado inicial ("Reportado").
-* **CU-07:** Cambiar el estado de un reporte a "Aceptado" o "Rechazado" tras validación visual.
-* **CU-08:** Agrupar múltiples reportes de una misma zona en un nuevo "Caso de Obra" (Grupo).
+* **CU-07:** Validar un reporte visualmente y aceptarlo o rechazarlo. Al aceptar, el sistema crea automáticamente un Caso de Obra (`GrupoReporte`) con código único (ej. `OBRA-2026-001`), asigna el reporte al grupo y cambia el estado a "Aceptado". El moderador puede confirmar o corregir la categoría del grupo en ese momento.
+* **CU-08:** Fusionar reportes adicionales de una misma zona en un Caso de Obra ya existente (agregar reportes sueltos al grupo).
 * **CU-09:** Bloquear (banear) de forma permanente el DeviceID de un usuario por generar spam.
 
 ## Actor: Técnico en Campo (Cuadrilla)

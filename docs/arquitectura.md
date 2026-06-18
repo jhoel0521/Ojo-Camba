@@ -66,6 +66,7 @@ graph TD
 | `GET`  | `/reportes` | ms-register | `register.list_reports` |
 | `GET`  | `/reportes/heatmap` | ms-register | `register.get_heatmap` |
 | `GET`  | `/reportes/heatmap-detailed` | ms-register | `register.get_heatmap_detailed` |
+| `POST` | `/reportes/vincular` | ms-register | `register.vincular_device` — body: `{ usuario_id, device_id }` |
 | `GET`  | `/reportes/:id` | ms-register | `register.get_report` |
 | `GET`  | `/admin/reports/pending` | ms-admin | `admin.list_pending` |
 | `POST` | `/admin/reports/:id/accept` | ms-admin | `admin.accept_report` |
@@ -74,6 +75,8 @@ graph TD
 | `POST` | `/admin/groups/:id/updates` | ms-admin | `admin.update_case` |
 | `POST` | `/admin/devices/ban` | ms-admin | `admin.ban_device` |
 | `GET`  | `/admin/groups` | ms-admin | `admin.list_groups` |
+| `GET`  | `/admin/groups/heatmap` | ms-admin | `admin.get_groups_heatmap` |
+| `GET`  | `/admin/groups/by-cell` | ms-admin | `admin.list_groups_by_cell` |
 | `GET`  | `/admin/groups/:id` | ms-admin | `admin.get_group` |
 | `GET`  | `/admin/groups/:id/timeline` | ms-admin | `admin.get_case_timeline` |
 | `POST` | `/gamify/award` | ms-gamify | `gamify.award_points` |
