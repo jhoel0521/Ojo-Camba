@@ -1,7 +1,7 @@
 import { Controller, Post, Get, Body, Param, Inject, Query } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
-import { firstValueFrom } from 'rxjs';
 import { TCP_PATTERNS } from '@ojo-camba/common';
+import { sendRpc } from './rpc.helper';
 
 @Controller('admin')
 export class AdminController {
@@ -9,7 +9,7 @@ export class AdminController {
 
   @Get('reports/pending')
   listPending(@Query() query: { page?: string; limit?: string }) {
-    return firstValueFrom(
+    return sendRpc(
       this.client.send(TCP_PATTERNS.ADMIN.LIST_PENDING, {
         page: query.page ? parseInt(query.page, 10) : undefined,
         limit: query.limit ? parseInt(query.limit, 10) : undefined,
@@ -19,7 +19,7 @@ export class AdminController {
 
   @Post('reports/:id/accept')
   acceptReport(@Param('id') id: string, @Body() dto: { moderador_id: number }) {
-    return firstValueFrom(
+    return sendRpc(
       this.client.send(TCP_PATTERNS.ADMIN.ACCEPT_REPORT, {
         report_id: parseInt(id, 10),
         moderador_id: dto.moderador_id,
@@ -29,14 +29,14 @@ export class AdminController {
 
   @Post('reports/:id/reject')
   rejectReport(@Param('id') id: string) {
-    return firstValueFrom(
+    return sendRpc(
       this.client.send(TCP_PATTERNS.ADMIN.REJECT_REPORT, { report_id: parseInt(id, 10) }),
     );
   }
 
   @Post('groups')
   createGroup(@Body() dto: { report_ids: number[]; creado_por_usuario_id: number }) {
-    return firstValueFrom(this.client.send(TCP_PATTERNS.ADMIN.CREATE_GROUP, dto));
+    return sendRpc(this.client.send(TCP_PATTERNS.ADMIN.CREATE_GROUP, dto));
   }
 
   @Post('groups/:id/updates')
@@ -54,7 +54,7 @@ export class AdminController {
       url_imagen?: string;
     },
   ) {
-    return firstValueFrom(
+    return sendRpc(
       this.client.send(TCP_PATTERNS.ADMIN.UPDATE_CASE, {
         grupo_id: parseInt(id, 10),
         ...dto,
@@ -64,12 +64,12 @@ export class AdminController {
 
   @Post('devices/ban')
   banDevice(@Body() dto: { device_id: string; motivo?: string }) {
-    return firstValueFrom(this.client.send(TCP_PATTERNS.ADMIN.BAN_DEVICE, dto));
+    return sendRpc(this.client.send(TCP_PATTERNS.ADMIN.BAN_DEVICE, dto));
   }
 
   @Get('groups')
   listGroups(@Query() query: { page?: string; limit?: string }) {
-    return firstValueFrom(
+    return sendRpc(
       this.client.send(TCP_PATTERNS.ADMIN.LIST_GROUPS, {
         page: query.page ? parseInt(query.page, 10) : undefined,
         limit: query.limit ? parseInt(query.limit, 10) : undefined,
@@ -79,14 +79,12 @@ export class AdminController {
 
   @Get('groups/:id')
   getGroup(@Param('id') id: string) {
-    return firstValueFrom(
-      this.client.send(TCP_PATTERNS.ADMIN.GET_GROUP, { grupo_id: parseInt(id, 10) }),
-    );
+    return sendRpc(this.client.send(TCP_PATTERNS.ADMIN.GET_GROUP, { grupo_id: parseInt(id, 10) }));
   }
 
   @Get('groups/:id/timeline')
   getTimeline(@Param('id') id: string) {
-    return firstValueFrom(
+    return sendRpc(
       this.client.send(TCP_PATTERNS.ADMIN.GET_CASE_TIMELINE, { grupo_id: parseInt(id, 10) }),
     );
   }

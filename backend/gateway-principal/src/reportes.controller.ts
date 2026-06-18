@@ -1,7 +1,7 @@
 import { Controller, Post, Get, Body, Param, Inject, Query } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
-import { firstValueFrom } from 'rxjs';
 import { TCP_PATTERNS } from '@ojo-camba/common';
+import { sendRpc } from './rpc.helper';
 
 @Controller('reportes')
 export class ReportesController {
@@ -17,9 +17,10 @@ export class ReportesController {
       categoria_id: number;
       gravedad?: string;
       imagen_base64?: string;
+      usuario_id?: number;
     },
   ) {
-    return firstValueFrom(this.client.send(TCP_PATTERNS.REGISTER.CREATE_REPORT, dto));
+    return sendRpc(this.client.send(TCP_PATTERNS.REGISTER.CREATE_REPORT, dto));
   }
 
   @Get()
@@ -31,22 +32,26 @@ export class ReportesController {
       estado?: string;
       categoria_id?: string;
       h3_res_8?: string;
+      device_id?: string;
+      usuario_id?: string;
     },
   ) {
-    return firstValueFrom(
+    return sendRpc(
       this.client.send(TCP_PATTERNS.REGISTER.LIST_REPORTS, {
         page: query.page ? parseInt(query.page, 10) : undefined,
         limit: query.limit ? parseInt(query.limit, 10) : undefined,
         estado: query.estado,
         categoria_id: query.categoria_id ? parseInt(query.categoria_id, 10) : undefined,
         h3_res_8: query.h3_res_8,
+        device_id: query.device_id,
+        usuario_id: query.usuario_id ? parseInt(query.usuario_id, 10) : undefined,
       }),
     );
   }
 
   @Get('heatmap')
   heatmap(@Query('resolution') resolution?: string) {
-    return firstValueFrom(
+    return sendRpc(
       this.client.send(TCP_PATTERNS.REGISTER.GET_HEATMAP, {
         resolution: resolution ? parseInt(resolution, 10) : undefined,
       }),
@@ -58,7 +63,7 @@ export class ReportesController {
     @Query('resolution') resolution?: string,
     @Query('solo_activos') soloActivos?: string,
   ) {
-    return firstValueFrom(
+    return sendRpc(
       this.client.send(TCP_PATTERNS.REGISTER.GET_HEATMAP_DETAILED, {
         resolution: resolution ? parseInt(resolution, 10) : undefined,
         solo_activos: soloActivos !== 'false',
@@ -68,7 +73,7 @@ export class ReportesController {
 
   @Get(':id')
   get(@Param('id') id: string) {
-    return firstValueFrom(
+    return sendRpc(
       this.client.send(TCP_PATTERNS.REGISTER.GET_REPORT, { report_id: parseInt(id, 10) }),
     );
   }
