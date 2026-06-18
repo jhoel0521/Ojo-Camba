@@ -18,6 +18,9 @@ COPY tsconfig.base.json ./
 COPY libs/common/ libs/common/
 COPY backend/gateway-status/ backend/gateway-status/
 
+WORKDIR /app/libs/common
+RUN pnpm build
+
 WORKDIR /app/backend/gateway-status
 RUN pnpm build
 
