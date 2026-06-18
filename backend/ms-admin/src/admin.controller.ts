@@ -2,12 +2,7 @@ import { Controller } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import { TCP_PATTERNS } from '@ojo-camba/common';
 import { AdminService } from './admin.service';
-import {
-  CreateGroupDto,
-  UpdateCaseDto,
-  AcceptReportDto,
-  BanDeviceDto,
-} from './dto';
+import { CreateGroupDto, UpdateCaseDto, AcceptReportDto, BanDeviceDto } from './dto';
 
 @Controller()
 export class AdminController {
@@ -61,5 +56,17 @@ export class AdminController {
   @MessagePattern(TCP_PATTERNS.ADMIN.GET_CASE_TIMELINE)
   getCaseTimeline(@Payload() dto: { grupo_id: number }) {
     return this.adminService.getCaseTimeline(dto.grupo_id);
+  }
+
+  @MessagePattern(TCP_PATTERNS.ADMIN.LIST_GROUPS_BY_CELL)
+  listGroupsByCell(
+    @Payload() dto: { h3_cell: string; h3_resolution: number; solo_activos?: boolean },
+  ) {
+    return this.adminService.listGroupsByCell(dto.h3_cell, dto.h3_resolution, dto.solo_activos);
+  }
+
+  @MessagePattern(TCP_PATTERNS.ADMIN.GET_GROUPS_HEATMAP)
+  getGroupsHeatmap(@Payload() dto: { resolution?: number; solo_activos?: boolean }) {
+    return this.adminService.getGroupsHeatmap(dto.resolution, dto.solo_activos);
   }
 }

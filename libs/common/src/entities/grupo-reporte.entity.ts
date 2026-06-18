@@ -18,6 +18,9 @@ export class GrupoReporte {
   @Column({ type: 'int' })
   creado_por_usuario_id: number;
 
+  @Column({ type: 'int', nullable: true })
+  categoria_id: number | null;
+
   @CreateDateColumn()
   creado_en: Date;
 }

@@ -1,9 +1,4 @@
-import {
-  Injectable,
-  BadRequestException,
-  NotFoundException,
-  Logger,
-} from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import {
@@ -13,12 +8,7 @@ import {
   ActualizacionCaso,
   EstadoReporte,
 } from '@ojo-camba/common';
-import {
-  CreateGroupDto,
-  UpdateCaseDto,
-  AcceptReportDto,
-  BanDeviceDto,
-} from './dto';
+import { CreateGroupDto, UpdateCaseDto, AcceptReportDto, BanDeviceDto } from './dto';
 
 @Injectable()
 export class AdminService {
@@ -57,10 +47,23 @@ export class AdminService {
     }
 
     reporte.estado = EstadoReporte.Aceptado;
-    reporte.usuario_id = dto.moderador_id;
+
+    const year = new Date().getFullYear();
+    const count = (await this.grupoRepo.count()) + 1;
+    const codigoObra = `OBRA-${year}-${String(count).padStart(3, '0')}`;
+
+    const grupo = await this.grupoRepo.save(
+      this.grupoRepo.create({
+        codigo_obra: codigoObra,
+        estado_actual: EstadoReporte.Aceptado,
+        creado_por_usuario_id: dto.moderador_id,
+        categoria_id: dto.categoria_id ?? reporte.categoria_id,
+      }),
+    );
+    reporte.grupo_id = grupo.id;
     await this.reporteRepo.save(reporte);
 
-    return { id: reporte.id, estado: reporte.estado };
+    return { id: reporte.id, estado: reporte.estado, grupo_id: grupo.id, codigo_obra: codigoObra };
   }
 
   async rejectReport(reportId: number) {
@@ -165,10 +168,7 @@ export class AdminService {
       }
       await this.grupoRepo.save(grupo);
 
-      await this.reporteRepo.update(
-        { grupo_id: dto.grupo_id },
-        { estado: dto.estado_nuevo },
-      );
+      await this.reporteRepo.update({ grupo_id: dto.grupo_id }, { estado: dto.estado_nuevo });
     }
 
     return {
@@ -189,6 +189,48 @@ export class AdminService {
     const totalReportes = await this.reporteRepo.count({ where: { grupo_id: grupoId } });
 
     return { ...grupo, total_reportes: totalReportes };
+  }
+
+  async getGroupsHeatmap(resolution = 8, soloActivos = true) {
+    const qb = this.grupoRepo
+      .createQueryBuilder('g')
+      .innerJoin(Reporte, 'r', 'r.grupo_id = g.id')
+      .select(`r.h3_res_${resolution}`, 'h3_cell')
+      .addSelect('g.categoria_id', 'categoria_id')
+      .addSelect('COUNT(DISTINCT g.id)', 'count')
+      .where('g.categoria_id IS NOT NULL')
+      .groupBy(`r.h3_res_${resolution}`)
+      .addGroupBy('g.categoria_id')
+      .orderBy('count', 'DESC');
+
+    if (soloActivos) {
+      qb.andWhere('g.estado_actual NOT IN (:...estados)', {
+        estados: [EstadoReporte.Rechazado, EstadoReporte.Finalizado],
+      });
+    }
+    return qb.getRawMany();
+  }
+
+  async listGroupsByCell(h3_cell: string, h3_resolution: number, soloActivos = true) {
+    const col = `r.h3_res_${h3_resolution}`;
+    const qb = this.grupoRepo
+      .createQueryBuilder('g')
+      .innerJoin(Reporte, 'r', `r.grupo_id = g.id AND ${col} = :cell`, { cell: h3_cell })
+      .select('g.id', 'id')
+      .addSelect('g.estado_actual', 'estado_actual')
+      .addSelect('g.categoria_id', 'categoria_id')
+      .addSelect('g.creado_en', 'creado_en')
+      .addSelect('COUNT(r.id)', 'total_reportes')
+      .addSelect('MIN(r.url_imagen)', 'preview_imagen')
+      .groupBy('g.id')
+      .orderBy('g.creado_en', 'DESC');
+
+    if (soloActivos) {
+      qb.andWhere('g.estado_actual NOT IN (:...estados)', {
+        estados: [EstadoReporte.Rechazado, EstadoReporte.Finalizado],
+      });
+    }
+    return qb.getRawMany();
   }
 
   async listGroups(page = 1, limit = 20) {

@@ -228,6 +228,37 @@ El sistema utiliza bucles de desplazamiento continuo y fluido, inspirados en la 
 
 ---
 
+## Diseño Responsive y Detección de Dispositivo
+
+La app-reporte detecta capacidades del dispositivo para determinar qué funcionalidades están disponibles.
+
+### Estados de dispositivo
+
+| hasCamera | hasGPS | Rol | Puede reportar | Mapa |
+|:---------:|:------:|-----|:--------------:|:----:|
+| ✅ | ✅ | **Reportero** | Sí | Sí (centrado en GPS) |
+| ❌ | ✅ | **Observador** | No | Sí (centrado en GPS) |
+| ❌ | ❌ | **Visitante** | No | Sí (centro default SC) |
+
+### Breakpoints
+
+| Dispositivo | Ancho | Layout | Mapa | Formulario | Bottom Nav | FAB |
+|-------------|-------|--------|------|------------|:----------:|:---:|
+| Mobile | <768px | `max-w-sm`, header compacto | 60vh | Página `/nuevo` | ✅ | Solo Reportero |
+| Tablet | 768-1023px | Header amplio, sin max-w | 70vh, centrado | Página `/nuevo` | ❌ | Solo Reportero |
+| Desktop | ≥1024px | Header completo, sin max-w | `100vw`, `h-[calc(100vh-56px)]` | Página `/nuevo` | ❌ | Solo Reportero |
+
+### Reglas responsive
+
+- **Mobile-first**: todo se diseña para 375-428px primero
+- **Desktop**: el mapa ocupa todo el viewport para periodistas/equipos municipales
+- **FAB**: solo visible si el dispositivo tiene cámara (puede reportar)
+- **Bottom nav**: solo en mobile (<768px)
+- **Heatmap default**: solo hexágonos con reportes activos (filtro toggle en header)
+- **Centro default**: Santa Cruz de la Sierra (`-17.7833, -63.1821`) para visitantes sin GPS
+
+---
+
 ## Inicio Rápido — Tailwind v4
 
 ```css

@@ -43,6 +43,12 @@ import { GamifyController } from './gamify.controller';
       },
     ]),
   ],
-  controllers: [HealthController, AuthController, ReportesController, AdminController, GamifyController],
+  controllers: [
+    HealthController,
+    AuthController,
+    ReportesController,
+    AdminController,
+    GamifyController,
+  ],
 })
 export class AppModule {}

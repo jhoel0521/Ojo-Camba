@@ -23,6 +23,10 @@ export class CreateReporteDto {
   gravedad?: string;
 
   @IsOptional()
+  @IsNumber()
+  usuario_id?: number;
+
+  @IsOptional()
   @IsString()
   imagen_base64?: string;
 }

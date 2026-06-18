@@ -102,6 +102,7 @@ export class RegisterService implements OnModuleInit {
 
     const reporte = this.reporteRepo.create({
       device_id: dto.device_id,
+      usuario_id: dto.usuario_id ?? null,
       lat: dto.lat,
       lng: dto.lng,
       categoria_id: dto.categoria_id,
@@ -140,17 +141,25 @@ export class RegisterService implements OnModuleInit {
   async list(dto: ListReportesDto) {
     const page = dto.page ?? 1;
     const limit = dto.limit ?? 20;
-    const where: Record<string, unknown> = {};
-    if (dto.estado) where.estado = dto.estado;
-    if (dto.categoria_id) where.categoria_id = dto.categoria_id;
-    if (dto.h3_res_8) where.h3_res_8 = dto.h3_res_8;
 
-    const [data, total] = await this.reporteRepo.findAndCount({
-      where,
-      skip: (page - 1) * limit,
-      take: limit,
-      order: { creado_en: 'DESC' },
-    });
+    const query = this.reporteRepo.createQueryBuilder('r');
+    if (dto.estado) query.andWhere('r.estado = :estado', { estado: dto.estado });
+    if (dto.categoria_id) query.andWhere('r.categoria_id = :catId', { catId: dto.categoria_id });
+
+    if (dto.h3_cell && dto.h3_resolution) {
+      query.andWhere(`r.h3_res_${dto.h3_resolution} = :h3Cell`, { h3Cell: dto.h3_cell });
+    } else if (dto.h3_res_8) {
+      query.andWhere('r.h3_res_8 = :h3', { h3: dto.h3_res_8 });
+    }
+    if (dto.device_id) query.andWhere('r.device_id = :deviceId', { deviceId: dto.device_id });
+    if (dto.usuario_id) query.andWhere('r.usuario_id = :userId', { userId: dto.usuario_id });
+    if (dto.grupo_id) query.andWhere('r.grupo_id = :grupoId', { grupoId: dto.grupo_id });
+
+    const [data, total] = await query
+      .skip((page - 1) * limit)
+      .take(limit)
+      .orderBy('r.creado_en', 'DESC')
+      .getManyAndCount();
 
     return { data, total, page, limit };
   }
@@ -165,13 +174,35 @@ export class RegisterService implements OnModuleInit {
       .getRawMany();
   }
 
+  async heatmapDetailed(resolution: number = 8, soloActivos = true) {
+    const qb = this.reporteRepo
+      .createQueryBuilder('r')
+      .select(`r.h3_res_${resolution}`, 'h3_cell')
+      .addSelect('r.categoria_id', 'categoria_id')
+      .addSelect('COUNT(*)', 'count')
+      .groupBy(`r.h3_res_${resolution}`)
+      .addGroupBy('r.categoria_id')
+      .orderBy('count', 'DESC');
+
+    if (soloActivos) {
+      qb.where('r.estado != :rechazado', { rechazado: 'Rechazado' });
+    }
+
+    return qb.getRawMany();
+  }
+
+  async vincularDevice(userId: number, deviceId: string) {
+    const result = await this.reporteRepo.update(
+      { device_id: deviceId, usuario_id: null as unknown as number },
+      { usuario_id: userId },
+    );
+    return { vinculados: result.affected ?? 0 };
+  }
+
   private async seedCategorias() {
     const nombres = ['bache', 'luminaria', 'residuos', 'alcantarillado', 'trafico', 'otro'];
     for (const nombre of nombres) {
-      const exists = await this.categoriaRepo.findOne({ where: { nombre } });
-      if (!exists) {
-        await this.categoriaRepo.save(this.categoriaRepo.create({ nombre }));
-      }
+      await this.categoriaRepo.upsert({ nombre }, ['nombre']);
     }
   }
 }

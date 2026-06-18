@@ -8,7 +8,7 @@
 
 ```mermaid
 erDiagram
-    NIVELES {
+    NIVELES["NIVELES (pendiente)"] {
         int id PK
         varchar nombre
         int puntos_requeridos
@@ -54,6 +54,7 @@ erDiagram
         int id PK
         varchar codigo_obra
         varchar estado_actual
+        int categoria_id FK
         date fecha_estimada_fin
         int creado_por_usuario_id FK
         timestamp creado_en
@@ -135,6 +136,7 @@ Table roles {
   nombre varchar [not null]
 }
 
+// ⏳ PENDIENTE — entidad de gamificación, no implementada aún (ver HU-06)
 Table niveles {
   id int [pk, increment]
   nombre varchar [not null]
@@ -188,8 +190,9 @@ Table grupos_reportes {
   id int [pk, increment, note: 'Entidad que agrupa múltiples reportes iguales']
   codigo_obra varchar [unique, note: 'Ej: OBRA-2026-001']
   estado_actual EstadoReporte [default: 'Aceptado']
+  categoria_id int [ref: > categorias.id, null, note: 'Confirmada o corregida por el moderador al aceptar']
   fecha_estimada_fin date [note: 'ETA general de la obra']
-  creado_por_usuario_id int [ref: > usuarios.id, note: 'Técnico o Backoffice que creó el grupo']
+  creado_por_usuario_id int [ref: > usuarios.id, note: 'Moderador o técnico que creó el grupo']
   creado_en timestamp [default: `now()`]
 }
 
