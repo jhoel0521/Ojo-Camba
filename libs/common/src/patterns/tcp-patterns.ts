@@ -15,6 +15,7 @@ export const TCP_PATTERNS = {
     LIST_REPORTS: 'register.list_reports',
     GET_HEATMAP: 'register.get_heatmap',
     GET_HEATMAP_DETAILED: 'register.get_heatmap_detailed',
+    VINCULAR_DEVICE: 'register.vincular_device',
   },
   ADMIN: {
     PING: 'admin.ping',
@@ -26,6 +27,8 @@ export const TCP_PATTERNS = {
     BAN_DEVICE: 'admin.ban_device',
     GET_GROUP: 'admin.get_group',
     LIST_GROUPS: 'admin.list_groups',
+    LIST_GROUPS_BY_CELL: 'admin.list_groups_by_cell',
+    GET_GROUPS_HEATMAP: 'admin.get_groups_heatmap',
     GET_CASE_TIMELINE: 'admin.get_case_timeline',
   },
   GAMIFY: {
