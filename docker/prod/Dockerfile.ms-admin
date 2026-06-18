@@ -18,6 +18,9 @@ COPY tsconfig.base.json ./
 COPY libs/common/ libs/common/
 COPY backend/ms-admin/ backend/ms-admin/
 
+WORKDIR /app/libs/common
+RUN pnpm build
+
 WORKDIR /app/backend/ms-admin
 RUN pnpm build
 

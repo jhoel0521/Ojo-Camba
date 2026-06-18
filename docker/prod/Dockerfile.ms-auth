@@ -18,6 +18,9 @@ COPY tsconfig.base.json ./
 COPY libs/common/ libs/common/
 COPY backend/ms-auth/ backend/ms-auth/
 
+WORKDIR /app/libs/common
+RUN pnpm build
+
 WORKDIR /app/backend/ms-auth
 RUN pnpm build
 
