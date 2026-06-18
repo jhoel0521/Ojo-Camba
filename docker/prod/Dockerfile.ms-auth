@@ -40,6 +40,7 @@ COPY backend/ms-auth/package.json backend/ms-auth/
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
     pnpm install --frozen-lockfile --prod
 
+COPY --from=builder /app/libs/common/dist libs/common/dist
 COPY --from=builder /app/backend/ms-auth/dist backend/ms-auth/dist
 
 WORKDIR /app/backend/ms-auth
