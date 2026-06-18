@@ -34,4 +34,9 @@ export class RegisterController {
   getHeatmap(@Payload() dto: HeatmapDto) {
     return this.registerService.heatmap(dto.resolution);
   }
+
+  @MessagePattern(TCP_PATTERNS.REGISTER.GET_HEATMAP_DETAILED)
+  getHeatmapDetailed(@Payload() dto: { resolution?: number; solo_activos?: boolean }) {
+    return this.registerService.heatmapDetailed(dto.resolution, dto.solo_activos);
+  }
 }

@@ -165,6 +165,23 @@ export class RegisterService implements OnModuleInit {
       .getRawMany();
   }
 
+  async heatmapDetailed(resolution: number = 8, soloActivos = true) {
+    const qb = this.reporteRepo
+      .createQueryBuilder('r')
+      .select(`r.h3_res_${resolution}`, 'h3_cell')
+      .addSelect('r.categoria_id', 'categoria_id')
+      .addSelect('COUNT(*)', 'count')
+      .groupBy(`r.h3_res_${resolution}`)
+      .addGroupBy('r.categoria_id')
+      .orderBy('count', 'DESC');
+
+    if (soloActivos) {
+      qb.where('r.estado != :rechazado', { rechazado: 'Rechazado' });
+    }
+
+    return qb.getRawMany();
+  }
+
   private async seedCategorias() {
     const nombres = ['bache', 'luminaria', 'residuos', 'alcantarillado', 'trafico', 'otro'];
     for (const nombre of nombres) {

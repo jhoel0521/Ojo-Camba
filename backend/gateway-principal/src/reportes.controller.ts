@@ -53,6 +53,19 @@ export class ReportesController {
     );
   }
 
+  @Get('heatmap-detailed')
+  heatmapDetailed(
+    @Query('resolution') resolution?: string,
+    @Query('solo_activos') soloActivos?: string,
+  ) {
+    return firstValueFrom(
+      this.client.send(TCP_PATTERNS.REGISTER.GET_HEATMAP_DETAILED, {
+        resolution: resolution ? parseInt(resolution, 10) : undefined,
+        solo_activos: soloActivos !== 'false',
+      }),
+    );
+  }
+
   @Get(':id')
   get(@Param('id') id: string) {
     return firstValueFrom(

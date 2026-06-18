@@ -14,6 +14,7 @@ export const TCP_PATTERNS = {
     GET_REPORT: 'register.get_report',
     LIST_REPORTS: 'register.list_reports',
     GET_HEATMAP: 'register.get_heatmap',
+    GET_HEATMAP_DETAILED: 'register.get_heatmap_detailed',
   },
   ADMIN: {
     PING: 'admin.ping',

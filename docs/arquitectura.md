@@ -65,6 +65,7 @@ graph TD
 | `POST` | `/reportes` | ms-register | `register.create_report` |
 | `GET`  | `/reportes` | ms-register | `register.list_reports` |
 | `GET`  | `/reportes/heatmap` | ms-register | `register.get_heatmap` |
+| `GET`  | `/reportes/heatmap-detailed` | ms-register | `register.get_heatmap_detailed` |
 | `GET`  | `/reportes/:id` | ms-register | `register.get_report` |
 | `GET`  | `/admin/reports/pending` | ms-admin | `admin.list_pending` |
 | `POST` | `/admin/reports/:id/accept` | ms-admin | `admin.accept_report` |
