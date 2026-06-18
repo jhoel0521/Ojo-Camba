@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import React from 'react';
 import { MapContainer, TileLayer, Polygon, Tooltip } from 'react-leaflet';
 import * as h3 from 'h3-js';
@@ -24,6 +25,7 @@ interface HeatmapDetail {
 function HeatmapLayer() {
   const [data, setData] = useState<HeatmapDetail[]>([]);
   const { resolution, soloActivos, categorias } = useAppStore((s) => s.filters);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const load = () => {
@@ -74,7 +76,9 @@ function HeatmapLayer() {
                 color: color,
                 weight: 1,
                 fillOpacity: 0.18 + alphas * 0.45,
+                bubblingMouseEvents: true,
               }}
+              eventHandlers={{ click: () => navigate(`/hexagono/${resolution}/${cell}`) }}
             >
               <Tooltip direction="center">
                 <div className="text-center">
@@ -109,7 +113,8 @@ function HeatmapLayer() {
             })}
             <Polygon
               positions={positions}
-              pathOptions={{ fill: false, color: 'rgba(0,0,0,0.25)', weight: 1 }}
+              pathOptions={{ fill: false, color: 'rgba(0,0,0,0.25)', weight: 1, bubblingMouseEvents: true }}
+              eventHandlers={{ click: () => navigate(`/hexagono/${resolution}/${cell}`) }}
             >
               <Tooltip direction="center">
                 <div className="text-center">

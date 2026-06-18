@@ -5,14 +5,9 @@ import Layout from './components/Layout';
 import HeatmapPage from './pages/HeatmapPage';
 import ReportePage from './pages/ReportePage';
 import ReporteDetailPage from './pages/ReporteDetailPage';
-
-function PlaceholderPage({ title }: { title: string }) {
-  return (
-    <div className="flex items-center justify-center min-h-[60vh] text-caoba text-sm">
-      {title} — pronto
-    </div>
-  );
-}
+import MisReportesPage from './pages/MisReportesPage';
+import PerfilPage from './pages/PerfilPage';
+import HexagonoPage from './pages/HexagonoPage';
 
 export default function App() {
   const setDevice = useAppStore((s) => s.setDevice);
@@ -25,8 +20,9 @@ export default function App() {
           <Route path="/" element={<HeatmapPage />} />
           <Route path="/nuevo" element={<ReportePage />} />
           <Route path="/reporte/:id" element={<ReporteDetailPage />} />
-          <Route path="/mis-reportes" element={<PlaceholderPage title="Mis Reportes" />} />
-          <Route path="/perfil" element={<PlaceholderPage title="Perfil" />} />
+          <Route path="/mis-reportes" element={<MisReportesPage />} />
+          <Route path="/perfil" element={<PerfilPage />} />
+          <Route path="/hexagono/:resolution/:h3" element={<HexagonoPage />} />
         </Routes>
       </Layout>
     </BrowserRouter>

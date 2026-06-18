@@ -6,6 +6,7 @@ import FilterModal from './FilterModal';
 import AuthModal from './AuthModal';
 import UserMenu from './UserMenu';
 import { useOfflineWatcher } from '../hooks/useOfflineWatcher';
+import { useInstallPrompt } from '../hooks/useInstallPrompt';
 import { Toaster } from 'sonner';
 import { useState, useEffect } from 'react';
 
@@ -20,6 +21,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     loadFromStorage();
   }, [loadFromStorage]);
   useOfflineWatcher();
+  useInstallPrompt();
 
   const isHome = location.pathname === '/';
   const isReporte = location.pathname === '/nuevo';
