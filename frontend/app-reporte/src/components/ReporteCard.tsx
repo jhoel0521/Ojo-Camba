@@ -8,6 +8,7 @@ interface ReporteCardProps {
   estado: string;
   url_imagen: string;
   creado_en: string;
+  grupo_id?: number | null;
 }
 
 export default function ReporteCard({
@@ -16,15 +17,17 @@ export default function ReporteCard({
   estado,
   url_imagen,
   creado_en,
+  grupo_id,
 }: ReporteCardProps) {
   const fecha = new Date(creado_en).toLocaleDateString('es-BO', {
     day: 'numeric',
     month: 'short',
     year: 'numeric',
   });
+  const dest = grupo_id ? `/group-reporte/${grupo_id}` : `/reporte/${id}`;
   return (
     <Link
-      to={`/reporte/${id}`}
+      to={dest}
       className="bg-perla rounded-3xl-2 overflow-hidden flex items-center gap-3 p-3 active:scale-[0.98] transition-all"
     >
       <img

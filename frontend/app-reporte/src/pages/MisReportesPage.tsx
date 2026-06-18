@@ -10,6 +10,7 @@ interface ReporteItem {
   estado: string;
   url_imagen: string;
   creado_en: string;
+  grupo_id: number | null;
 }
 
 export default function MisReportesPage() {

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { X, Loader2, AlertCircle } from 'lucide-react';
 import { fetchAPI } from '../lib/api';
+import { getDeviceId } from '../lib/device';
 import { friendlyError } from '../lib/errors';
 import { useAuthStore } from '../store/authStore';
 
@@ -27,6 +28,10 @@ export default function AuthModal({ open, onClose }: { open: boolean; onClose: (
         user: { id: number; nombre: string; email: string };
       }>(endpoint, { method: 'POST', body: JSON.stringify(body) });
       loginStore(data);
+      await fetchAPI('/reportes/vincular', {
+        method: 'POST',
+        body: JSON.stringify({ user_id: data.user.id, device_id: getDeviceId() }),
+      }).catch(() => {});
       onClose();
     } catch (err) {
       setError(friendlyError(err));

@@ -1,20 +1,13 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import React from 'react';
-import { MapContainer, TileLayer, Polygon, Tooltip } from 'react-leaflet';
+import { MapContainer, TileLayer, Polygon, Popup } from 'react-leaflet';
 import * as h3 from 'h3-js';
 import { fetchAPI } from '../lib/api';
 import { useAppStore } from '../store/appStore';
+import { CATEGORIA_NAMES } from '../lib/categories';
+import { CAT_COLORS } from '../lib/catColors';
 import 'leaflet/dist/leaflet.css';
-
-const CAT_COLORS: Record<number, string> = {
-  1: '#dc2626',
-  2: '#f59e0b',
-  3: '#6b7280',
-  4: '#2563eb',
-  5: '#16a34a',
-  6: '#7c3aed',
-};
 
 interface HeatmapDetail {
   h3_cell: string;
@@ -33,7 +26,7 @@ function HeatmapLayer() {
         resolution: String(resolution),
         solo_activos: String(soloActivos),
       });
-      fetchAPI<HeatmapDetail[]>(`/reportes/heatmap-detailed?${params}`)
+      fetchAPI<HeatmapDetail[]>(`/admin/groups/heatmap?${params}`)
         .then(setData)
         .catch(() => {});
     };
@@ -71,22 +64,41 @@ function HeatmapLayer() {
             <Polygon
               key={cell}
               positions={positions}
+              interactive
               pathOptions={{
                 fillColor: color,
                 color: color,
                 weight: 1,
                 fillOpacity: 0.18 + alphas * 0.45,
-                bubblingMouseEvents: true,
               }}
-              eventHandlers={{ click: () => navigate(`/hexagono/${resolution}/${cell}`) }}
             >
-              <Tooltip direction="center">
-                <div className="text-center">
-                  <p className="font-semibold text-xs">
+              <Popup>
+                <div className="text-center min-w-[120px]">
+                  <div className="flex items-center gap-1.5 justify-center mb-2">
+                    <span
+                      className="w-2.5 h-2.5 rounded-full shrink-0"
+                      style={{ background: color }}
+                    />
+                    <span className="font-semibold text-sm text-tierra">
+                      {CATEGORIA_NAMES[rows[0].catId] ?? 'Otro'}
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-500 mb-2">
                     {total} reporte{total !== 1 ? 's' : ''}
                   </p>
+                  <button
+                    onTouchEnd={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      navigate(`/hexagono/${resolution}/${cell}`);
+                    }}
+                    onClick={() => navigate(`/hexagono/${resolution}/${cell}`)}
+                    className="px-4 py-1.5 bg-catedral text-perla text-xs font-medium rounded-pill w-full"
+                  >
+                    Ver reportes
+                  </button>
                 </div>
-              </Tooltip>
+              </Popup>
             </Polygon>
           );
         }
@@ -102,6 +114,7 @@ function HeatmapLayer() {
                 <Polygon
                   key={`${cell}-${r.catId}`}
                   positions={positions}
+                  interactive={false}
                   pathOptions={{
                     fillColor: color,
                     color: 'transparent',
@@ -113,25 +126,37 @@ function HeatmapLayer() {
             })}
             <Polygon
               positions={positions}
-              pathOptions={{ fill: false, color: 'rgba(0,0,0,0.25)', weight: 1, bubblingMouseEvents: true }}
-              eventHandlers={{ click: () => navigate(`/hexagono/${resolution}/${cell}`) }}
+              interactive
+              pathOptions={{ fillOpacity: 0, color: 'rgba(0,0,0,0.25)', weight: 1 }}
             >
-              <Tooltip direction="center">
-                <div className="text-center">
-                  <p className="font-semibold text-xs mb-1">
+              <Popup>
+                <div className="min-w-[140px]">
+                  <p className="font-semibold text-sm text-tierra mb-2">
                     {total} reporte{total !== 1 ? 's' : ''}
                   </p>
                   {rows.map((r) => (
-                    <div key={r.catId} className="flex items-center gap-1.5 text-[10px]">
+                    <div key={r.catId} className="flex items-center gap-1.5 text-xs mb-1">
                       <span
                         className="w-2.5 h-2.5 rounded-full shrink-0"
                         style={{ background: CAT_COLORS[r.catId] || '#888' }}
                       />
-                      <span>{r.count}</span>
+                      <span className="flex-1">{CATEGORIA_NAMES[r.catId] ?? 'Otro'}</span>
+                      <span className="text-gray-400 font-medium">{r.count}</span>
                     </div>
                   ))}
+                  <button
+                    onTouchEnd={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      navigate(`/hexagono/${resolution}/${cell}`);
+                    }}
+                    onClick={() => navigate(`/hexagono/${resolution}/${cell}`)}
+                    className="mt-2 px-4 py-1.5 bg-catedral text-perla text-xs font-medium rounded-pill w-full"
+                  >
+                    Ver reportes
+                  </button>
                 </div>
-              </Tooltip>
+              </Popup>
             </Polygon>
           </React.Fragment>
         );
@@ -145,7 +170,13 @@ export default function HeatmapView({ lat, lng }: { lat: number; lng: number }) 
 
   return (
     <div className="h-full w-full relative">
-      <MapContainer center={[lat, lng]} zoom={14} className="h-full w-full" zoomControl={!isMobile}>
+      <MapContainer
+        center={[lat, lng]}
+        zoom={14}
+        className="h-full w-full"
+        zoomControl={!isMobile}
+        scrollWheelZoom={false}
+      >
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"

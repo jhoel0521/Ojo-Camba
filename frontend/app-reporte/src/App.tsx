@@ -8,6 +8,7 @@ import ReporteDetailPage from './pages/ReporteDetailPage';
 import MisReportesPage from './pages/MisReportesPage';
 import PerfilPage from './pages/PerfilPage';
 import HexagonoPage from './pages/HexagonoPage';
+import GroupReportePage from './pages/GroupReportePage';
 
 export default function App() {
   const setDevice = useAppStore((s) => s.setDevice);
@@ -23,6 +24,7 @@ export default function App() {
           <Route path="/mis-reportes" element={<MisReportesPage />} />
           <Route path="/perfil" element={<PerfilPage />} />
           <Route path="/hexagono/:resolution/:h3" element={<HexagonoPage />} />
+          <Route path="/group-reporte/:groupId" element={<GroupReportePage />} />
         </Routes>
       </Layout>
     </BrowserRouter>
