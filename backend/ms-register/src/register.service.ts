@@ -102,6 +102,7 @@ export class RegisterService implements OnModuleInit {
 
     const reporte = this.reporteRepo.create({
       device_id: dto.device_id,
+      usuario_id: dto.usuario_id ?? null,
       lat: dto.lat,
       lng: dto.lng,
       categoria_id: dto.categoria_id,
@@ -144,6 +145,8 @@ export class RegisterService implements OnModuleInit {
     if (dto.estado) where.estado = dto.estado;
     if (dto.categoria_id) where.categoria_id = dto.categoria_id;
     if (dto.h3_res_8) where.h3_res_8 = dto.h3_res_8;
+    if (dto.device_id) where.device_id = dto.device_id;
+    if (dto.usuario_id) where.usuario_id = dto.usuario_id;
 
     const [data, total] = await this.reporteRepo.findAndCount({
       where,

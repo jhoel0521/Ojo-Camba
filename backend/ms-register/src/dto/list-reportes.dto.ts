@@ -26,4 +26,13 @@ export class ListReportesDto {
   @IsOptional()
   @IsString()
   h3_res_8?: string;
+
+  @IsOptional()
+  @IsString()
+  device_id?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  usuario_id?: number;
 }
