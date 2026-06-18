@@ -1,12 +1,23 @@
 import { Link, useLocation } from 'react-router-dom';
-import { MapPin, Plus, SlidersHorizontal } from 'lucide-react';
+import { MapPin, Plus, SlidersHorizontal, User } from 'lucide-react';
 import { useAppStore } from '../store/appStore';
+import { useAuthStore } from '../store/authStore';
 import FilterModal from './FilterModal';
+import AuthModal from './AuthModal';
+import UserMenu from './UserMenu';
+import { useState, useEffect } from 'react';
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const { device } = useAppStore();
   const setFilterOpen = useAppStore((s) => s.setFilterOpen);
+  const { isLoggedIn, loadFromStorage } = useAuthStore();
+  const [authOpen, setAuthOpen] = useState(false);
+
+  useEffect(() => {
+    loadFromStorage();
+  }, [loadFromStorage]);
+
   const isHome = location.pathname === '/';
   const isReporte = location.pathname === '/nuevo';
   const canReport = device?.canReport ?? false;
@@ -34,12 +45,11 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 >
                   Mapa
                 </Link>
-                <Link to="/mis-reportes" className="hover:text-lienzo transition-colors">
-                  Mis Reportes
-                </Link>
-                <Link to="/perfil" className="hover:text-lienzo transition-colors">
-                  Perfil
-                </Link>
+                {isLoggedIn && (
+                  <Link to="/mis-reportes" className="hover:text-lienzo transition-colors">
+                    Mis Reportes
+                  </Link>
+                )}
               </nav>
             )}
 
@@ -49,6 +59,17 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 className="w-9 h-9 flex items-center justify-center text-arena hover:text-lienzo transition-colors"
               >
                 <SlidersHorizontal className="w-5 h-5" />
+              </button>
+            )}
+
+            {isLoggedIn ? (
+              <UserMenu />
+            ) : (
+              <button
+                onClick={() => setAuthOpen(true)}
+                className="text-xs text-arena hover:text-lienzo font-medium"
+              >
+                Iniciar sesion
               </button>
             )}
 
@@ -85,11 +106,29 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               <MapPin className="w-5 h-5" />
               <span className="text-[10px] font-semibold uppercase tracking-wide">Mapa</span>
             </Link>
+            {isLoggedIn ? (
+              <Link
+                to="/mis-reportes"
+                className="flex flex-col items-center gap-0.5 px-4 text-arena"
+              >
+                <User className="w-5 h-5" />
+                <span className="text-[10px] font-semibold uppercase tracking-wide">Perfil</span>
+              </Link>
+            ) : (
+              <button
+                onClick={() => setAuthOpen(true)}
+                className="flex flex-col items-center gap-0.5 px-4 text-arena"
+              >
+                <User className="w-5 h-5" />
+                <span className="text-[10px] font-semibold uppercase tracking-wide">Entrar</span>
+              </button>
+            )}
           </div>
         </nav>
       )}
 
       <FilterModal />
+      <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} />
     </div>
   );
 }

@@ -3,6 +3,7 @@ import { useGeolocation } from '../hooks/useGeolocation';
 import { getDeviceId } from '../lib/device';
 import { fetchAPI } from '../lib/api';
 import { friendlyError } from '../lib/errors';
+import { useAuthStore } from '../store/authStore';
 import { useState, useRef } from 'react';
 import {
   ArrowLeft,
@@ -31,6 +32,7 @@ export default function ReportePage() {
   const navigate = useNavigate();
   const geo = useGeolocation();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { user } = useAuthStore();
   const [imagen, setImagen] = useState<string | null>(null);
   const [categoriaId, setCategoriaId] = useState<number | null>(null);
   const [gravedad, setGravedad] = useState('Media');
@@ -60,6 +62,7 @@ export default function ReportePage() {
           categoria_id: categoriaId,
           gravedad,
           imagen_base64: imagen,
+          usuario_id: user?.id,
         }),
       });
       setEnviado(true);
