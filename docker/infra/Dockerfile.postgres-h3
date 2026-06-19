@@ -30,3 +30,5 @@ COPY --from=builder /usr/local/share/postgresql/extension/ /usr/local/share/post
 COPY --from=builder /usr/local/lib/postgresql/ /usr/local/lib/postgresql/
 
 RUN ldconfig /usr/local/lib
+
+COPY docker/infra/init-db.sql /docker-entrypoint-initdb.d/init-db.sql
