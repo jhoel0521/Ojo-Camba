@@ -1,9 +1,5 @@
 name: ojo-camba-infra
 
-networks:
-  infra-net:
-    driver: bridge
-
 volumes:
   postgres_data:
   minio_data:
@@ -25,7 +21,9 @@ services:
       - ../../docker/infra/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
       - postgres_data:/var/lib/postgresql/data
     networks:
-      - infra-net
+      default:
+        aliases:
+          - infra-services
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-ojocamba}"]
       interval: 10s
@@ -44,8 +42,6 @@ services:
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?required}
     volumes:
       - minio_data:/data
-    networks:
-      - infra-net
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
       interval: 30s
@@ -61,8 +57,6 @@ services:
       echo 'Bucket reportes listo';
       exit 0;
       "
-    networks:
-      - infra-net
     depends_on:
       minio:
         condition: service_healthy
