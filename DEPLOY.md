@@ -62,11 +62,10 @@ pnpm ping
 | `DATABASE_URL` | — | — | ✅ | ✅ | ✅ | ✅ |
 | `JWT_SECRET` | — | — | ✅ | — | — | — |
 | `JWT_EXPIRES_IN` | — | — | ✅ | — | — | — |
-| `MINIO_ENDPOINT` | — | — | — | ✅ | — | — |
-| `MINIO_PORT` | — | — | — | ✅ | — | — |
-| `MINIO_ACCESS_KEY` | — | — | — | ✅ | — | — |
-| `MINIO_SECRET_KEY` | — | — | — | ✅ | — | — |
-| `MINIO_BUCKET` | — | — | — | ✅ | — | — |
+| `S3_ENDPOINT` | — | — | — | ✅ | — | — |
+| `S3_ACCESS_KEY` | — | — | — | ✅ | — | — |
+| `S3_SECRET_KEY` | — | — | — | ✅ | — | — |
+| `S3_BUCKET` | — | — | — | ✅ | — | — |
 
 ### Variables de entorno — Frontend (build args)
 
@@ -141,12 +140,10 @@ Health check: (ninguno)
 Env vars:
   TCP_PORT=3002
   DATABASE_URL=postgresql://user:pass@host:5432/ojocamba
-  MINIO_ENDPOINT=<minio-host>
-  MINIO_PORT=9000
-  MINIO_USE_SSL=true
-  MINIO_ACCESS_KEY=<access-key>
-  MINIO_SECRET_KEY=<secret-key>
-  MINIO_BUCKET=reportes
+  S3_ENDPOINT=<s3-host>
+  S3_ACCESS_KEY=<access-key>
+  S3_SECRET_KEY=<secret-key>
+  S3_BUCKET=reportes
 Watch Paths:
   backend/ms-register/**  libs/common/**  tsconfig.base.json  pnpm-workspace.yaml  docker/prod/Dockerfile.ms-register
 ```
