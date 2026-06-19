@@ -219,7 +219,7 @@ sequenceDiagram
     participant App as App Reporte (PWA)
     participant GW as API Gateway Principal
     participant MS as MS Registro (NestJS)
-    participant MinIO
+    participant SeaweedFS
     participant DB as PostgreSQL
 
     Ciudadano->>App: Toma foto y activa GPS
@@ -227,8 +227,8 @@ sequenceDiagram
     App->>GW: POST /reportes {imagen, lat, lng, categoria, deviceId}
     GW->>MS: TCP: cmd=registrar_reporte {payload}
 
-    MS->>MinIO: PUT /bucket/imagenes/{uuid}
-    MinIO-->>MS: URL persistente de la imagen
+    MS->>SeaweedFS: PUT s3://bucket/{uuid}
+    SeaweedFS-->>MS: Key persistente
 
     MS->>MS: calcularH3(lat, lng) → res 8, 11, 13
 
@@ -268,7 +268,7 @@ graph TD
 
         subgraph Almacenamiento["Persistencia"]
             PG["PostgreSQL 16\n+ PostGIS\n+ h3-pg\n:5432"]
-            MINIO["MinIO\nObject Storage\n:9000"]
+            SF["SeaweedFS\nObject Storage\nS3 API :8333"]
         end
     end
 
@@ -287,7 +287,7 @@ graph TD
     GWS -.->|Ping TCP 60s| MSAdmin
     GWS -.->|Ping TCP 60s| MSGamify
 
-    MSReg -->|PUT imagen| MINIO
+    MSReg -->|PUT imagen| SF
     MSAuth --> PG
     MSReg --> PG
     MSAdmin --> PG

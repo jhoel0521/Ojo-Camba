@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { fetchAPI } from '../lib/api';
+import { fetchAPI, getImageUrl } from '../lib/api';
 import StatusBadge from '../components/StatusBadge';
 import ReportTimeline from '../components/ReportTimeline';
 import { CATEGORIA_NAMES } from '../lib/categories';
@@ -143,7 +143,11 @@ export default function GroupReportePage() {
                   className="relative aspect-square rounded-3xl-2 overflow-hidden bg-yeso max-h-[300px]"
                 >
                   {r.url_imagen ? (
-                    <img src={r.url_imagen} alt="" className="w-full h-full object-cover" />
+                    <img
+                      src={getImageUrl(r.url_imagen)}
+                      alt=""
+                      className="w-full h-full object-cover"
+                    />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center">
                       <ImageOff className="w-6 h-6 text-arcilla" />

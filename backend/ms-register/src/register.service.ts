@@ -9,15 +9,34 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as h3 from 'h3-js';
 import * as crypto from 'crypto';
-import { Client as MinioClient } from 'minio';
+import {
+  S3Client,
+  HeadBucketCommand,
+  CreateBucketCommand,
+  PutObjectCommand,
+  GetObjectCommand,
+} from '@aws-sdk/client-s3';
 import { Reporte, Dispositivo, Categoria } from '@ojo-camba/common';
 import { CreateReporteDto } from './dto/create-reporte.dto';
 import { ListReportesDto } from './dto/list-reportes.dto';
 
+interface ImagenResult {
+  buffer: Buffer;
+  contentType: string;
+}
+
+const isExternalUrl = (url: string | null): boolean => url?.startsWith('http') === true;
+
+function imageApiPath(reporte: { id: number; url_imagen: string }): string | null {
+  if (!reporte.url_imagen) return null;
+  if (isExternalUrl(reporte.url_imagen)) return reporte.url_imagen;
+  return `/api/reportes/${reporte.id}/imagen`;
+}
+
 @Injectable()
 export class RegisterService implements OnModuleInit {
   private readonly logger = new Logger(RegisterService.name);
-  private readonly minioClient: MinioClient;
+  private readonly s3: S3Client;
   private readonly bucket: string;
 
   constructor(
@@ -28,40 +47,35 @@ export class RegisterService implements OnModuleInit {
     @InjectRepository(Categoria)
     private readonly categoriaRepo: Repository<Categoria>,
   ) {
-    this.bucket = process.env.MINIO_BUCKET ?? 'reportes';
-    this.minioClient = new MinioClient({
-      endPoint: process.env.MINIO_ENDPOINT ?? 'localhost',
-      port: parseInt(process.env.MINIO_PORT ?? '9000', 10),
-      useSSL: process.env.MINIO_USE_SSL === 'true',
-      accessKey: process.env.MINIO_ACCESS_KEY ?? 'minioadmin',
-      secretKey: process.env.MINIO_SECRET_KEY ?? 'minioadmin',
+    this.bucket = process.env.S3_BUCKET ?? 'reportes';
+    this.s3 = new S3Client({
+      endpoint: process.env.S3_ENDPOINT ?? 'http://localhost:9000',
+      region: 'us-east-1',
+      credentials: {
+        accessKeyId: process.env.S3_ACCESS_KEY ?? 'ojocamba',
+        secretAccessKey: process.env.S3_SECRET_KEY ?? 'ojocamba_secret',
+      },
+      forcePathStyle: true,
     });
   }
 
   async onModuleInit() {
     await this.seedCategorias();
 
-    const exists = await this.minioClient.bucketExists(this.bucket);
-    if (!exists) {
-      await this.minioClient.makeBucket(this.bucket);
-      this.logger.log(`Bucket '${this.bucket}' creado`);
-    } else {
+    try {
+      await this.s3.send(new HeadBucketCommand({ Bucket: this.bucket }));
       this.logger.log(`Bucket '${this.bucket}' verificado`);
+    } catch (err: unknown) {
+      const e = err as { name?: string };
+      if (e.name === 'NotFound' || e.name === 'NoSuchBucket') {
+        await this.s3.send(new CreateBucketCommand({ Bucket: this.bucket }));
+        this.logger.log(`Bucket '${this.bucket}' creado`);
+      } else {
+        this.logger.warn(
+          `No se pudo verificar/crear bucket '${this.bucket}': ${(err as Error).message}`,
+        );
+      }
     }
-
-    const policy = {
-      Version: '2012-10-17',
-      Statement: [
-        {
-          Effect: 'Allow',
-          Principal: { AWS: ['*'] },
-          Action: ['s3:GetObject'],
-          Resource: [`arn:aws:s3:::${this.bucket}/*`],
-        },
-      ],
-    };
-    await this.minioClient.setBucketPolicy(this.bucket, JSON.stringify(policy));
-    this.logger.log(`Politica publica aplicada al bucket '${this.bucket}'`);
   }
 
   async create(dto: CreateReporteDto) {
@@ -70,7 +84,7 @@ export class RegisterService implements OnModuleInit {
       throw new BadRequestException(`Categoria ${dto.categoria_id} no existe`);
     }
 
-    let url_imagen: string;
+    let s3Key: string;
 
     if (dto.imagen_base64) {
       const match = dto.imagen_base64.match(/^data:image\/(\w+);base64,(.+)$/);
@@ -83,11 +97,16 @@ export class RegisterService implements OnModuleInit {
       const buffer = Buffer.from(match[2], 'base64');
       const filename = `${crypto.randomUUID()}.${ext}`;
 
-      await this.minioClient.putObject(this.bucket, filename, buffer, buffer.length, {
-        'Content-Type': `image/${ext}`,
-      });
+      await this.s3.send(
+        new PutObjectCommand({
+          Bucket: this.bucket,
+          Key: filename,
+          Body: buffer,
+          ContentType: `image/${ext}`,
+        }),
+      );
 
-      url_imagen = `http://${process.env.MINIO_ENDPOINT ?? 'localhost'}:${process.env.MINIO_PORT ?? '9000'}/${this.bucket}/${filename}`;
+      s3Key = filename;
     } else {
       throw new BadRequestException('Se requiere imagen en base64');
     }
@@ -110,7 +129,7 @@ export class RegisterService implements OnModuleInit {
       h3_res_8: h3res8,
       h3_res_11: h3res11,
       h3_res_13: h3res13,
-      url_imagen,
+      url_imagen: s3Key,
     });
     await this.reporteRepo.save(reporte);
 
@@ -123,7 +142,7 @@ export class RegisterService implements OnModuleInit {
       h3_res_8: reporte.h3_res_8,
       h3_res_11: reporte.h3_res_11,
       h3_res_13: reporte.h3_res_13,
-      url_imagen: reporte.url_imagen,
+      url_imagen: `/api/reportes/${reporte.id}/imagen`,
       estado: reporte.estado,
       creado_en: reporte.creado_en,
     };
@@ -135,7 +154,11 @@ export class RegisterService implements OnModuleInit {
       throw new NotFoundException('Reporte no encontrado');
     }
     const categoria = await this.categoriaRepo.findOne({ where: { id: reporte.categoria_id } });
-    return { ...reporte, categoria: categoria?.nombre };
+    return {
+      ...reporte,
+      url_imagen: imageApiPath(reporte),
+      categoria: categoria?.nombre,
+    };
   }
 
   async list(dto: ListReportesDto) {
@@ -161,7 +184,12 @@ export class RegisterService implements OnModuleInit {
       .orderBy('r.creado_en', 'DESC')
       .getManyAndCount();
 
-    return { data, total, page, limit };
+    const mapped = data.map((r) => ({
+      ...r,
+      url_imagen: imageApiPath(r),
+    }));
+
+    return { data: mapped, total, page, limit };
   }
 
   async heatmap(resolution: number = 8) {
@@ -189,6 +217,36 @@ export class RegisterService implements OnModuleInit {
     }
 
     return qb.getRawMany();
+  }
+
+  async getImagenById(reporteId: number): Promise<ImagenResult> {
+    const reporte = await this.reporteRepo.findOne({ where: { id: reporteId } });
+    if (!reporte?.url_imagen) {
+      throw new NotFoundException('Imagen no encontrada');
+    }
+
+    if (isExternalUrl(reporte.url_imagen)) {
+      throw new NotFoundException('Imagen no gestionada por el sistema');
+    }
+
+    const response = await this.s3.send(
+      new GetObjectCommand({
+        Bucket: this.bucket,
+        Key: reporte.url_imagen,
+      }),
+    );
+
+    const chunks: Buffer[] = [];
+    if (response.Body) {
+      for await (const chunk of response.Body as AsyncIterable<Uint8Array>) {
+        chunks.push(Buffer.from(chunk));
+      }
+    }
+
+    return {
+      buffer: Buffer.concat(chunks),
+      contentType: response.ContentType ?? 'image/jpeg',
+    };
   }
 
   async vincularDevice(userId: number, deviceId: string) {

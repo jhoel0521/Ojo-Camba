@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { CATEGORIA_NAMES } from '../lib/categories';
+import { getImageUrl } from '../lib/api';
 import StatusBadge from './StatusBadge';
 
 interface ReporteCardProps {
@@ -31,7 +32,7 @@ export default function ReporteCard({
       className="bg-perla rounded-3xl-2 overflow-hidden flex items-center gap-3 p-3 active:scale-[0.98] transition-all"
     >
       <img
-        src={url_imagen}
+        src={getImageUrl(url_imagen)}
         alt=""
         className="w-14 h-14 object-cover rounded-2xl shrink-0 bg-yeso flex-shrink-0"
       />

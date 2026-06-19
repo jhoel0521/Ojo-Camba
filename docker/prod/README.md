@@ -57,12 +57,10 @@ pnpm docker:down
 | `MS_ADMIN_PORT` | ✅ | ✅ | — | — | — | — |
 | `MS_GAMIFY_HOST` | ✅ | ✅ | — | — | — | — |
 | `MS_GAMIFY_PORT` | ✅ | ✅ | — | — | — | — |
-| `MINIO_ENDPOINT` | — | — | — | ✅ | — | — |
-| `MINIO_PORT` | — | — | — | ✅ | — | — |
-| `MINIO_USE_SSL` | — | — | — | ✅ | — | — |
-| `MINIO_ACCESS_KEY` | — | — | — | ✅ | — | — |
-| `MINIO_SECRET_KEY` | — | — | — | ✅ | — | — |
-| `MINIO_BUCKET` | — | — | — | ✅ | — | — |
+| `S3_ENDPOINT` | — | — | — | ✅ | — | — |
+| `S3_ACCESS_KEY` | — | — | — | ✅ | — | — |
+| `S3_SECRET_KEY` | — | — | — | ✅ | — | — |
+| `S3_BUCKET` | — | — | — | ✅ | — | — |
 
 ### Variables de entorno — Frontend (Build Args)
 
@@ -134,12 +132,10 @@ Health:      (ninguno — contenedor alive)
 Env vars:
   TCP_PORT=3002
   DATABASE_URL=postgresql://ojocamba:<password>@<pg-host>:5432/ojocamba
-  MINIO_ENDPOINT=<minio-host>
-  MINIO_PORT=9000
-  MINIO_USE_SSL=false
-  MINIO_ACCESS_KEY=<minio-user>
-  MINIO_SECRET_KEY=<minio-password>
-  MINIO_BUCKET=reportes
+  S3_ENDPOINT=http://<seaweedfs-host>:8333
+  S3_ACCESS_KEY=<access-key>
+  S3_SECRET_KEY=<secret-key>
+  S3_BUCKET=reportes
 Watch Paths:
   backend/ms-register/**  libs/**  package.json  pnpm-lock.yaml  tsconfig.base.json  docker/prod/Dockerfile.ms-register
 ```
@@ -356,10 +352,12 @@ Si PostgreSQL se vuelve cuello de botella:
 - Misma estructura de tablas. Solo cambia `DATABASE_URL` en cada microservicio
 - Agregar réplica de lectura para consultas del mapa de calor (ms-register)
 
-### MinIO
+### SeaweedFS
 
-Una instancia MinIO es suficiente para el MVP. Si el volumen de imágenes crece:
+Una instancia SeaweedFS es suficiente para el MVP. Si el volumen de imagenes crece:
 
-- Escalar MinIO horizontalmente (modo distribuido)
-- O migrar a S3 compatible (AWS S3, Cloudflare R2)
-- Solo cambia `MINIO_ENDPOINT` en ms-register. Cero cambio de código.
+- Escalar SeaweedFS horizontalmente (modo cluster con volume servers)
+- O migrar a cualquier S3 compatible (AWS S3, Cloudflare R2)
+- Solo cambia `S3_ENDPOINT` en ms-register. Cero cambio de codigo.
+
+Las imagenes se sirven via el gateway (`GET /api/reportes/{id}/imagen`). SeaweedFS nunca recibe trafico publico.

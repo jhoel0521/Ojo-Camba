@@ -1,5 +1,6 @@
-import { Controller, Post, Get, Body, Param, Inject, Query } from '@nestjs/common';
+import { Controller, Post, Get, Body, Param, Inject, Query, Res } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
+import { firstValueFrom } from 'rxjs';
 import { TCP_PATTERNS } from '@ojo-camba/common';
 import { sendRpc } from './rpc.helper';
 
@@ -87,5 +88,18 @@ export class ReportesController {
   @Post('vincular')
   vincular(@Body() dto: { usuario_id: number; device_id: string }) {
     return sendRpc(this.client.send(TCP_PATTERNS.REGISTER.VINCULAR_DEVICE, dto));
+  }
+
+  @Get(':id/imagen')
+  async getImagen(@Param('id') id: string, @Res() res: any) {
+    const { data, contentType } = await firstValueFrom(
+      this.client.send(TCP_PATTERNS.REGISTER.GET_IMAGEN, parseInt(id, 10)),
+    );
+    const buffer = Buffer.from(data, 'base64');
+    res.set({
+      'Content-Type': contentType,
+      'Cache-Control': 'public, max-age=31536000, immutable',
+    });
+    res.send(buffer);
   }
 }
