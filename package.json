@@ -21,7 +21,7 @@
     "lint": "pnpm run lint:backend && pnpm run lint:frontend",
     "format": "prettier --write \"backend/**/*.ts\" \"libs/**/*.ts\" \"frontend/**/*.tsx\" \"frontend/**/*.ts\"",
     "db:fresh": "node scripts/db-fresh-seed.mjs",
-    "db:migrate": "pnpm --filter @ojo-camba/ms-register sync",
+    "db:migrate": "node scripts/db-migrate.mjs",
     "db:fresh:seed": "pnpm db:fresh && pnpm db:migrate && pnpm db:seed",
     "db:seed": "pnpm --filter @ojo-camba/ms-register seed",
     "pre-commit": "pnpm run format && pnpm run lint && pnpm run build"
