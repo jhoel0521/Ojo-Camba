@@ -97,10 +97,9 @@ export class ReportesController {
       this.client.send(TCP_PATTERNS.REGISTER.GET_IMAGEN, parseInt(id, 10)),
     );
     const buffer = Buffer.from(data, 'base64');
-    res.set({
-      'Content-Type': contentType,
-      'Cache-Control': 'public, max-age=31536000, immutable',
-    });
-    res.send(buffer);
+    res
+      .header('Content-Type', contentType)
+      .header('Cache-Control', 'public, max-age=31536000, immutable')
+      .send(buffer);
   }
 }
