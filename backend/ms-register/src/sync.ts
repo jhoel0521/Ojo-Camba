@@ -8,12 +8,6 @@ import {
   ActualizacionCaso,
 } from '@ojo-camba/common';
 
-try {
-  require('dotenv').config();
-} catch {
-  /* optional */
-}
-
 const DATABASE_URL = process.env.DATABASE_URL;
 if (!DATABASE_URL) {
   console.error('DATABASE_URL no definido');
