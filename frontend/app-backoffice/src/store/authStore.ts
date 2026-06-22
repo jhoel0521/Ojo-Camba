@@ -13,16 +13,12 @@ interface AuthState {
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
-  user: null,
-  isLoggedIn: false,
+  user: auth.getUser(),
+  isLoggedIn: auth.isLoggedIn(),
   login: (data) => {
     auth.setToken(data.access_token);
-    auth.saveUser({
-      id: data.user.id,
-      nombre: data.user.nombre,
-      email: data.user.email,
-      roles: data.user.roles,
-    });
+    auth.setRefreshToken(data.refresh_token);
+    auth.saveUser(data.user);
     set({ user: data.user, isLoggedIn: true });
   },
   logout: () => {

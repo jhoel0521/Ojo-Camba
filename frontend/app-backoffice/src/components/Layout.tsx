@@ -1,5 +1,6 @@
-import { NavLink, useLocation } from 'react-router-dom';
-import { MapPin, ClipboardList, FolderOpen, Users, User, LogOut, Construction } from 'lucide-react';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { MapPin, ClipboardList, FolderOpen, Users, LogOut, Construction } from 'lucide-react';
+import { useAuthStore } from '../store/authStore';
 
 const NAV_ITEMS = [
   { to: '/', icon: Construction, label: 'Dashboard' },
@@ -10,6 +11,18 @@ const NAV_ITEMS = [
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, logout } = useAuthStore();
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
+
+  const currentLabel =
+    NAV_ITEMS.find(
+      (n) => location.pathname === n.to || (n.to !== '/' && location.pathname.startsWith(n.to)),
+    )?.label ?? 'BackOffice';
 
   return (
     <div className="min-h-screen flex bg-lienzo font-pirai">
@@ -48,14 +61,16 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         </nav>
 
         <div className="px-3 py-4 border-t border-ladrillo/30 space-y-1">
-          <NavLink
-            to="/perfil"
-            className="flex items-center gap-3 px-3 py-2.5 rounded-3xl-2 text-sm font-medium text-arena hover:text-lienzo hover:bg-ladrillo/20 transition-colors"
+          {user && (
+            <div className="px-3 py-2 text-xs text-arena">
+              <p className="text-lienzo font-medium truncate">{user.nombre}</p>
+              <p className="truncate">{user.email}</p>
+            </div>
+          )}
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-3xl-2 text-sm font-medium text-arena hover:text-rosa-toborochi hover:bg-rosa-toborochi/10 transition-colors"
           >
-            <User className="w-4.5 h-4.5" />
-            Perfil
-          </NavLink>
-          <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-3xl-2 text-sm font-medium text-arena hover:text-rosa-toborochi hover:bg-rosa-toborochi/10 transition-colors">
             <LogOut className="w-4.5 h-4.5" />
             Cerrar sesion
           </button>
@@ -64,12 +79,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
       <div className="flex-1 min-w-0 flex flex-col">
         <header className="shrink-0 bg-perla border-b border-arcilla px-6 py-3.5">
-          <h1 className="font-semibold text-base text-tierra">
-            {NAV_ITEMS.find(
-              (n) =>
-                location.pathname === n.to || (n.to !== '/' && location.pathname.startsWith(n.to)),
-            )?.label ?? 'BackOffice'}
-          </h1>
+          <h1 className="font-semibold text-base text-tierra">{currentLabel}</h1>
         </header>
         <main className="flex-1 p-6">{children}</main>
       </div>

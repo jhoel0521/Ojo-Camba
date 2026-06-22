@@ -1,6 +1,12 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import AuthGuard from './components/AuthGuard';
 import Layout from './components/Layout';
+import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
+import RevisarPage from './pages/RevisarPage';
+import CasosPage from './pages/CasosPage';
+import CasoDetallePage from './pages/CasoDetallePage';
+import UsuariosPage from './pages/UsuariosPage';
 
 function PlaceholderPage({ title }: { title: string }) {
   return (
@@ -11,15 +17,27 @@ function PlaceholderPage({ title }: { title: string }) {
 export default function App() {
   return (
     <BrowserRouter>
-      <Layout>
-        <Routes>
-          <Route path="/" element={<DashboardPage />} />
-          <Route path="/revisar" element={<PlaceholderPage title="Revision de reportes" />} />
-          <Route path="/casos" element={<PlaceholderPage title="Casos de Obra" />} />
-          <Route path="/usuarios" element={<PlaceholderPage title="Gestion de Usuarios" />} />
-          <Route path="/grupos/:id" element={<PlaceholderPage title="Detalle de Caso" />} />
-        </Routes>
-      </Layout>
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route
+          path="/*"
+          element={
+            <AuthGuard>
+              <Layout>
+                <Routes>
+                  <Route path="/" element={<DashboardPage />} />
+                  <Route path="/revisar" element={<RevisarPage />} />
+                  <Route path="/casos" element={<CasosPage />} />
+                  <Route path="/casos/:id" element={<CasoDetallePage />} />
+                  <Route path="/grupos/:id" element={<CasoDetallePage />} />
+                  <Route path="/usuarios" element={<UsuariosPage />} />
+                  <Route path="*" element={<PlaceholderPage title="Pagina no encontrada" />} />
+                </Routes>
+              </Layout>
+            </AuthGuard>
+          }
+        />
+      </Routes>
     </BrowserRouter>
   );
 }
