@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Body, Param, Inject } from '@nestjs/common';
+import { Controller, Post, Get, Body, Param, Inject, Query } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { TCP_PATTERNS } from '@ojo-camba/common';
 import { sendRpc } from './rpc.helper';
@@ -35,5 +35,15 @@ export class AuthController {
   @Get('profile/:id')
   profile(@Param('id') id: string) {
     return sendRpc(this.client.send(TCP_PATTERNS.AUTH.GET_PROFILE, { user_id: parseInt(id, 10) }));
+  }
+
+  @Get('users')
+  listUsers(@Query() query: { page?: string; limit?: string }) {
+    return sendRpc(
+      this.client.send(TCP_PATTERNS.AUTH.LIST_USERS, {
+        page: query.page ? parseInt(query.page, 10) : undefined,
+        limit: query.limit ? parseInt(query.limit, 10) : undefined,
+      }),
+    );
   }
 }

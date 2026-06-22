@@ -23,7 +23,7 @@
     "db:fresh": "node scripts/db-fresh-seed.mjs",
     "db:migrate": "node scripts/db-migrate.mjs",
     "db:fresh:seed": "pnpm db:fresh && pnpm db:migrate && pnpm db:seed",
-    "db:seed": "pnpm --filter @ojo-camba/ms-register seed",
+    "db:seed": "pnpm --filter @ojo-camba/ms-auth seed && pnpm --filter @ojo-camba/ms-register seed",
     "pre-commit": "pnpm run format && pnpm run lint && pnpm run build"
   },
   "devDependencies": {

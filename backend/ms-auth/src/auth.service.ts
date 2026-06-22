@@ -174,6 +174,27 @@ export class AuthService implements OnModuleInit {
     await this.refreshTokenRepo.update({ usuario_id: userId, revoked: false }, { revoked: true });
   }
 
+  async listUsers(page = 1, limit = 20) {
+    const [data, total] = await this.usuarioRepo.findAndCount({
+      select: ['id', 'nombre', 'email', 'puntos', 'nivel_id', 'creado_en'],
+      skip: (page - 1) * limit,
+      take: limit,
+      order: { creado_en: 'DESC' },
+    });
+
+    const usuariosConRoles = await Promise.all(
+      data.map(async (u) => {
+        const roles = await this.usuarioRolRepo.find({
+          where: { usuario_id: u.id },
+          relations: ['rol'],
+        });
+        return { ...u, roles: roles.map((r) => r.rol.nombre) };
+      }),
+    );
+
+    return { data: usuariosConRoles, total, page, limit };
+  }
+
   async onModuleInit() {
     const roles = ['ciudadano', 'moderador', 'tecnico', 'admin'];
     for (const nombre of roles) {

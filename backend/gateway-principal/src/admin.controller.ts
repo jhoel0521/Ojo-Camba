@@ -116,4 +116,20 @@ export class AdminController {
       this.client.send(TCP_PATTERNS.ADMIN.GET_CASE_TIMELINE, { grupo_id: parseInt(id, 10) }),
     );
   }
+
+  @Get('dashboard')
+  getDashboard() {
+    return sendRpc(this.client.send(TCP_PATTERNS.ADMIN.DASHBOARD, {}));
+  }
+
+  @Get('devices')
+  listDevices(@Query() query: { page?: string; limit?: string; banned_only?: string }) {
+    return sendRpc(
+      this.client.send(TCP_PATTERNS.ADMIN.LIST_DEVICES, {
+        page: query.page ? parseInt(query.page, 10) : undefined,
+        limit: query.limit ? parseInt(query.limit, 10) : undefined,
+        banned_only: query.banned_only === 'true',
+      }),
+    );
+  }
 }
