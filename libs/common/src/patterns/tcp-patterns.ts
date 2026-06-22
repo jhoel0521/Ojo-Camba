@@ -16,6 +16,7 @@ export const TCP_PATTERNS = {
     GET_HEATMAP: 'register.get_heatmap',
     GET_HEATMAP_DETAILED: 'register.get_heatmap_detailed',
     VINCULAR_DEVICE: 'register.vincular_device',
+    GET_IMAGEN: 'register.get_imagen',
   },
   ADMIN: {
     PING: 'admin.ping',

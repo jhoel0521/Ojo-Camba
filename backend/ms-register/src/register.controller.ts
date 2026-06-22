@@ -44,4 +44,10 @@ export class RegisterController {
   vincularDevice(@Payload() dto: { usuario_id: number; device_id: string }) {
     return this.registerService.vincularDevice(dto.usuario_id, dto.device_id);
   }
+
+  @MessagePattern(TCP_PATTERNS.REGISTER.GET_IMAGEN)
+  async getImagen(@Payload() reporteId: number) {
+    const { buffer, contentType } = await this.registerService.getImagenById(reporteId);
+    return { data: buffer.toString('base64'), contentType };
+  }
 }

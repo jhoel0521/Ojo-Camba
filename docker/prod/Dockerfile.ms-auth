@@ -18,29 +18,33 @@ COPY tsconfig.base.json ./
 COPY libs/common/ libs/common/
 COPY backend/ms-auth/ backend/ms-auth/
 
+WORKDIR /app/libs/common
+RUN pnpm build
+
+# pnpm crea un symlink relativo que se rompe en Docker overlayfs (WSL2).
+# Lo reemplazamos con el contenido real para que TypeScript lo encuentre.
+RUN rm -f /app/backend/ms-auth/node_modules/@ojo-camba/common && \
+    mkdir -p /app/backend/ms-auth/node_modules/@ojo-camba/common && \
+    cp -r dist package.json /app/backend/ms-auth/node_modules/@ojo-camba/common/
+
 WORKDIR /app/backend/ms-auth
 RUN pnpm build
+
+WORKDIR /app
+RUN pnpm --filter @ojo-camba/ms-auth deploy --prod /app/out
 
 # ── Stage 2: Run ─────────────────────────────────────────────
 FROM node:22-alpine AS runner
 
-ENV PNPM_HOME="/pnpm"
-ENV PATH="$PNPM_HOME:$PATH"
-RUN corepack enable && corepack prepare pnpm@9 --activate
-
+ENV NODE_ENV=production
 WORKDIR /app
 
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
-COPY libs/common/package.json libs/common/
-COPY backend/ms-auth/package.json backend/ms-auth/
+COPY --from=builder /app/out ./
+COPY --from=builder /app/libs/common/dist/ ./libs/common/dist/
+COPY scripts/db-migrate.mjs ./scripts/
 
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
-    pnpm install --frozen-lockfile --prod
-
-COPY --from=builder /app/backend/ms-auth/dist backend/ms-auth/dist
-
-WORKDIR /app/backend/ms-auth
+USER node
 
 EXPOSE 3001
 
-CMD ["node", "dist/main"]
+CMD ["sh", "-c", "node scripts/db-migrate.mjs && node dist/main"]

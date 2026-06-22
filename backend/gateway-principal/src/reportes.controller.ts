@@ -1,7 +1,9 @@
-import { Controller, Post, Get, Body, Param, Inject, Query } from '@nestjs/common';
+import { Controller, Post, Get, Body, Param, Inject, Query, Res } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
+import { firstValueFrom } from 'rxjs';
 import { TCP_PATTERNS } from '@ojo-camba/common';
 import { sendRpc } from './rpc.helper';
+import type { FastifyReply } from 'fastify';
 
 @Controller('reportes')
 export class ReportesController {
@@ -87,5 +89,17 @@ export class ReportesController {
   @Post('vincular')
   vincular(@Body() dto: { usuario_id: number; device_id: string }) {
     return sendRpc(this.client.send(TCP_PATTERNS.REGISTER.VINCULAR_DEVICE, dto));
+  }
+
+  @Get(':id/imagen')
+  async getImagen(@Param('id') id: string, @Res() res: FastifyReply) {
+    const { data, contentType } = await firstValueFrom(
+      this.client.send(TCP_PATTERNS.REGISTER.GET_IMAGEN, parseInt(id, 10)),
+    );
+    const buffer = Buffer.from(data, 'base64');
+    res
+      .header('Content-Type', contentType)
+      .header('Cache-Control', 'public, max-age=31536000, immutable')
+      .send(buffer);
   }
 }

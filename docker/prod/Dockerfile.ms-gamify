@@ -18,28 +18,28 @@ COPY tsconfig.base.json ./
 COPY libs/common/ libs/common/
 COPY backend/ms-gamify/ backend/ms-gamify/
 
+WORKDIR /app/libs/common
+RUN pnpm build
+
+RUN rm -f /app/backend/ms-gamify/node_modules/@ojo-camba/common && \
+    mkdir -p /app/backend/ms-gamify/node_modules/@ojo-camba/common && \
+    cp -r dist package.json /app/backend/ms-gamify/node_modules/@ojo-camba/common/
+
 WORKDIR /app/backend/ms-gamify
 RUN pnpm build
+
+WORKDIR /app
+RUN pnpm --filter @ojo-camba/ms-gamify deploy --prod /app/out
 
 # ── Stage 2: Run ─────────────────────────────────────────────
 FROM node:22-alpine AS runner
 
-ENV PNPM_HOME="/pnpm"
-ENV PATH="$PNPM_HOME:$PATH"
-RUN corepack enable && corepack prepare pnpm@9 --activate
-
+ENV NODE_ENV=production
 WORKDIR /app
 
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
-COPY libs/common/package.json libs/common/
-COPY backend/ms-gamify/package.json backend/ms-gamify/
+COPY --from=builder /app/out ./
 
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
-    pnpm install --frozen-lockfile --prod
-
-COPY --from=builder /app/backend/ms-gamify/dist backend/ms-gamify/dist
-
-WORKDIR /app/backend/ms-gamify
+USER node
 
 EXPOSE 3004
 

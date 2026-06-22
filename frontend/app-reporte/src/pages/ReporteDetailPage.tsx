@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { fetchAPI } from '../lib/api';
+import { fetchAPI, getImageUrl } from '../lib/api';
 import StatusBadge from '../components/StatusBadge';
 import ReportTimeline from '../components/ReportTimeline';
 import { getDeviceId } from '../lib/device';
@@ -94,7 +94,7 @@ export default function ReporteDetailPage() {
         </button>
       </div>
 
-      <img src={reporte.url_imagen} alt="" className="w-full" />
+      <img src={getImageUrl(reporte.url_imagen)} alt="" className="w-full" />
 
       <div className="p-4 space-y-3">
         <div className="flex items-center gap-2">

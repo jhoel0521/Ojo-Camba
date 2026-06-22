@@ -59,13 +59,24 @@ docker/prod/      Stack de producción (multi-stage builds)
 # 1. Instalar dependencias
 pnpm install
 
-# 2. Levantar infraestructura (PostgreSQL + MinIO)
+# 2. Compilar librería compartida (requerido antes de arrancar servicios)
+pnpm build:libs
+
+# 3. Copiar variables de entorno para cada servicio
+cp backend/ms-auth/.env.example       backend/ms-auth/.env
+cp backend/ms-register/.env.example   backend/ms-register/.env
+cp backend/ms-admin/.env.example      backend/ms-admin/.env
+cp backend/ms-gamify/.env.example     backend/ms-gamify/.env
+cp backend/gateway-principal/.env.example backend/gateway-principal/.env
+cp backend/gateway-status/.env.example    backend/gateway-status/.env
+
+# 4. Levantar infraestructura (PostgreSQL + SeaweedFS)
 pnpm docker:up
 
-# 3. Arrancar todos los servicios en modo dev
+# 5. Arrancar todos los servicios en modo dev
 pnpm dev
 
-# 4. Verificar que todo esté corriendo
+# 6. Verificar que todo esté corriendo
 pnpm health
 ```
 
@@ -90,6 +101,5 @@ pnpm dev:check
 ## Almacenamiento
 
 - **PostgreSQL 16 + PostGIS** — base de datos relacional con soporte geoespacial
-- **MinIO** — object storage para imágenes de reportes (compatible S3)
-  - Consola: http://localhost:9001
-  - API: http://localhost:9000
+- **SeaweedFS** — object storage para imágenes de reportes (API compatible S3)
+  - S3 API: http://localhost:8333

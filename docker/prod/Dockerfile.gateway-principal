@@ -18,28 +18,28 @@ COPY tsconfig.base.json ./
 COPY libs/common/ libs/common/
 COPY backend/gateway-principal/ backend/gateway-principal/
 
+WORKDIR /app/libs/common
+RUN pnpm build
+
+RUN rm -f /app/backend/gateway-principal/node_modules/@ojo-camba/common && \
+    mkdir -p /app/backend/gateway-principal/node_modules/@ojo-camba/common && \
+    cp -r dist package.json /app/backend/gateway-principal/node_modules/@ojo-camba/common/
+
 WORKDIR /app/backend/gateway-principal
 RUN pnpm build
+
+WORKDIR /app
+RUN pnpm --filter @ojo-camba/gateway-principal deploy --prod /app/out
 
 # ── Stage 2: Run ─────────────────────────────────────────────
 FROM node:22-alpine AS runner
 
-ENV PNPM_HOME="/pnpm"
-ENV PATH="$PNPM_HOME:$PATH"
-RUN corepack enable && corepack prepare pnpm@9 --activate
-
+ENV NODE_ENV=production
 WORKDIR /app
 
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
-COPY libs/common/package.json libs/common/
-COPY backend/gateway-principal/package.json backend/gateway-principal/
+COPY --from=builder /app/out ./
 
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
-    pnpm install --frozen-lockfile --prod
-
-COPY --from=builder /app/backend/gateway-principal/dist backend/gateway-principal/dist
-
-WORKDIR /app/backend/gateway-principal
+USER node
 
 EXPOSE 3000
 
