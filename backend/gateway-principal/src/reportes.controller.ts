@@ -3,6 +3,7 @@ import { ClientProxy } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
 import { TCP_PATTERNS } from '@ojo-camba/common';
 import { sendRpc } from './rpc.helper';
+import type { FastifyReply } from 'fastify';
 
 @Controller('reportes')
 export class ReportesController {
@@ -91,7 +92,7 @@ export class ReportesController {
   }
 
   @Get(':id/imagen')
-  async getImagen(@Param('id') id: string, @Res() res: any) {
+  async getImagen(@Param('id') id: string, @Res() res: FastifyReply) {
     const { data, contentType } = await firstValueFrom(
       this.client.send(TCP_PATTERNS.REGISTER.GET_IMAGEN, parseInt(id, 10)),
     );
