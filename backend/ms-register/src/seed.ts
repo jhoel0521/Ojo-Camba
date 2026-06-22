@@ -10,18 +10,8 @@ import {
   EstadoReporte,
 } from '@ojo-camba/common';
 
-try {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  require('dotenv').config();
-} catch {
-  /* optional */
-}
-
-const DATABASE_URL = process.env.DATABASE_URL;
-if (!DATABASE_URL) {
-  console.error('DATABASE_URL no definido');
-  process.exit(1);
-}
+const DATABASE_URL =
+  process.env.DATABASE_URL ?? 'postgresql://ojocamba:ojocamba_secret@localhost:5432/ojocamba';
 
 const ds = new DataSource({
   type: 'postgres',
