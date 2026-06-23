@@ -7,6 +7,8 @@ export const TCP_PATTERNS = {
     GET_PROFILE: 'auth.get_profile',
     REFRESH: 'auth.refresh',
     LOGOUT: 'auth.logout',
+    ADD_POINTS: 'auth.add_points',
+    UPDATE_LEVEL: 'auth.update_level',
   },
   REGISTER: {
     PING: 'register.ping',
