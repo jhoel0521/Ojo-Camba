@@ -153,6 +153,30 @@ export class AuthService implements OnModuleInit {
     };
   }
 
+  async addPoints(userId: number, puntos: number) {
+    const usuario = await this.usuarioRepo.findOne({ where: { id: userId } });
+    if (!usuario) {
+      throw new NotFoundException('Usuario no encontrado');
+    }
+
+    await this.usuarioRepo.increment({ id: userId }, 'puntos', puntos);
+    const actualizado = await this.usuarioRepo.findOne({ where: { id: userId } });
+
+    return { user_id: userId, puntos: actualizado!.puntos, nivel_id: actualizado!.nivel_id };
+  }
+
+  async updateLevel(userId: number, nivelId: number) {
+    const usuario = await this.usuarioRepo.findOne({ where: { id: userId } });
+    if (!usuario) {
+      throw new NotFoundException('Usuario no encontrado');
+    }
+
+    usuario.nivel_id = nivelId;
+    await this.usuarioRepo.save(usuario);
+
+    return { user_id: userId, nivel_id: nivelId };
+  }
+
   private async generateTokens(userId: number) {
     const access_token = this.jwtService.sign({ sub: userId });
 
