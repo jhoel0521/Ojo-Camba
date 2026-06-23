@@ -25,7 +25,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     )?.label ?? 'BackOffice';
 
   return (
-    <div className="min-h-screen flex bg-lienzo font-pirai">
+    <div className="h-screen overflow-hidden flex bg-lienzo font-pirai">
       <aside className="w-64 shrink-0 bg-catedral flex flex-col">
         <div className="px-5 py-5 border-b border-ladrillo/30">
           <div className="flex items-center gap-2.5">
@@ -81,7 +81,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         <header className="shrink-0 bg-perla border-b border-arcilla px-6 py-3.5">
           <h1 className="font-semibold text-base text-tierra">{currentLabel}</h1>
         </header>
-        <main className="flex-1 p-6">{children}</main>
+        <main className="flex-1 overflow-hidden p-6">{children}</main>
       </div>
     </div>
   );

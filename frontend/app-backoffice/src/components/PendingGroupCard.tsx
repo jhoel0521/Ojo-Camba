@@ -7,12 +7,12 @@ interface PendingGroupCardProps {
   h3Cell: string;
   reportes: PendingReport[];
   selectedIds: Set<number>;
+  selectedReportId?: number;
   onToggleSelect: (id: number) => void;
   onSelectAll: () => void;
   onGroupSelected: () => void;
   onRejectSelected: () => void;
-  onAccept?: (id: number) => void;
-  onReject?: (id: number) => void;
+  onOpenDetail?: (report: PendingReport) => void;
   loading?: boolean;
 }
 
@@ -20,15 +20,15 @@ export default function PendingGroupCard({
   h3Cell,
   reportes,
   selectedIds,
+  selectedReportId,
   onToggleSelect,
   onSelectAll,
   onGroupSelected,
   onRejectSelected,
-  onAccept,
-  onReject,
+  onOpenDetail,
   loading,
 }: PendingGroupCardProps) {
-  const [open, setOpen] = useState(reportes.length > 1);
+  const [open, setOpen] = useState(true);
   const selectedCount = reportes.filter((r) => selectedIds.has(r.id)).length;
   const categoriaCounts: Record<string, number> = {};
   reportes.forEach((r) => {
@@ -95,7 +95,7 @@ export default function PendingGroupCard({
                   <button
                     onClick={onRejectSelected}
                     disabled={loading}
-                    className="flex items-center gap-1 text-xs font-medium text-red-600 hover:text-red-700 disabled:opacity-50 transition-all"
+                    className="flex items-center gap-1 text-xs font-medium text-ladrillo hover:text-tierra disabled:opacity-50 transition-all"
                   >
                     <X className="w-3.5 h-3.5" />
                     Rechazar seleccionados
@@ -107,19 +107,26 @@ export default function PendingGroupCard({
 
           <div className="space-y-2">
             {reportes.map((r) => (
-              <PendingReportCard
+              <div
                 key={r.id}
-                id={r.id}
-                categoria_id={r.categoria_id}
-                url_imagen={r.url_imagen}
-                device_id={r.device_id}
-                creado_en={r.creado_en}
-                selected={selectedIds.has(r.id)}
-                onSelect={reportes.length > 1 ? onToggleSelect : undefined}
-                onAccept={reportes.length === 1 ? onAccept : undefined}
-                onReject={reportes.length === 1 ? onReject : undefined}
-                loading={loading}
-              />
+                onClick={() => onOpenDetail?.(r)}
+                className={`rounded-3xl-2 transition-all cursor-pointer ${
+                  selectedReportId === r.id
+                    ? 'ring-2 ring-sol-camba ring-offset-1'
+                    : 'hover:ring-1 hover:ring-arcilla'
+                }`}
+              >
+                <PendingReportCard
+                  id={r.id}
+                  categoria_id={r.categoria_id}
+                  url_imagen={r.url_imagen}
+                  device_id={r.device_id}
+                  creado_en={r.creado_en}
+                  selected={selectedIds.has(r.id)}
+                  onSelect={reportes.length > 1 ? onToggleSelect : undefined}
+                  loading={loading}
+                />
+              </div>
             ))}
           </div>
         </div>

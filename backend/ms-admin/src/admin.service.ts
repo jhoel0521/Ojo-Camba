@@ -34,7 +34,15 @@ export class AdminService {
       take: limit,
       order: { creado_en: 'DESC' },
     });
-    return { data, total, page, limit };
+    const mapped = data.map((r) => ({
+      ...r,
+      url_imagen: r.url_imagen
+        ? r.url_imagen.startsWith('http')
+          ? r.url_imagen
+          : `/reportes/${r.id}/imagen`
+        : null,
+    }));
+    return { data: mapped, total, page, limit };
   }
 
   // ── CU-07: Aceptar / Rechazar ─────────────────────────────

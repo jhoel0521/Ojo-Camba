@@ -6,3 +6,12 @@ export const CATEGORIA_NAMES: Record<number, string> = {
   5: 'Trafico',
   6: 'Otro',
 };
+
+export const CATEGORIA_IDS: Record<string, number> = {
+  Bache: 1,
+  Luminaria: 2,
+  Residuos: 3,
+  Alcantarillado: 4,
+  Trafico: 5,
+  Otro: 6,
+};
