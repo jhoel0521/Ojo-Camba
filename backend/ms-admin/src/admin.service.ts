@@ -34,7 +34,15 @@ export class AdminService {
       take: limit,
       order: { creado_en: 'DESC' },
     });
-    return { data, total, page, limit };
+    const mapped = data.map((r) => ({
+      ...r,
+      url_imagen: r.url_imagen
+        ? r.url_imagen.startsWith('http')
+          ? r.url_imagen
+          : `/reportes/${r.id}/imagen`
+        : null,
+    }));
+    return { data: mapped, total, page, limit };
   }
 
   // ── CU-07: Aceptar / Rechazar ─────────────────────────────
@@ -250,5 +258,45 @@ export class AdminService {
       where: { grupo_id: grupoId },
       order: { creado_en: 'ASC' },
     });
+  }
+
+  async getDashboard() {
+    const pendientes = await this.reporteRepo.count({ where: { estado: EstadoReporte.Reportado } });
+
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+    const aceptadosHoy = await this.grupoRepo
+      .createQueryBuilder('g')
+      .where('g.creado_en >= :hoy', { hoy: hoy.toISOString() })
+      .getCount();
+
+    const casosActivos = await this.grupoRepo
+      .createQueryBuilder('g')
+      .where('g.estado_actual NOT IN (:...estados)', {
+        estados: [EstadoReporte.Rechazado, EstadoReporte.Finalizado],
+      })
+      .getCount();
+
+    const baneados = await this.dispositivoRepo.count({ where: { is_banned: true } });
+
+    return {
+      pendientes,
+      aceptados_hoy: aceptadosHoy,
+      casos_activos: casosActivos,
+      dispositivos_baneados: baneados,
+    };
+  }
+
+  async listDevices(page = 1, limit = 20, bannedOnly = false) {
+    const where: Record<string, unknown> = {};
+    if (bannedOnly) where.is_banned = true;
+
+    const [data, total] = await this.dispositivoRepo.findAndCount({
+      where,
+      skip: (page - 1) * limit,
+      take: limit,
+      order: { ultimo_uso: 'DESC' },
+    });
+    return { data, total, page, limit };
   }
 }

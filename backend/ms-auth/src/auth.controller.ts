@@ -43,4 +43,9 @@ export class AuthController {
   getProfile(@Payload() dto: { user_id: number }) {
     return this.authService.getProfile(dto.user_id);
   }
+
+  @MessagePattern(TCP_PATTERNS.AUTH.LIST_USERS)
+  listUsers(@Payload() dto: { page?: number; limit?: number }) {
+    return this.authService.listUsers(dto.page, dto.limit);
+  }
 }

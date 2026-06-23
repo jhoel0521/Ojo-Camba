@@ -79,6 +79,9 @@ graph TD
 | `GET`  | `/admin/groups/by-cell` | ms-admin | `admin.list_groups_by_cell` |
 | `GET`  | `/admin/groups/:id` | ms-admin | `admin.get_group` |
 | `GET`  | `/admin/groups/:id/timeline` | ms-admin | `admin.get_case_timeline` |
+| `GET`  | `/admin/dashboard` | ms-admin | `admin.dashboard` |
+| `GET`  | `/admin/devices` | ms-admin | `admin.list_devices` |
+| `GET`  | `/auth/users` | ms-auth | `auth.list_users` |
 | `POST` | `/gamify/award` | ms-gamify | `gamify.award_points` |
 | `GET`  | `/gamify/stats/:id` | ms-gamify | `gamify.get_user_stats` |
 | `GET`  | `/gamify/levels` | ms-gamify | `gamify.get_levels` |
