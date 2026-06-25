@@ -1,0 +1,14 @@
+{
+  "name": "ojo-camba-docs",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "act4":        "node src/act4.js",
+    "act4:slides": "node src/act4-slides.js",
+    "act5":        "node src/act5.js"
+  },
+  "dependencies": {
+    "docx": "^9.7.1",
+    "pptxgenjs": "^4.0.1"
+  }
+}
