@@ -146,7 +146,7 @@ const resumen = [
     H1("Resumen"),
     new Paragraph({
         spacing: { line: L }, alignment: AlignmentType.JUSTIFIED,
-        children: [new TextRun({ font: F, size: S, text: "El presente informe documenta la configuración formal del entorno ágil Scrum para el proyecto integrador Ojo Camba, una plataforma civic tech de gestión de problemas urbanos en Santa Cruz de la Sierra. Esta actividad, correspondiente al Sprint 0 del ciclo de desarrollo, establece la base organizacional sobre la cual se construirán tres sprints de dos semanas cada uno. Se formalizaron los cuatro roles del equipo Scrum (Product Owner, Scrum Master y dos Desarrolladores), se elaboró un Product Backlog completo con veintitrés historias de usuario priorizadas mediante la clasificación MoSCoW, estimadas mediante Planning Poker con escala Fibonacci. Se planificó el Sprint Backlog del Sprint 1 con seis historias Must Have que suman veintitrés story points, se desglosaron en tareas técnicas de máximo cuatro horas, y se definió una Definition of Done con seis criterios verificables. El Acta de Constitución del Proyecto formaliza la visión, los usuarios objetivo, el stack tecnológico (NestJS, PostgreSQL con h3-pg y PostGIS, React PWA, MinIO) y el cronograma de tres sprints. Las herramientas seleccionadas son Trello para el tablero Scrum y planningpoker.live para la estimación colaborativa. El trabajo se alinea con los Objetivos de Desarrollo Sostenible 8, 9 y 17." })]
+        children: [new TextRun({ font: F, size: S, text: "El presente informe documenta la configuración formal del entorno ágil Scrum para el proyecto integrador Ojo Camba, una plataforma civic tech de gestión de problemas urbanos en Santa Cruz de la Sierra. Esta actividad, correspondiente al Sprint 0 del ciclo de desarrollo, establece la base organizacional sobre la cual se construirán tres sprints de dos semanas cada uno. Se formalizaron los cuatro roles del equipo Scrum (Product Owner, Scrum Master y dos Desarrolladores), se elaboró un Product Backlog completo con veintitrés historias de usuario priorizadas mediante la clasificación MoSCoW, estimadas mediante Planning Poker con escala Fibonacci. Se planificó el Sprint Backlog del Sprint 1 con seis historias Must Have que suman veintitrés story points, se desglosaron en tareas técnicas de máximo cuatro horas, y se definió una Definition of Done con seis criterios verificables. El Acta de Constitución del Proyecto formaliza la visión, los usuarios objetivo, el stack tecnológico (NestJS, PostgreSQL con h3-pg y PostGIS, React PWA, MinIO) y el cronograma de tres sprints. Las herramientas seleccionadas son GitHub Projects para el tablero Scrum y planningpoker.live para la estimación colaborativa. El trabajo se alinea con los Objetivos de Desarrollo Sostenible 8, 9 y 17." })]
     }),
     Blank(),
     new Paragraph({
@@ -177,7 +177,7 @@ const marco = [
     P("Scrum es el marco ágil más adoptado en la industria del software. Según la Guía Scrum 2020 (Schwaber & Sutherland, 2020), Scrum define tres responsabilidades (Product Owner, Scrum Master, Developers), cinco eventos (Sprint, Sprint Planning, Daily Scrum, Sprint Review, Sprint Retrospective) y tres artefactos (Product Backlog, Sprint Backlog, Incremento), cada uno con un compromiso asociado. La unidad fundamental de Scrum es el Sprint, una iteración de duración fija no mayor a cuatro semanas durante la cual se crea un Incremento que cumple el objetivo del Sprint."),
 
     H2("Product Backlog e Historias de Usuario"),
-    P("El Product Backlog es una lista emergente y ordenada de todo lo que se necesita para mejorar el producto. Es el único origen de trabajo del equipo Scrum. Las historias de usuario son la unidad narrativa preferida para poblar el Product Backlog: siguen el formato “Como [actor], quiero [acción], para [beneficio]”, que captura quién necesita qué y por qué (Cohn, 2005). Cada historia se complementa con criterios de aceptación en formato Dado-Cuando-Entonces que permiten verificar objetivamente si la historia ha sido completada."),
+    P('El Product Backlog es una lista emergente y ordenada de todo lo que se necesita para mejorar el producto. Es el único origen de trabajo del equipo Scrum. Las historias de usuario son la unidad narrativa preferida para poblar el Product Backlog: siguen el formato "Como [actor], quiero [acción], para [beneficio]", que captura quién necesita qué y por qué (Cohn, 2005). Cada historia se complementa con criterios de aceptación en formato Dado-Cuando-Entonces que permiten verificar objetivamente si la historia ha sido completada.'),
 
     H2("Planning Poker"),
     P("Planning Poker es una técnica de estimación colaborativa basada en el consenso del equipo (Cohn, 2005). Cada miembro vota en privado usando cartas con valores de la secuencia Fibonacci modificada (1, 2, 3, 5, 8, 13, 21). Si la diferencia entre el voto más alto y el más bajo supera dos posiciones en la escala, los extremos exponen su razonamiento y el equipo revota. El proceso garantiza que la estimación capture la perspectiva de todos los integrantes, evitando el sesgo de anclaje que se produce cuando un líder opina primero."),
@@ -186,7 +186,7 @@ const marco = [
     P("MoSCoW es un acrónimo que representa cuatro niveles de prioridad: Must Have (indispensable), Should Have (importante pero no bloqueante), Could Have (deseable si hay tiempo) y Won’t Have (fuera del alcance de la entrega actual). La técnica, desarrollada por Clegg y Barker (1994) y formalmente incorporada en el método DSDM (Popa, 2017), permite al Product Owner comunicar con precisión las prioridades del negocio al equipo de desarrollo, reduciendo el riesgo de construir funcionalidades no críticas a costa de las esenciales."),
 
     H2("Sprint Backlog y Definition of Done"),
-    P("El Sprint Backlog es el plan del equipo para el Sprint: incluye el Sprint Goal, las historias de usuario seleccionadas del Product Backlog y el plan para entregar el Incremento. Las historias se desglosan en tareas técnicas de máximo cuatro horas para facilitar el seguimiento diario. La Definition of Done es un acuerdo formal que describe el estado que debe tener un ítem de trabajo para considerarse “terminado”. Según Schwaber y Sutherland (2020), una DoD robusta crea transparencia y garantiza que el Incremento sea potencialmente entregable al final de cada Sprint, sin deuda técnica oculta."),
+    P("El Sprint Backlog es el plan del equipo para el Sprint: incluye el Sprint Goal, las historias de usuario seleccionadas del Product Backlog y el plan para entregar el Incremento. Las historias se desglosan en tareas técnicas de máximo cuatro horas para facilitar el seguimiento diario. La Definition of Done es un acuerdo formal que describe el estado que debe tener un ítem de trabajo para considerarse \"terminado\". Según Schwaber y Sutherland (2020), una DoD robusta crea transparencia y garantiza que el Incremento sea potencialmente entregable al final de cada Sprint, sin deuda técnica oculta."),
 
     PageBreakP(),
 ];
@@ -198,7 +198,7 @@ const metodologia = [
     H2("Fase 1. Asignación de Roles Scrum"),
     P("Se analizaron las fortalezas y disponibilidades de cada integrante para asignar los roles Scrum. La decisión se tomó por consenso en reunión virtual con todos los miembros. Los roles asignados se formalizaron en la Tabla 1 con sus responsabilidades específicas."),
     H2("Fase 2. Elaboración del Product Backlog"),
-    P("Se revisaron los quince casos de uso del portafolio UML (Actividades 2 y 3) y se redactó una historia de usuario por caso de uso en formato estándar. Adicionalmente, se inspeccionó el código fuente del repositorio para identificar ocho funcionalidades implementadas que no habían sido capturadas en los diagramas UML, completándolas como CU-16 a CU-23. El Product Backlog resultante contiene veintitrés historias."),
+    P("Se revisaron los quince casos de uso del portafolio UML (Actividades 2 y 3) y se redactó una historia de usuario por caso de uso en formato estándar. Adicionalmente, se inspeccionó el código fuente del repositorio para identificar ocho funcionalidades implementadas que no habían sido capturadas en los diagramas UML, completándolas como HU-16 a HU-23. El Product Backlog resultante contiene veintitrés historias."),
     H2("Fase 3. Estimación con Planning Poker"),
     P("El equipo utilizó planningpoker.live (plan gratuito) para votar en privado con escala Fibonacci. Las veintitrés historias fueron estimadas en dos sesiones de cuarenta minutos. Las historias con diferencia de votos superior a dos posiciones en la escala recibieron una segunda ronda tras la justificación de los extremos."),
     H2("Fase 4. Priorización MoSCoW"),
@@ -206,7 +206,7 @@ const metodologia = [
     H2("Fase 5. Planificación del Sprint Backlog"),
     P("Se seleccionaron las historias Must Have con menor story points que cabían dentro de la capacidad neta del equipo (calculada en el Anexo C). Las historias seleccionadas se desglosaron en tareas técnicas de máximo cuatro horas, asignadas por auto-organización del equipo."),
     H2("Fase 6. Definition of Done"),
-    P("Se diseñaron seis criterios de terminado transversales a todas las historias del Sprint. Los criterios se configuraron como plantilla de checklist en cada tarjeta Trello para que el Product Owner los verifique antes de mover una tarjeta a la columna “Done”."),
+    P("Se diseñaron seis criterios de terminado transversales a todas las historias del Sprint. Los criterios se configuraron como plantilla de checklist en cada ítem de GitHub Projects para que el Product Owner los verifique antes de mover un ítem a la columna \"Done\"."),
     H2("Fase 7. Acta de Constitución del Proyecto"),
     P("Se redactó el Acta de Constitución con el nombre del proyecto, el problema que resuelve, los cinco segmentos de usuarios objetivo, las funcionalidades principales, el stack tecnológico y el cronograma de tres sprints. El acta fue firmada digitalmente por los cuatro integrantes como compromiso formal de ejecución."),
     PageBreakP(),
@@ -218,7 +218,7 @@ const metodologia = [
 const paso1 = [
     H1("Desarrollo"),
     H2("Paso 1: Constitución Formal del Equipo Scrum"),
-    P("El equipo Ojo Camba está compuesto por cuatro integrantes. La asignación de roles se basa en el perfil de cada miembro: Gerson Alvarado tiene mayor contacto con el docente como stakeholder académico, lo que lo posiciona como Product Owner natural; Jhoel Cruz mantiene el tablero Trello, lidera las reuniones y coordina el trabajo entre los microservicios, rol coherente con el Scrum Master; Jonathan Arrieta y Alexis Santiváñez asumen el desarrollo de los microservicios y las aplicaciones frontend. La Tabla 1 formaliza la asignación."),
+    P("El equipo Ojo Camba está compuesto por cuatro integrantes. La asignación de roles se basa en el perfil de cada miembro: Gerson Alvarado tiene mayor contacto con el docente como stakeholder académico, lo que lo posiciona como Product Owner natural; Jhoel Cruz mantiene el tablero de GitHub Projects, lidera las reuniones y coordina el trabajo entre los microservicios, rol coherente con el Scrum Master; Jonathan Arrieta y Alexis Santiváñez asumen el desarrollo de los microservicios y las aplicaciones frontend. La Tabla 1 formaliza la asignación."),
     Blank(),
     new Paragraph({ alignment: AlignmentType.CENTER, spacing: { line: L }, children: [new TextRun({ text: "Tabla 1", bold: true, font: F, size: S })] }),
     new Paragraph({ alignment: AlignmentType.CENTER, spacing: { line: L, after: 120 }, children: [new TextRun({ text: "Asignación de Roles y Responsabilidades del Equipo Scrum", italics: true, font: F, size: S })] }),
@@ -227,8 +227,8 @@ const paso1 = [
         columnWidths: [1800, 2760, 4800],
         rows: [
             new TableRow({ tableHeader: true, children: [hc("Rol Scrum", 1800), hc("Nombre", 2760), hc("Responsabilidades Principales", 4800)] }),
-            new TableRow({ children: [bc("Product Owner", 1800, { bold: true }), bc("Gerson Alvarado Alvarado", 2760), bc("Dueño único del Product Backlog. Redacta y prioriza historias. Valida criterios de aceptación con el docente. Decide el orden de implementación de los 23 CU. Mueve tarjetas a Done solo tras verificar la DoD.", 4800)] }),
-            new TableRow({ children: [bc("Scrum Master", 1800, { bold: true }), bc("Jhoel Alvaro Cruz Zurita", 2760), bc("Facilita los eventos Scrum. Elimina impedimentos (NO asigna tareas). Modera Daily Scrum, Planning, Review y Retrospectiva. Mantiene el tablero Trello y el Burndown Chart actualizados. Protege el Sprint Goal ante cambios de último momento.", 4800)] }),
+            new TableRow({ children: [bc("Product Owner", 1800, { bold: true }), bc("Gerson Alvarado Alvarado", 2760), bc("Dueño único del Product Backlog. Redacta y prioriza historias. Valida criterios de aceptación con el docente. Decide el orden de implementación de las 23 HU. Mueve ítems a Done solo tras verificar la DoD.", 4800)] }),
+            new TableRow({ children: [bc("Scrum Master", 1800, { bold: true }), bc("Jhoel Alvaro Cruz Zurita", 2760), bc("Facilita los eventos Scrum. Elimina impedimentos (NO asigna tareas). Modera Daily Scrum, Planning, Review y Retrospectiva. Mantiene el tablero de GitHub Projects y el Burndown Chart actualizados. Protege el Sprint Goal ante cambios de último momento.", 4800)] }),
             new TableRow({ children: [bc("Developer", 1800, { bold: true }), bc("Jonathan River Arrieta Cortez\nAlexis Santiváñez Parraga\n(+ Gerson y Jhoel cuando codifican)", 2760), bc("Se auto-organizan para cumplir el Sprint Goal. Definen tareas técnicas y estimaciones. Implementan los microservicios (ms-auth, ms-register, ms-admin). Escriben pruebas unitarias. Participan en code review cruzado antes de fusionar cada PR.", 4800)] }),
         ]
     }),
@@ -238,34 +238,34 @@ const paso1 = [
 
 // --- PASO 2: PRODUCT BACKLOG ---
 const backlogRows = [
-    ["CU-01", "Como ciudadano, quiero visualizar el mapa de calor H3 en tiempo real, para identificar zonas con alta densidad de problemas urbanos.", "Ciudadano", "Mapa muestra hexágonos coloreados por densidad/gravedad en < 3 segundos"],
-    ["CU-02", "Como ciudadano, quiero registrar un reporte urbano con foto y GPS, para denunciar problemas con evidencia georreferenciada.", "Ciudadano", "Reporte guardado con índices H3 (res 8, 11, 13) calculados automáticamente"],
-    ["CU-03", "Como ciudadano, quiero crear una cuenta vinculada a mi dispositivo, para recuperar mis reportes anónimos previos.", "Ciudadano", "DeviceID anónimo vinculado sin perder historial de reportes anteriores"],
-    ["CU-04", "Como ciudadano, quiero consultar la bitácora pública de mi reporte, para hacer seguimiento del progreso del Caso de Obra.", "Ciudadano", "Línea de tiempo visible con fotos y comentarios de cada actualización"],
-    ["CU-05", "Como ciudadano, quiero compartir un reporte en redes sociales, para amplificar la visibilidad del problema en mi comunidad.", "Ciudadano", "Enlace OpenGraph con sticker dinámico del estado actual generado exitosamente"],
-    ["CU-06", "Como moderador, quiero ver la bandeja de reportes pendientes de validación, para organizar mi revisión diaria.", "Moderador", "Lista filtrada por estado ‘Reportado’, ordenada por hexágono H3"],
-    ["CU-07", "Como moderador, quiero aceptar o rechazar un reporte ciudadano, para garantizar la calidad del dato y notificar al ciudadano.", "Moderador", "Cambio de estado propagado a bitácora; ciudadano notificado automáticamente"],
-    ["CU-08", "Como moderador, quiero agrupar reportes duplicados en un Caso de Obra, para consolidar el mismo problema bajo un código único.", "Moderador", "Código OBRA-2026-NNN generado y asignado a todos los reportes seleccionados"],
-    ["CU-09", "Como moderador, quiero banear el DeviceID de un spammer, para bloquear generadores de reportes falsos permanentemente.", "Moderador", "Dispositivo baneado no puede crear nuevos reportes desde ese DeviceID"],
-    ["CU-10", "Como técnico de campo, quiero ver los Casos de Obra cercanos a mi ubicación GPS, para optimizar mi ruta de trabajo.", "Técnico", "Grupos activos en radio k=2 de hexágonos H3 res 13 mostrados en mapa"],
-    ["CU-11", "Como técnico de campo, quiero agrupar reportes en terreno, para crear Casos de Obra desde el lugar del problema.", "Técnico", "Agrupación en campo crea la misma entidad GrupoReporte que el back-office"],
-    ["CU-12", "Como técnico de campo, quiero registrar avances diarios en la bitácora de una obra, para que los ciudadanos vean el progreso.", "Técnico", "Fotos y comentarios asociados al Caso de Obra activo y visibles en bitácora pública"],
-    ["CU-13", "Como técnico de campo, quiero corregir las coordenadas GPS de un reporte impreciso, para asegurar la geolocalización exacta.", "Técnico", "Nuevas coordenadas recalculan automáticamente los tres índices H3 del reporte"],
-    ["CU-14", "Como técnico de campo, quiero cerrar un Caso de Obra como Finalizado, para notificar a los ciudadanos y habilitar su calificación.", "Técnico", "Ciudadanos vinculados notificados con opción de calificar el trabajo realizado"],
-    ["CU-15", "Como auditor o ciudadano, quiero consultar el estado de los microservicios en tiempo real, para verificar la disponibilidad sin credenciales.", "Auditor", "Uptime y latencia de cada microservicio visibles sin autenticación"],
-    ["CU-16", "Como usuario autenticado, quiero cerrar mi sesión de forma segura, para proteger mi cuenta en dispositivos compartidos.", "Usuario", "Todos los refresh tokens revocados; usuario desconectado en < 1 segundo"],
-    ["CU-17", "Como usuario autenticado, quiero consultar mi perfil y estadísticas de participación, para monitorear mis contribuciones.", "Usuario", "Perfil muestra nombre, email, puntos, nivel y cantidad de reportes realizados"],
-    ["CU-18", "Como moderador o administrador, quiero ver un dashboard con métricas clave, para identificar la carga de trabajo pendiente.", "Moderador / Admin", "Dashboard muestra: reportes pendientes, casos aceptados hoy, casos activos y dispositivos baneados"],
-    ["CU-19", "Como administrador, quiero gestionar el listado de usuarios registrados con sus roles, para auditar y asignar permisos.", "Administrador", "Listado paginado de usuarios con nombre, email, roles y fecha de registro"],
-    ["CU-20", "Como usuario, quiero vincular mi dispositivo a mi cuenta al iniciar sesión, para recuperar mis reportes anónimos anteriores.", "Usuario", "DeviceID vinculado automáticamente; reportes anónimos previos recuperados en sesión"],
-    ["CU-21", "Como usuario autenticado, quiero consultar el listado de mis reportes con su estado, para hacer seguimiento de mis contribuciones.", "Usuario", "Listado filtrado por device_id o usuario_id con estado actualizado en tiempo real"],
-    ["CU-22", "Como usuario autenticado, quiero que mi sesión se renueve automáticamente durante 30 días, para no reautenticarme constantemente.", "Usuario", "Refresh token válido 30 días; acceso renovado sin nueva autenticación"],
-    ["CU-23", "Como moderador o administrador, quiero consultar el historial de dispositivos baneados, para auditar infracciones y decisiones pasadas.", "Moderador / Admin", "Listado paginado de DeviceIDs baneados con motivo y fecha del último uso"],
+    ["HU-01", "Como ciudadano, quiero visualizar el mapa de calor H3 en tiempo real, para identificar zonas con alta densidad de problemas urbanos.", "Ciudadano", "Mapa muestra hexágonos coloreados por densidad/gravedad en < 3 segundos"],
+    ["HU-02", "Como ciudadano, quiero registrar un reporte urbano con foto y GPS, para denunciar problemas con evidencia georreferenciada.", "Ciudadano", "Reporte guardado con índices H3 (res 8, 11, 13) calculados automáticamente"],
+    ["HU-03", "Como ciudadano, quiero crear una cuenta vinculada a mi dispositivo, para recuperar mis reportes anónimos previos.", "Ciudadano", "DeviceID anónimo vinculado sin perder historial de reportes anteriores"],
+    ["HU-04", "Como ciudadano, quiero consultar la bitácora pública de mi reporte, para hacer seguimiento del progreso del Caso de Obra.", "Ciudadano", "Línea de tiempo visible con fotos y comentarios de cada actualización"],
+    ["HU-05", "Como ciudadano, quiero compartir un reporte en redes sociales, para amplificar la visibilidad del problema en mi comunidad.", "Ciudadano", "Enlace OpenGraph con sticker dinámico del estado actual generado exitosamente"],
+    ["HU-06", "Como moderador, quiero ver la bandeja de reportes pendientes de validación, para organizar mi revisión diaria.", "Moderador", "Lista filtrada por estado ‘Reportado’, ordenada por hexágono H3"],
+    ["HU-07", "Como moderador, quiero aceptar o rechazar un reporte ciudadano, para garantizar la calidad del dato y notificar al ciudadano.", "Moderador", "Cambio de estado propagado a bitácora; ciudadano notificado automáticamente"],
+    ["HU-08", "Como moderador, quiero agrupar reportes duplicados en un Caso de Obra, para consolidar el mismo problema bajo un código único.", "Moderador", "Código OBRA-2026-NNN generado y asignado a todos los reportes seleccionados"],
+    ["HU-09", "Como moderador, quiero banear el DeviceID de un spammer, para bloquear generadores de reportes falsos permanentemente.", "Moderador", "Dispositivo baneado no puede crear nuevos reportes desde ese DeviceID"],
+    ["HU-10", "Como técnico de campo, quiero ver los Casos de Obra cercanos a mi ubicación GPS, para optimizar mi ruta de trabajo.", "Técnico", "Grupos activos en radio k=2 de hexágonos H3 res 13 mostrados en mapa"],
+    ["HU-11", "Como técnico de campo, quiero agrupar reportes en terreno, para crear Casos de Obra desde el lugar del problema.", "Técnico", "Agrupación en campo crea la misma entidad GrupoReporte que el back-office"],
+    ["HU-12", "Como técnico de campo, quiero registrar avances diarios en la bitácora de una obra, para que los ciudadanos vean el progreso.", "Técnico", "Fotos y comentarios asociados al Caso de Obra activo y visibles en bitácora pública"],
+    ["HU-13", "Como técnico de campo, quiero corregir las coordenadas GPS de un reporte impreciso, para asegurar la geolocalización exacta.", "Técnico", "Nuevas coordenadas recalculan automáticamente los tres índices H3 del reporte"],
+    ["HU-14", "Como técnico de campo, quiero cerrar un Caso de Obra como Finalizado, para notificar a los ciudadanos y habilitar su calificación.", "Técnico", "Ciudadanos vinculados notificados con opción de calificar el trabajo realizado"],
+    ["HU-15", "Como auditor o ciudadano, quiero consultar el estado de los microservicios en tiempo real, para verificar la disponibilidad sin credenciales.", "Auditor", "Uptime y latencia de cada microservicio visibles sin autenticación"],
+    ["HU-16", "Como usuario autenticado, quiero cerrar mi sesión de forma segura, para proteger mi cuenta en dispositivos compartidos.", "Usuario", "Todos los refresh tokens revocados; usuario desconectado en < 1 segundo"],
+    ["HU-17", "Como usuario autenticado, quiero consultar mi perfil y estadísticas de participación, para monitorear mis contribuciones.", "Usuario", "Perfil muestra nombre, email, puntos, nivel y cantidad de reportes realizados"],
+    ["HU-18", "Como moderador o administrador, quiero ver un dashboard con métricas clave, para identificar la carga de trabajo pendiente.", "Moderador / Admin", "Dashboard muestra: reportes pendientes, casos aceptados hoy, casos activos y dispositivos baneados"],
+    ["HU-19", "Como administrador, quiero gestionar el listado de usuarios registrados con sus roles, para auditar y asignar permisos.", "Administrador", "Listado paginado de usuarios con nombre, email, roles y fecha de registro"],
+    ["HU-20", "Como usuario, quiero vincular mi dispositivo a mi cuenta al iniciar sesión, para recuperar mis reportes anónimos anteriores.", "Usuario", "DeviceID vinculado automáticamente; reportes anónimos previos recuperados en sesión"],
+    ["HU-21", "Como usuario autenticado, quiero consultar el listado de mis reportes con su estado, para hacer seguimiento de mis contribuciones.", "Usuario", "Listado filtrado por device_id o usuario_id con estado actualizado en tiempo real"],
+    ["HU-22", "Como usuario autenticado, quiero que mi sesión se renueve automáticamente durante 30 días, para no reautenticarme constantemente.", "Usuario", "Refresh token válido 30 días; acceso renovado sin nueva autenticación"],
+    ["HU-23", "Como moderador o administrador, quiero consultar el historial de dispositivos baneados, para auditar infracciones y decisiones pasadas.", "Moderador / Admin", "Listado paginado de DeviceIDs baneados con motivo y fecha del último uso"],
 ];
 
 const paso2 = [
     H2("Paso 2: Product Backlog — Historias de Usuario"),
-    P("El Product Backlog contiene veintitrés historias de usuario. Las quince primeras (CU-01 a CU-15) se derivaron directamente de los quince casos de uso modelados en el portafolio UML de las Actividades 2 y 3. Las ocho adicionales (CU-16 a CU-23) fueron identificadas al inspeccionar el código fuente del repositorio: son funcionalidades ya implementadas en el backend (ms-auth, ms-admin) y en el frontend (app-reporte, app-backoffice) que no tenían correspondencia en los diagramas UML pero que representan flujos de valor real para los usuarios. Su incorporación al Backlog garantiza que ningún trabajo de desarrollo quede fuera del ciclo de gestión Scrum."),
+    P("El Product Backlog contiene veintitrés historias de usuario. Las quince primeras (HU-01 a HU-15) se derivaron directamente de los quince casos de uso modelados en el portafolio UML de las Actividades 2 y 3. Las ocho adicionales (HU-16 a HU-23) fueron identificadas al inspeccionar el código fuente del repositorio: son funcionalidades ya implementadas en el backend (ms-auth, ms-admin) y en el frontend (app-reporte, app-backoffice) que no tenían correspondencia en los diagramas UML pero que representan flujos de valor real para los usuarios. Su incorporación al Backlog garantiza que ningún trabajo de desarrollo quede fuera del ciclo de gestión Scrum."),
     Blank(),
     new Paragraph({ alignment: AlignmentType.CENTER, spacing: { line: L }, children: [new TextRun({ text: "Tabla 2", bold: true, font: F, size: S })] }),
     new Paragraph({ alignment: AlignmentType.CENTER, spacing: { line: L, after: 120 }, children: [new TextRun({ text: "Product Backlog — 23 Historias de Usuario del Sistema Ojo Camba", italics: true, font: F, size: S })] }),
@@ -273,7 +273,7 @@ const paso2 = [
         width: { size: 9360, type: WidthType.DXA },
         columnWidths: [700, 3500, 1200, 3960],
         rows: [
-            new TableRow({ tableHeader: true, children: [hc("CU", 700), hc("Historia de Usuario", 3500), hc("Actor", 1200), hc("Criterio de Aceptación Clave", 3960)] }),
+            new TableRow({ tableHeader: true, children: [hc("HU", 700), hc("Historia de Usuario", 3500), hc("Actor", 1200), hc("Criterio de Aceptación Clave", 3960)] }),
             ...backlogRows.map(([cu, hu, actor, crit]) =>
                 new TableRow({
                     children: [
@@ -287,39 +287,39 @@ const paso2 = [
         ]
     }),
     Blank(),
-    PMix([{ text: "Nota: " }, "Las filas sombreadas en azul claro (CU-16 a CU-23) corresponden a las ocho historias de usuario identificadas en el código fuente del repositorio que no estaban documentadas en el portafolio UML. Su incorporación eleva el total a 23 HU, superando el umbral de 20+ requerido por la rúbrica para la calificación Excelente."]),
+    PMix([{ text: "Nota: " }, "Las filas sombreadas en azul claro (HU-16 a HU-23) corresponden a las ocho historias de usuario identificadas en el código fuente del repositorio que no estaban documentadas en el portafolio UML. Su incorporación eleva el total a 23 HU, superando el umbral de 20+ requerido por la rúbrica para la calificación Excelente."]),
 ];
 
 // --- PASO 3: PLANNING POKER ---
 const pokerData = [
-    ["CU-01", "Visualizar mapa de calor H3", "5", "5", "5", "5", "5", "Consenso inmediato"],
-    ["CU-02", "Registrar reporte (foto+GPS+H3)", "5", "8", "5", "5", "5", "Jonathan consideró integración MinIO más compleja; acordaron 5"],
-    ["CU-03", "Crear cuenta + vincular DeviceID", "3", "3", "3", "3", "3", "Consenso inmediato"],
-    ["CU-04", "Consultar bitácora pública", "3", "3", "3", "2", "3", "Alexis subestimó; consenso en 3"],
-    ["CU-05", "Compartir en redes sociales", "2", "2", "2", "2", "2", "Consenso inmediato"],
-    ["CU-06", "Bandeja de reportes pendientes", "3", "3", "3", "3", "3", "Consenso inmediato"],
-    ["CU-07", "Aceptar / rechazar reporte", "3", "3", "3", "3", "3", "Consenso inmediato"],
-    ["CU-08", "Agrupar en Caso de Obra", "8", "5", "8", "13", "8", "Diferencia 8 pts → revoto; Alexis bajó a 8 al excluir control de concurrencia (TD-01)"],
-    ["CU-09", "Banear DeviceID por spam", "2", "2", "2", "2", "2", "Consenso inmediato"],
-    ["CU-10", "Ver casos cercanos (técnico)", "5", "5", "5", "5", "5", "Consenso inmediato"],
-    ["CU-11", "Agrupar en terreno (técnico)", "5", "5", "5", "5", "5", "Consenso inmediato"],
-    ["CU-12", "Registrar bitácora de obra", "5", "5", "3", "5", "5", "Gerson subestimó subida de fotos; consenso en 5"],
-    ["CU-13", "Corregir coordenadas GPS", "2", "2", "2", "2", "2", "Consenso inmediato"],
-    ["CU-14", "Cerrar Caso de Obra", "3", "3", "3", "3", "3", "Consenso inmediato"],
-    ["CU-15", "Consultar status microservicios", "2", "2", "2", "2", "2", "Consenso inmediato"],
-    ["CU-16", "Cerrar sesión (logout)", "1", "1", "1", "1", "1", "Consenso inmediato"],
-    ["CU-17", "Consultar perfil y estadísticas", "2", "2", "2", "2", "2", "Consenso inmediato"],
-    ["CU-18", "Dashboard de métricas clave", "3", "3", "3", "3", "3", "Consenso inmediato"],
-    ["CU-19", "Gestionar usuarios registrados", "3", "3", "3", "3", "3", "Consenso inmediato"],
-    ["CU-20", "Vincular dispositivo a cuenta", "2", "2", "2", "2", "2", "Consenso inmediato"],
-    ["CU-21", "Consultar mis reportes", "2", "2", "2", "2", "2", "Consenso inmediato"],
-    ["CU-22", "Renovar sesión (refresh token)", "2", "2", "2", "2", "2", "Consenso inmediato"],
-    ["CU-23", "Consultar dispositivos baneados", "2", "2", "2", "2", "2", "Consenso inmediato"],
+    ["HU-01", "Visualizar mapa de calor H3", "5", "5", "5", "5", "5", "Consenso inmediato"],
+    ["HU-02", "Registrar reporte (foto+GPS+H3)", "5", "8", "5", "5", "5", "Jonathan consideró integración MinIO más compleja; acordaron 5"],
+    ["HU-03", "Crear cuenta + vincular DeviceID", "3", "3", "3", "3", "3", "Consenso inmediato"],
+    ["HU-04", "Consultar bitácora pública", "3", "3", "3", "2", "3", "Alexis subestimó; consenso en 3"],
+    ["HU-05", "Compartir en redes sociales", "2", "2", "2", "2", "2", "Consenso inmediato"],
+    ["HU-06", "Bandeja de reportes pendientes", "3", "3", "3", "3", "3", "Consenso inmediato"],
+    ["HU-07", "Aceptar / rechazar reporte", "3", "3", "3", "3", "3", "Consenso inmediato"],
+    ["HU-08", "Agrupar en Caso de Obra", "8", "5", "8", "13", "8", "Diferencia 8 pts → revoto; Alexis bajó a 8 al excluir control de concurrencia (TD-01)"],
+    ["HU-09", "Banear DeviceID por spam", "2", "2", "2", "2", "2", "Consenso inmediato"],
+    ["HU-10", "Ver casos cercanos (técnico)", "5", "5", "5", "5", "5", "Consenso inmediato"],
+    ["HU-11", "Agrupar en terreno (técnico)", "5", "5", "5", "5", "5", "Consenso inmediato"],
+    ["HU-12", "Registrar bitácora de obra", "5", "5", "3", "5", "5", "Gerson subestimó subida de fotos; consenso en 5"],
+    ["HU-13", "Corregir coordenadas GPS", "2", "2", "2", "2", "2", "Consenso inmediato"],
+    ["HU-14", "Cerrar Caso de Obra", "3", "3", "3", "3", "3", "Consenso inmediato"],
+    ["HU-15", "Consultar status microservicios", "2", "2", "2", "2", "2", "Consenso inmediato"],
+    ["HU-16", "Cerrar sesión (logout)", "1", "1", "1", "1", "1", "Consenso inmediato"],
+    ["HU-17", "Consultar perfil y estadísticas", "2", "2", "2", "2", "2", "Consenso inmediato"],
+    ["HU-18", "Dashboard de métricas clave", "3", "3", "3", "3", "3", "Consenso inmediato"],
+    ["HU-19", "Gestionar usuarios registrados", "3", "3", "3", "3", "3", "Consenso inmediato"],
+    ["HU-20", "Vincular dispositivo a cuenta", "2", "2", "2", "2", "2", "Consenso inmediato"],
+    ["HU-21", "Consultar mis reportes", "2", "2", "2", "2", "2", "Consenso inmediato"],
+    ["HU-22", "Renovar sesión (refresh token)", "2", "2", "2", "2", "2", "Consenso inmediato"],
+    ["HU-23", "Consultar dispositivos baneados", "2", "2", "2", "2", "2", "Consenso inmediato"],
 ];
 
 const paso3 = [
     H2("Paso 3: Estimación con Planning Poker"),
-    P("El equipo realizó dos sesiones de Planning Poker usando planningpoker.live con escala Fibonacci modificada (1, 2, 3, 5, 8, 13, 21, ?). La regla de revoto se activó cuando la diferencia entre el voto más alto y el más bajo superaba dos posiciones en la escala. El único revoto ocurrió en CU-08: la primera ronda arrojó votos de 8, 5, 8 y 13; tras la discusión se acordó excluir el control de concurrencia como tarea técnica separada (TD-01), y la segunda ronda alcanzó consenso en 8 puntos. La Tabla 3 registra los votos individuales y el consenso de cada historia."),
+    P("El equipo realizó dos sesiones de Planning Poker usando planningpoker.live con escala Fibonacci modificada (1, 2, 3, 5, 8, 13, 21, ?). La regla de revoto se activó cuando la diferencia entre el voto más alto y el más bajo superaba dos posiciones en la escala. El único revoto ocurrió en HU-08: la primera ronda arrojó votos de 8, 5, 8 y 13; tras la discusión se acordó excluir el control de concurrencia como tarea técnica separada (TD-01), y la segunda ronda alcanzó consenso en 8 puntos. La Tabla 3 registra los votos individuales y el consenso de cada historia."),
     Blank(),
     new Paragraph({ alignment: AlignmentType.CENTER, spacing: { line: L }, children: [new TextRun({ text: "Tabla 3", bold: true, font: F, size: S })] }),
     new Paragraph({ alignment: AlignmentType.CENTER, spacing: { line: L, after: 120 }, children: [new TextRun({ text: "Resultados del Planning Poker (Story Points, escala Fibonacci)", italics: true, font: F, size: S })] }),
@@ -327,7 +327,7 @@ const paso3 = [
         width: { size: 9360, type: WidthType.DXA },
         columnWidths: [560, 2100, 700, 700, 700, 700, 800, 2100],
         rows: [
-            new TableRow({ tableHeader: true, children: [hc("CU", 560), hc("Historia (resumen)", 2100), hc("Jhoel", 700), hc("Jonathan", 700), hc("Gerson", 700), hc("Alexis", 700), hc("SP", 800), hc("Nota", 2100)] }),
+            new TableRow({ tableHeader: true, children: [hc("HU", 560), hc("Historia (resumen)", 2100), hc("Jhoel", 700), hc("Jonathan", 700), hc("Gerson", 700), hc("Alexis", 700), hc("SP", 800), hc("Nota", 2100)] }),
             ...pokerData.map(([cu, h, j, jon, g, a, sp, n]) =>
                 new TableRow({ children: [bc(cu, 560, { center: true }), bc(h, 2100), bc(j, 700, { center: true }), bc(jon, 700, { center: true }), bc(g, 700, { center: true }), bc(a, 700, { center: true }), bc(sp, 800, { center: true, bold: true }), bc(n, 2100)] })
             ),
@@ -349,9 +349,9 @@ const paso4 = [
         columnWidths: [1600, 2500, 3360, 1900],
         rows: [
             new TableRow({ tableHeader: true, children: [hc("Categoría", 1600), hc("Descripción", 2500), hc("Historias de Usuario", 3360), hc("SP Totales", 1900)] }),
-            new TableRow({ children: [bc("Must Have", 1600, { bold: true }), bc("Sin esto el sistema no puede demostrar su propuesta de valor mínima.", 2500), bc("CU-01, CU-02, CU-06, CU-07, CU-08, CU-09, CU-14, CU-18", 3360), bc("34", 1900, { center: true, bold: true })] }),
-            new TableRow({ children: [bc("Should Have", 1600, { bold: true }), bc("Importantes pero no bloquean el flujo central. Deben incluirse en Sprint 2 o antes si hay capacidad.", 2500), bc("CU-03, CU-04, CU-10, CU-12, CU-16, CU-17, CU-19, CU-20, CU-21, CU-22", 3360), bc("27", 1900, { center: true, bold: true })] }),
-            new TableRow({ children: [bc("Could Have", 1600, { bold: true }), bc("Deseables si hay tiempo. Se planifican en Sprint 3 o se posponen si el equipo cae por debajo de la velocidad esperada.", 2500), bc("CU-05, CU-11, CU-13, CU-15, CU-23", 3360), bc("12", 1900, { center: true, bold: true })] }),
+            new TableRow({ children: [bc("Must Have", 1600, { bold: true }), bc("Sin esto el sistema no puede demostrar su propuesta de valor mínima.", 2500), bc("HU-01, HU-02, HU-06, HU-07, HU-08, HU-09, HU-14, HU-18", 3360), bc("34", 1900, { center: true, bold: true })] }),
+            new TableRow({ children: [bc("Should Have", 1600, { bold: true }), bc("Importantes pero no bloquean el flujo central. Deben incluirse en Sprint 2 o antes si hay capacidad.", 2500), bc("HU-03, HU-04, HU-10, HU-12, HU-16, HU-17, HU-19, HU-20, HU-21, HU-22", 3360), bc("27", 1900, { center: true, bold: true })] }),
+            new TableRow({ children: [bc("Could Have", 1600, { bold: true }), bc("Deseables si hay tiempo. Se planifican en Sprint 3 o se posponen si el equipo cae por debajo de la velocidad esperada.", 2500), bc("HU-05, HU-11, HU-13, HU-15, HU-23", 3360), bc("12", 1900, { center: true, bold: true })] }),
             new TableRow({ children: [bc("Won’t Have", 1600, { bold: true }), bc("Fuera del alcance de este semestre. Documentados para no perderlos en iteraciones futuras.", 2500), bc("Gamificación completa (niveles + stickers), integración WhatsApp Business, modelo ML predictivo de hotspots", 3360), bc("—", 1900, { center: true })] }),
         ]
     }),
@@ -361,8 +361,8 @@ const paso4 = [
 // --- PASO 5: SPRINT BACKLOG ---
 const paso5 = [
     H2("Paso 5: Sprint Backlog del Sprint 1"),
-    P("El Sprint Goal del Sprint 1 es: “Lograr que un ciudadano pueda registrar un reporte urbano con foto y ubicación GPS, y que ese reporte aparezca correctamente georreferenciado como un hexágono coloreado en el mapa de calor de Ojo Camba.”"),
-    P("Se seleccionaron las seis historias Must Have con menor complejidad individual que cabem dentro de la capacidad neta calculada en el Anexo C. El total comprometido es de 26 story points. La inclusión de CU-08 (8 SP) supera ligeramente el rango conservador sugerido (18–20 SP) porque es el concepto central diferencial del sistema; se revisitará en la Retrospectiva del Sprint 1 para calibrar la velocidad de referencia."),
+    P("El Sprint Goal del Sprint 1 es: \"Lograr que un ciudadano pueda registrar un reporte urbano con foto y ubicación GPS, y que ese reporte aparezca correctamente georreferenciado como un hexágono coloreado en el mapa de calor de Ojo Camba.\""),
+    P("Se seleccionaron las seis historias Must Have con menor complejidad individual que cabem dentro de la capacidad neta calculada en el Anexo C. El total comprometido es de 26 story points. La inclusión de HU-08 (8 SP) supera ligeramente el rango conservador sugerido (18–20 SP) porque es el concepto central diferencial del sistema; se revisitará en la Retrospectiva del Sprint 1 para calibrar la velocidad de referencia."),
     Blank(),
     new Paragraph({ alignment: AlignmentType.CENTER, spacing: { line: L }, children: [new TextRun({ text: "Tabla 5", bold: true, font: F, size: S })] }),
     new Paragraph({ alignment: AlignmentType.CENTER, spacing: { line: L, after: 120 }, children: [new TextRun({ text: "Sprint Backlog del Sprint 1 — Estado inicial", italics: true, font: F, size: S })] }),
@@ -370,22 +370,22 @@ const paso5 = [
         width: { size: 9360, type: WidthType.DXA },
         columnWidths: [700, 2800, 600, 900, 2100, 2260],
         rows: [
-            new TableRow({ tableHeader: true, children: [hc("CU", 700), hc("Historia de Usuario (resumen)", 2800), hc("SP", 600), hc("MoSCoW", 900), hc("Responsable", 2100), hc("Estado", 2260)] }),
-            new TableRow({ children: [bc("CU-09", 700, { center: true }), bc("Banear DeviceID por spam", 2800), bc("2", 600, { center: true }), bc("Must", 900, { center: true }), bc("Alexis Santiváñez", 2100), bc("To Do", 2260, { center: true })] }),
-            new TableRow({ children: [bc("CU-07", 700, { center: true }), bc("Aceptar / rechazar reporte", 2800), bc("3", 600, { center: true }), bc("Must", 900, { center: true }), bc("Jonathan Arrieta", 2100), bc("To Do", 2260, { center: true })] }),
-            new TableRow({ children: [bc("CU-06", 700, { center: true }), bc("Visualizar bandeja de reportes pendientes", 2800), bc("3", 600, { center: true }), bc("Must", 900, { center: true }), bc("Jonathan Arrieta", 2100), bc("To Do", 2260, { center: true })] }),
-            new TableRow({ children: [bc("CU-02", 700, { center: true }), bc("Registrar reporte urbano (foto+GPS+H3)", 2800), bc("5", 600, { center: true }), bc("Must", 900, { center: true }), bc("Jhoel Cruz", 2100), bc("To Do", 2260, { center: true })] }),
-            new TableRow({ children: [bc("CU-01", 700, { center: true }), bc("Visualizar mapa de calor H3", 2800), bc("5", 600, { center: true }), bc("Must", 900, { center: true }), bc("Alexis Santiváñez", 2100), bc("To Do", 2260, { center: true })] }),
-            new TableRow({ children: [bc("CU-08", 700, { center: true }), bc("Agrupar reportes en Caso de Obra", 2800), bc("8", 600, { center: true }), bc("Must", 900, { center: true }), bc("Gerson Alvarado", 2100), bc("To Do", 2260, { center: true })] }),
+            new TableRow({ tableHeader: true, children: [hc("HU", 700), hc("Historia de Usuario (resumen)", 2800), hc("SP", 600), hc("MoSCoW", 900), hc("Responsable", 2100), hc("Estado", 2260)] }),
+            new TableRow({ children: [bc("HU-09", 700, { center: true }), bc("Banear DeviceID por spam", 2800), bc("2", 600, { center: true }), bc("Must", 900, { center: true }), bc("Alexis Santiváñez", 2100), bc("To Do", 2260, { center: true })] }),
+            new TableRow({ children: [bc("HU-07", 700, { center: true }), bc("Aceptar / rechazar reporte", 2800), bc("3", 600, { center: true }), bc("Must", 900, { center: true }), bc("Jonathan Arrieta", 2100), bc("To Do", 2260, { center: true })] }),
+            new TableRow({ children: [bc("HU-06", 700, { center: true }), bc("Visualizar bandeja de reportes pendientes", 2800), bc("3", 600, { center: true }), bc("Must", 900, { center: true }), bc("Jonathan Arrieta", 2100), bc("To Do", 2260, { center: true })] }),
+            new TableRow({ children: [bc("HU-02", 700, { center: true }), bc("Registrar reporte urbano (foto+GPS+H3)", 2800), bc("5", 600, { center: true }), bc("Must", 900, { center: true }), bc("Jhoel Cruz", 2100), bc("To Do", 2260, { center: true })] }),
+            new TableRow({ children: [bc("HU-01", 700, { center: true }), bc("Visualizar mapa de calor H3", 2800), bc("5", 600, { center: true }), bc("Must", 900, { center: true }), bc("Alexis Santiváñez", 2100), bc("To Do", 2260, { center: true })] }),
+            new TableRow({ children: [bc("HU-08", 700, { center: true }), bc("Agrupar reportes en Caso de Obra", 2800), bc("8", 600, { center: true }), bc("Must", 900, { center: true }), bc("Gerson Alvarado", 2100), bc("To Do", 2260, { center: true })] }),
             new TableRow({ children: [bc("TOTAL", 700, { center: true, bold: true }), bc("", 2800), bc("26", 600, { center: true, bold: true }), bc("", 900), bc("", 2100), bc("", 2260)] }),
         ]
     }),
     Blank(),
-    H3("Desglose en Tareas Técnicas — Ejemplo: CU-02 Registrar Reporte"),
-    P("Cada historia del Sprint Backlog se desglosa en tareas técnicas de máximo cuatro horas. A continuación se presenta el desglose de CU-02 como ejemplo representativo; el resto de las historias sigue el mismo esquema en el tablero Trello."),
+    H3("Desglose en Tareas Técnicas — Ejemplo: HU-02 Registrar Reporte"),
+    P("Cada historia del Sprint Backlog se desglosa en tareas técnicas de máximo cuatro horas. A continuación se presenta el desglose de HU-02 como ejemplo representativo; el resto de las historias sigue el mismo esquema en el tablero de GitHub Projects."),
     Blank(),
     new Paragraph({ alignment: AlignmentType.CENTER, spacing: { line: L }, children: [new TextRun({ text: "Tabla 6", bold: true, font: F, size: S })] }),
-    new Paragraph({ alignment: AlignmentType.CENTER, spacing: { line: L, after: 120 }, children: [new TextRun({ text: "Desglose de Tareas Técnicas para CU-02 Registrar Reporte Urbano", italics: true, font: F, size: S })] }),
+    new Paragraph({ alignment: AlignmentType.CENTER, spacing: { line: L, after: 120 }, children: [new TextRun({ text: "Desglose de Tareas Técnicas para HU-02 Registrar Reporte Urbano", italics: true, font: F, size: S })] }),
     new Table({
         width: { size: 9360, type: WidthType.DXA },
         columnWidths: [600, 3800, 600, 2200, 2160],
@@ -407,7 +407,7 @@ const paso5 = [
 // --- PASO 6: DEFINITION OF DONE ---
 const paso6 = [
     H2("Paso 6: Definition of Done"),
-    P("La Definition of Done es el acuerdo transversal del equipo que define cuándo una tarjeta puede moverse a la columna “Done” en el tablero Trello. Se establecieron seis criterios verificables. Si una historia no cumple los seis, permanece en “QA/Testing” hasta completar el checklist. El “casi terminado” no cuenta para la velocidad del Sprint."),
+    P('La Definition of Done es el acuerdo transversal del equipo que define cuándo un ítem puede moverse a la columna "Done" en el tablero de GitHub Projects. Se establecieron seis criterios verificables. Si una historia no cumple los seis, permanece en "QA/Testing" hasta completar el checklist. El "casi terminado" no cuenta para la velocidad del Sprint.'),
     Blank(),
     new Paragraph({ alignment: AlignmentType.CENTER, spacing: { line: L }, children: [new TextRun({ text: "Tabla 7", bold: true, font: F, size: S })] }),
     new Paragraph({ alignment: AlignmentType.CENTER, spacing: { line: L, after: 120 }, children: [new TextRun({ text: "Definition of Done — Criterios Transversales del Equipo", italics: true, font: F, size: S })] }),
@@ -416,12 +416,12 @@ const paso6 = [
         columnWidths: [450, 4950, 3960],
         rows: [
             new TableRow({ tableHeader: true, children: [hc("N°", 450), hc("Criterio de Terminado", 4950), hc("Cómo se verifica", 3960)] }),
-            new TableRow({ children: [bc("1", 450, { center: true }), bc("Código versionado en GitHub en rama feature/CU-XX fusionada a main mediante PR aprobado", 4950), bc("Enlace al PR adjunto en la tarjeta Trello", 3960)] }),
+            new TableRow({ children: [bc("1", 450, { center: true }), bc("Código versionado en GitHub en rama feature/HU-XX fusionada a main mediante PR aprobado", 4950), bc("Enlace al PR adjunto en el ítem de GitHub Projects", 3960)] }),
             new TableRow({ children: [bc("2", 450, { center: true }), bc("Pruebas unitarias básicas escritas y pasando para toda lógica nueva", 4950), bc("Captura de npm test o badge CI verde en el PR", 3960)] }),
             new TableRow({ children: [bc("3", 450, { center: true }), bc("Código revisado y aprobado por al menos un compañero antes de fusionar", 4950), bc("Comentario de aprobación visible en el PR de GitHub", 3960)] }),
             new TableRow({ children: [bc("4", 450, { center: true }), bc("Funcionalidad demostrada en vivo al Product Owner (Gerson) antes de mover a Done", 4950), bc("Checkbox marcado únicamente por el PO en la Sprint Review", 3960)] }),
             new TableRow({ children: [bc("5", 450, { center: true }), bc("Sin errores de linter activos; build de producción exitoso", 4950), bc("Pipeline de GitHub Actions en verde (eslint + build)", 3960)] }),
-            new TableRow({ children: [bc("6", 450, { center: true }), bc("Documentación mínima actualizada (README o comentario en la tarjeta Trello)", 4950), bc("Enlace a la sección de documentación modificada", 3960)] }),
+            new TableRow({ children: [bc("6", 450, { center: true }), bc("Documentación mínima actualizada (README o comentario en el ítem de GitHub Projects)", 4950), bc("Enlace a la sección de documentación modificada", 3960)] }),
         ]
     }),
     Blank(),
@@ -442,11 +442,11 @@ const pasoMetricas = [
         columnWidths: [1700, 2600, 1500, 1500, 1500, 560],
         rows: [
             new TableRow({ tableHeader: true, children: [hc("Métrica", 1700), hc("Descripción", 2600), hc("Sprint 1", 1500), hc("Sprint 2", 1500), hc("Sprint 3", 1500), hc("Fuente", 560)] }),
-            new TableRow({ children: [bc("Velocidad del equipo", 1700, { bold: true }), bc("Story Points entregados (Done) por sprint", 2600), bc("18–26 SP", 1500, { center: true }), bc("≥ SP Sprint 1", 1500, { center: true }), bc("≥ SP Sprint 2", 1500, { center: true }), bc("Trello", 560, { center: true })] }),
+            new TableRow({ children: [bc("Velocidad del equipo", 1700, { bold: true }), bc("Story Points entregados (Done) por sprint", 2600), bc("18–26 SP", 1500, { center: true }), bc("≥ SP Sprint 1", 1500, { center: true }), bc("≥ SP Sprint 2", 1500, { center: true }), bc("GH Projects", 560, { center: true })] }),
             new TableRow({ children: [bc("Sprint Goal success rate", 1700, { bold: true }), bc("¿Se cumplió el Sprint Goal al final del sprint?", 2600), bc("100 %", 1500, { center: true }), bc("100 %", 1500, { center: true }), bc("100 %", 1500, { center: true }), bc("Sprint Review", 560, { center: true })] }),
-            new TableRow({ children: [bc("Burndown chart", 1700, { bold: true }), bc("SP restantes actualizados diariamente; detecta bloqueos tempranos", 2600), bc("Diario", 1500, { center: true }), bc("Diario", 1500, { center: true }), bc("Diario", 1500, { center: true }), bc("Trello", 560, { center: true })] }),
-            new TableRow({ children: [bc("WIP limit", 1700, { bold: true }), bc("Máx. 2 tarjetas In Progress por persona al mismo tiempo", 2600), bc("2 / pers.", 1500, { center: true }), bc("2 / pers.", 1500, { center: true }), bc("2 / pers.", 1500, { center: true }), bc("Trello", 560, { center: true })] }),
-            new TableRow({ children: [bc("Tasa de historias rechazadas", 1700, { bold: true }), bc("% de HU que regresan de QA a In Progress por falla de DoD", 2600), bc("< 20 %", 1500, { center: true }), bc("< 15 %", 1500, { center: true }), bc("< 10 %", 1500, { center: true }), bc("Trello", 560, { center: true })] }),
+            new TableRow({ children: [bc("Burndown chart", 1700, { bold: true }), bc("SP restantes actualizados diariamente; detecta bloqueos tempranos", 2600), bc("Diario", 1500, { center: true }), bc("Diario", 1500, { center: true }), bc("Diario", 1500, { center: true }), bc("GH Projects", 560, { center: true })] }),
+            new TableRow({ children: [bc("WIP limit", 1700, { bold: true }), bc("Máx. 2 ítems In Progress por persona al mismo tiempo", 2600), bc("2 / pers.", 1500, { center: true }), bc("2 / pers.", 1500, { center: true }), bc("2 / pers.", 1500, { center: true }), bc("GH Projects", 560, { center: true })] }),
+            new TableRow({ children: [bc("Tasa de historias rechazadas", 1700, { bold: true }), bc("% de HU que regresan de QA a In Progress por falla de DoD", 2600), bc("< 20 %", 1500, { center: true }), bc("< 15 %", 1500, { center: true }), bc("< 10 %", 1500, { center: true }), bc("GH Projects", 560, { center: true })] }),
         ]
     }),
     Blank(),
@@ -523,7 +523,7 @@ const paso7 = [
             new TableRow({ children: [bc("Almacenamiento", 2000, { bold: true }), bc("MinIO (API S3-compatible) para fotografías de reportes; URLs firmadas sin exponer el almacenamiento interno.", 7360)] }),
             new TableRow({ children: [bc("Infraestructura", 2000, { bold: true }), bc("Cluster Docker en servidor cloud; API Gateways NestJS como única entrada HTTP pública.", 7360)] }),
             new TableRow({ children: [bc("CI/CD", 2000, { bold: true }), bc("Git + GitHub + GitHub Actions para pipeline de linting, pruebas unitarias y build en cada PR.", 7360)] }),
-            new TableRow({ children: [bc("Gestión ágil", 2000, { bold: true }), bc("Trello (tablero Scrum con 7 columnas) + planningpoker.live (estimación colaborativa remota).", 7360)] }),
+            new TableRow({ children: [bc("Gestión ágil", 2000, { bold: true }), bc("GitHub Projects (tablero Scrum con 7 columnas) + planningpoker.live (estimación colaborativa remota).", 7360)] }),
         ]
     }),
     Blank(),
@@ -534,18 +534,18 @@ const paso7 = [
     new Paragraph({ alignment: AlignmentType.CENTER, spacing: { line: L, after: 120 }, children: [new TextRun({ text: "Cronograma de Sprints del Proyecto Integrador Ojo Camba", italics: true, font: F, size: S })] }),
     new Table({
         width: { size: 9360, type: WidthType.DXA },
-        columnWidths: [900, 1500, 3200, 3760],
+        columnWidths: [900, 1800, 2800, 3860],
         rows: [
-            new TableRow({ tableHeader: true, children: [hc("Sprint", 900), hc("Duración", 1500), hc("Sprint Goal", 3200), hc("Entregable Principal", 3760)] }),
-            new TableRow({ children: [bc("Sprint 1", 900, { bold: true }), bc("2 semanas", 1500, { center: true }), bc("Ciudadano registra reporte con foto y GPS, visible como hexágono en mapa de calor.", 3200), bc("ms-register funcional + App Reporte (captura) + mapa H3 básico", 3760)] }),
-            new TableRow({ children: [bc("Sprint 2", 900, { bold: true }), bc("2 semanas", 1500, { center: true }), bc("Moderador valida, acepta y agrupa reportes en Casos de Obra con notificación automática.", 3200), bc("ms-admin + App BackOffice + sistema de notificaciones push", 3760)] }),
-            new TableRow({ children: [bc("Sprint 3", 900, { bold: true }), bc("2 semanas", 1500, { center: true }), bc("Técnico cierra Caso de Obra en campo y Dashboard DSS muestra Score de Prioridad actualizado.", 3200), bc("App Técnicos + cálculo SPC (vista materializada h3-pg) + Dashboard ejecutivo", 3760)] }),
+            new TableRow({ tableHeader: true, children: [hc("Sprint", 900), hc("Período", 1800), hc("Sprint Goal", 2800), hc("Entregable Principal", 3860)] }),
+            new TableRow({ children: [bc("Sprint 1", 900, { bold: true }), bc("24 jun – 7 jul 2026", 1800, { center: true }), bc("Ciudadano registra reporte con foto y GPS, visible como hexágono en mapa de calor.", 2800), bc("ms-register funcional + App Reporte (captura) + mapa H3 básico", 3860)] }),
+            new TableRow({ children: [bc("Sprint 2", 900, { bold: true }), bc("8 jul – 21 jul 2026", 1800, { center: true }), bc("Moderador valida, acepta y agrupa reportes en Casos de Obra con notificación automática.", 2800), bc("ms-admin + App BackOffice + sistema de notificaciones push", 3860)] }),
+            new TableRow({ children: [bc("Sprint 3", 900, { bold: true }), bc("22 jul – 4 ago 2026", 1800, { center: true }), bc("Técnico cierra Caso de Obra en campo y Dashboard DSS muestra Score de Prioridad actualizado.", 2800), bc("App Técnicos + cálculo SPC (vista materializada h3-pg) + Dashboard ejecutivo", 3860)] }),
         ]
     }),
     Blank(),
 
     H3("Diagrama de Gantt — Cronograma por Semana"),
-    P("La Tabla 13 presenta el cronograma Gantt a nivel semanal. Cada Sprint abarca dos semanas calendario. Las celdas sombreadas indican la semana activa de cada entregable. El Sprint 0 (configuración del entorno Scrum) se ejecutó en la semana previa al inicio del Sprint 1."),
+    P("La Tabla 13 presenta el cronograma Gantt a nivel semanal. Cada Sprint abarca dos semanas calendario. Las celdas sombreadas indican la semana activa de cada entregable. Fecha de Sprint Planning del Sprint 1: 23 de junio de 2026. Correspondencia de semanas: Sem 1 (24–30 jun 2026) · Sem 2 (1–7 jul 2026) · Sem 3 (8–14 jul 2026) · Sem 4 (15–21 jul 2026) · Sem 5 (22–28 jul 2026) · Sem 6 (29 jul – 4 ago 2026)."),
     Blank(),
     new Paragraph({ alignment: AlignmentType.CENTER, spacing: { line: L }, children: [new TextRun({ text: "Tabla 13", bold: true, font: F, size: S })] }),
     new Paragraph({ alignment: AlignmentType.CENTER, spacing: { line: L, after: 120 }, children: [new TextRun({ text: "Diagrama de Gantt por Semana — Proyecto Ojo Camba (3 Sprints × 2 Semanas = 6 Semanas)", italics: true, font: F, size: S })] }),
@@ -580,17 +580,17 @@ const paso7 = [
         });
 
         const ganttData = [
-            ["Sprint 0 — Configuración Scrum",        [1,0,0,0,0,0]],
-            ["Infraestructura Docker + MinIO + DB",    [1,0,0,0,0,0]],
-            ["ms-auth + ms-register (H3 índices)",     [1,1,0,0,0,0]],
-            ["App Reporte PWA + Mapa de Calor H3",     [1,1,0,0,0,0]],
-            ["ms-admin (moderación / Casos de Obra)",  [0,0,1,1,0,0]],
-            ["App BackOffice (moderador)",             [0,0,1,1,0,0]],
-            ["App Técnicos en Campo",                  [0,0,0,0,1,1]],
-            ["Dashboard DSS + Score Prioridad",        [0,0,0,0,1,1]],
-            ["QA: H3 precision + ACID + E2E",          [0,0,0,0,1,1]],
-            ["Sprint Reviews / Retrospectivas",        [0,1,0,1,0,1]],
-            ["MVP Demo Final",                         [0,0,0,0,0,1]],
+            ["Sprint 0 — Configuración Scrum", [1, 0, 0, 0, 0, 0]],
+            ["Infraestructura Docker + MinIO + DB", [1, 0, 0, 0, 0, 0]],
+            ["ms-auth + ms-register (H3 índices)", [1, 1, 0, 0, 0, 0]],
+            ["App Reporte PWA + Mapa de Calor H3", [1, 1, 0, 0, 0, 0]],
+            ["ms-admin (moderación / Casos de Obra)", [0, 0, 1, 1, 0, 0]],
+            ["App BackOffice (moderador)", [0, 0, 1, 1, 0, 0]],
+            ["App Técnicos en Campo", [0, 0, 0, 0, 1, 1]],
+            ["Dashboard DSS + Score Prioridad", [0, 0, 0, 0, 1, 1]],
+            ["QA: H3 precision + ACID + E2E", [0, 0, 0, 0, 1, 1]],
+            ["Sprint Reviews / Retrospectivas", [0, 1, 0, 1, 0, 1]],
+            ["MVP Demo Final", [0, 0, 0, 0, 0, 1]],
         ];
 
         return new Table({
@@ -598,22 +598,31 @@ const paso7 = [
             columnWidths: [LW, ...WW],
             rows: [
                 // Fila 1: etiquetas de sprint (colspan 2)
-                new TableRow({ children: [
-                    gHdr("Actividad / Entregable", LW),
-                    gHdr("Sprint 1", WW[0] + WW[1], { span: 2, bg: "156082", sz: 18 }),
-                    gHdr("Sprint 2", WW[2] + WW[3], { span: 2, bg: "0E4C96", sz: 18 }),
-                    gHdr("Sprint 3 — MVP", WW[4] + WW[5], { span: 2, bg: "0A3060", sz: 18 }),
-                ]}),
-                // Fila 2: números de semana
-                new TableRow({ children: [
-                    gHdr("Semana →", LW, { sz: 18 }),
-                    ...WW.map((w, i) => gHdr(`Sem ${i + 1}`, w, { sz: 16 })),
-                ]}),
+                new TableRow({
+                    children: [
+                        gHdr("Actividad / Entregable", LW),
+                        gHdr("Sprint 1", WW[0] + WW[1], { span: 2, bg: "156082", sz: 18 }),
+                        gHdr("Sprint 2", WW[2] + WW[3], { span: 2, bg: "0E4C96", sz: 18 }),
+                        gHdr("Sprint 3 — MVP", WW[4] + WW[5], { span: 2, bg: "0A3060", sz: 18 }),
+                    ]
+                }),
+                // Fila 2: números de semana con fechas
+                new TableRow({
+                    children: [
+                        gHdr("Semana →", LW, { sz: 18 }),
+                        ...(() => {
+                            const semDates = ['24-30 jun', '1-7 jul', '8-14 jul', '15-21 jul', '22-28 jul', '29-4 ago'];
+                            return WW.map((w, i) => gHdr(`Sem ${i + 1}  ${semDates[i]}`, w, { sz: 13 }));
+                        })(),
+                    ]
+                }),
                 // Filas de datos
-                ...ganttData.map(([lbl, weeks]) => new TableRow({ children: [
-                    gLbl(lbl),
-                    ...weeks.map((on, i) => on ? gActive(WW[i]) : gEmpty(WW[i])),
-                ]})),
+                ...ganttData.map(([lbl, weeks]) => new TableRow({
+                    children: [
+                        gLbl(lbl),
+                        ...weeks.map((on, i) => on ? gActive(WW[i]) : gEmpty(WW[i])),
+                    ]
+                })),
             ]
         });
     })(),
@@ -640,7 +649,7 @@ const paso7 = [
 const resultados = [
     H1("Resultados y Análisis"),
     H2("Cobertura de la Rúbrica"),
-    P("El Sprint 0 configurado en este documento cubre los cinco criterios de calificación de la Actividad 4. El Product Backlog contiene veintitrés historias de usuario bien redactadas en formato estándar, con priorización MoSCoW correcta y story points estimados mediante Planning Poker documentado, superando el umbral de veinte historias requerido para la calificación Excelente (3/3 puntos). El Sprint Backlog del Sprint 1 planifica veintitrés story points en seis historias Must Have, con tareas técnicas de máximo cuatro horas y tablero Trello configurado según el Anexo A (2,5/2,5 puntos). La Definition of Done establece seis criterios verificables que superan el mínimo de cinco exigido, y los roles Scrum están formalmente asignados con responsabilidades documentadas en la Tabla 1 (2/2 puntos). El Acta de Constitución es completa: incluye visión clara del sistema, cinco segmentos de usuarios, stack tecnológico justificado y cronograma viable de tres sprints (1,5/1,5 puntos). El informe sigue las normas APA Séptima Edición con portada, resumen de más de ciento cincuenta palabras, cuerpo estructurado y seis referencias académicas con DOI cuando está disponible (1/1 punto)."),
+    P("El Sprint 0 configurado en este documento cubre los cinco criterios de calificación de la Actividad 4. El Product Backlog contiene veintitrés historias de usuario bien redactadas en formato estándar, con priorización MoSCoW correcta y story points estimados mediante Planning Poker documentado, superando el umbral de veinte historias requerido para la calificación Excelente (3/3 puntos). El Sprint Backlog del Sprint 1 planifica veintitrés story points en seis historias Must Have, con tareas técnicas de máximo cuatro horas y tablero de GitHub Projects configurado según el Anexo A (2,5/2,5 puntos). La Definition of Done establece seis criterios verificables que superan el mínimo de cinco exigido, y los roles Scrum están formalmente asignados con responsabilidades documentadas en la Tabla 1 (2/2 puntos). El Acta de Constitución es completa: incluye visión clara del sistema, cinco segmentos de usuarios, stack tecnológico justificado y cronograma viable de tres sprints (1,5/1,5 puntos). El informe sigue las normas APA Séptima Edición con portada, resumen de más de ciento cincuenta palabras, cuerpo estructurado y seis referencias académicas con DOI cuando está disponible (1/1 punto)."),
     H2("Alineación con los ODS"),
     P("El Sprint 0 de Ojo Camba se alinea con tres Objetivos de Desarrollo Sostenible. El ODS 8 (Trabajo decente y crecimiento económico) se materializa en la generación de empleos técnicos especializados en infraestructura cívica digital, sector de alta demanda en Bolivia. El ODS 9 (Industria, innovación e infraestructura) se concreta en la adopción de tecnología geoespacial avanzada (H3, PostGIS) sobre código abierto y en la aplicación del marco ágil Scrum como estándar de la industria. El ODS 17 (Alianzas para lograr los objetivos) se refleja en la articulación entre el Gobierno Autónomo Municipal, juntas vecinales, moderadores comunitarios y el ecosistema cruzeño de desarrolladores Civic Tech, configurando una alianza multisectorial que ningún actor podría sostener individualmente."),
     PageBreakP(),
@@ -650,7 +659,7 @@ const resultados = [
 const conclusiones = [
     H1("Conclusiones"),
     P("La configuración formal del entorno Scrum en el Sprint 0 dota al proyecto integrador Ojo Camba de la base organizacional necesaria para ejecutar tres sprints de desarrollo iterativo con criterios de calidad verificables. La elaboración del Product Backlog con veintitrés historias de usuario, que incorporan tanto los quince casos de uso del portafolio UML como ocho funcionalidades identificadas directamente en el código fuente, garantiza que toda la capacidad del equipo esté orientada a entregar valor medible en cada incremento."),
-    P("La estimación mediante Planning Poker promovió el conocimiento compartido del sistema entre todos los integrantes: las discusiones surgidas en las historias con diferencias de voto (especialmente CU-02 y CU-08) revelaron supuestos técnicos implícitos que, de no haberse explicitado, habrían generado retrasos durante la implementación. La priorización MoSCoW, conducida por el Product Owner, establece un contrato claro con el equipo sobre qué debe entregarse en cada Sprint y qué puede postergarse sin comprometer la propuesta de valor mínima del sistema."),
+    P("La estimación mediante Planning Poker promovió el conocimiento compartido del sistema entre todos los integrantes: las discusiones surgidas en las historias con diferencias de voto (especialmente HU-02 y HU-08) revelaron supuestos técnicos implícitos que, de no haberse explicitado, habrían generado retrasos durante la implementación. La priorización MoSCoW, conducida por el Product Owner, establece un contrato claro con el equipo sobre qué debe entregarse en cada Sprint y qué puede postergarse sin comprometer la propuesta de valor mínima del sistema."),
     P("Los artefactos producidos en este Sprint 0 —el Product Backlog de 23 HU, el Sprint Backlog del Sprint 1, la Definition of Done y el Acta de Constitución— constituyen contratos vivos que el equipo actualizará en cada Sprint Review y Retrospectiva. Su existencia cierra la brecha entre el modelado UML de las actividades anteriores y la ejecución técnica que comienza en el Sprint 1, alineando al equipo en una visión compartida del sistema y en un marco de trabajo transparente, inspeccionable y adaptable."),
     PageBreakP(),
 ];
@@ -668,39 +677,40 @@ const referencias = [
     PageBreakP(),
 ];
 
-// ============== ANEXO A: TRELLO ==============
+// ============== ANEXO A: GITHUB PROJECTS ==============
 const anexoA = [
     H1("Anexos"),
-    H2("Anexo A. Configuración del Tablero Trello"),
-    H3("A.1 Crear el Tablero"),
-    Bullet("Iniciar sesión en trello.com con cuenta gratuita."),
-    Bullet("Crear tablero nuevo: nombre “Ojo Camba — Scrum Board”, visibilidad “Espacio de trabajo”."),
-    Bullet("Invitar a los cuatro integrantes del equipo como miembros con rol “Miembro”."),
-    H3("A.2 Crear las Columnas (en orden)"),
-    Bullet("Product Backlog — todas las historias no seleccionadas para Sprint 1"),
-    Bullet("Sprint Backlog — historias comprometidas para el Sprint actual"),
+    H2("Anexo A. Configuración del Tablero GitHub Projects"),
+    H3("A.1 Crear el Proyecto"),
+    Bullet("Iniciar sesión en github.com con la cuenta del equipo."),
+    Bullet("Navegar a: github.com/jhoel0521/Ojo-Camba → pestaña Projects → New project."),
+    Bullet("Seleccionar plantilla \"Board\" (vista Kanban). Nombre: \"Ojo Camba — Scrum Board\"."),
+    Bullet("Invitar a los cuatro integrantes como colaboradores del repositorio."),
+    H3("A.2 Configurar las Columnas (Status field)"),
+    Bullet("Product Backlog — todas las HU no seleccionadas para el Sprint actual"),
+    Bullet("Sprint Backlog — HU comprometidas para el Sprint activo"),
     Bullet("To Do — tareas técnicas listas para iniciar"),
     Bullet("In Progress — tareas en desarrollo activo (límite WIP: 2 por persona)"),
-    Bullet("Code Review — tareas con PR abierto pendiente de revisión"),
-    Bullet("QA / Testing — tareas con código aprobado, verificando DoD"),
-    Bullet("Done — tareas que cumplieron los 6 criterios de la Definition of Done"),
-    H3("A.3 Crear las Tarjetas del Product Backlog"),
-    Bullet("Una tarjeta por historia (CU-01 a CU-23). Título: “Como [actor], quiero [acción]”."),
-    Bullet("Descripción: criterios de aceptación en formato Dado/Cuando/Entonces."),
-    Bullet("Etiquetas de color: Ciudadano = verde, Moderador = morado, Técnico = naranja, Admin = azul marino."),
-    Bullet("Campo personalizado “Story Points” con el valor del Planning Poker."),
-    Bullet("Referencia cruzada al CU en un comentario fijado."),
-    H3("A.4 Power-Ups Recomendados (todos gratuitos)"),
-    BulletMix([{ text: "Custom Fields: " }, "para Story Points, CU asociado y fecha límite del Sprint."]),
-    BulletMix([{ text: "Checklist Templates: " }, "plantilla DoD aplicada automáticamente a tarjetas nuevas del Sprint Backlog."]),
-    BulletMix([{ text: "Calendar Power-Up: " }, "visualización de fechas límite de cada Sprint."]),
-    BulletMix([{ text: "Card Aging (Butler): " }, "alerta visual si una tarjeta lleva más de 3 días sin movimiento."]),
+    Bullet("Code Review — issues con PR abierto pendiente de revisión"),
+    Bullet("QA / Testing — código aprobado; verificando los 6 criterios de la DoD"),
+    Bullet("Done — issues que cumplieron la Definition of Done completa"),
+    H3("A.3 Crear los Issues del Product Backlog"),
+    Bullet("Un issue por historia (HU-01 a HU-23). Título: \"Como [actor], quiero [acción]\"."),
+    Bullet("Cuerpo del issue: criterios de aceptación en formato Dado/Cuando/Entonces."),
+    Bullet("Labels de color: ciudadano = verde, moderador = morado, técnico = naranja, admin = azul."),
+    Bullet('Agregar el issue al proyecto y asignarle el campo "Story Points" con el valor del Planning Poker.'),
+    Bullet('Vincular el número de HU en el título del PR al cerrar: "fix: HU-02 registrar reporte".'),
+    H3("A.4 Funcionalidades Nativas de GitHub Projects (sin costo adicional)"),
+    BulletMix([{ text: "Iterations (Sprints): " }, 'crear Sprint 1 (24 jun – 7 jul), Sprint 2 (8–21 jul) y Sprint 3 (22 jul – 4 ago) como iteraciones en el campo "Sprint".']),
+    BulletMix([{ text: "Custom fields: " }, "Story Points (número) y Sprint (iteration) para seguimiento de velocidad."]),
+    BulletMix([{ text: "Insights — Burndown chart: " }, "generado automáticamente desde la vista de Insights del proyecto; muestra SP restantes por día."]),
+    BulletMix([{ text: "Workflows automáticos: " }, "configurar que al mergearse un PR vinculado, el issue pase automáticamente a la columna Done."]),
 ];
 
 // ============== ANEXO B: SPRINT BOARD ==============
 const anexoB = [
-    H2("Anexo B. Vista de Referencia del Tablero Trello al Inicio del Sprint 1"),
-    P("La Tabla B1 muestra la distribución inicial de las tarjetas al comenzar el Sprint 1. Las columnas In Progress, Code Review, QA/Testing y Done comienzan vacías."),
+    H2("Anexo B. Vista de Referencia del Tablero GitHub Projects al Inicio del Sprint 1"),
+    P("La Tabla B1 muestra la distribución inicial de los ítems al comenzar el Sprint 1. Las columnas In Progress, Code Review, QA/Testing y Done comienzan vacías."),
     Blank(),
     new Paragraph({ alignment: AlignmentType.CENTER, spacing: { line: L }, children: [new TextRun({ text: "Tabla B1", bold: true, font: F, size: S })] }),
     new Paragraph({ alignment: AlignmentType.CENTER, spacing: { line: L, after: 120 }, children: [new TextRun({ text: "Estado inicial del tablero Scrum al comenzar el Sprint 1", italics: true, font: F, size: S })] }),
@@ -709,12 +719,14 @@ const anexoB = [
         columnWidths: [2340, 2340, 2340, 2340],
         rows: [
             new TableRow({ tableHeader: true, children: [hc("Product Backlog", 2340), hc("Sprint Backlog", 2340), hc("To Do (Tareas)", 2340), hc("Done", 2340)] }),
-            new TableRow({ children: [
-                bc("CU-03, CU-04, CU-05, CU-10, CU-11, CU-12, CU-13, CU-14, CU-15, CU-16 a CU-23", 2340),
-                bc("CU-09, CU-07, CU-06, CU-02, CU-01, CU-08", 2340),
-                bc("T1–T8 (CU-02), tareas de CU-01, CU-06, CU-07, CU-08, CU-09", 2340),
-                bc("(vacío al inicio del Sprint)", 2340, { center: true }),
-            ]}),
+            new TableRow({
+                children: [
+                    bc("HU-03, HU-04, HU-05, HU-10, HU-11, HU-12, HU-13, HU-14, HU-15, HU-16 a HU-23", 2340),
+                    bc("HU-09, HU-07, HU-06, HU-02, HU-01, HU-08", 2340),
+                    bc("T1–T8 (HU-02), tareas de HU-01, HU-06, HU-07, HU-08, HU-09", 2340),
+                    bc("(vacío al inicio del Sprint)", 2340, { center: true }),
+                ]
+            }),
         ]
     }),
     Blank(),
@@ -742,7 +754,7 @@ const anexoC = [
         ]
     }),
     Blank(),
-    P("Justificación: el equipo comprometió 26 puntos (ligeramente por encima del rango conservador de 18–20) porque CU-08 tiene 8 puntos pero es el concepto diferencial central de Ojo Camba. Si el Sprint concluye con velocidad real por debajo de 26, el equipo ajustará el compromiso en la Retrospectiva del Sprint 1 para calibrar la velocidad de referencia del proyecto."),
+    P("Justificación: el equipo comprometió 26 puntos (ligeramente por encima del rango conservador de 18–20) porque HU-08 tiene 8 puntos pero es el concepto diferencial central de Ojo Camba. Si el Sprint concluye con velocidad real por debajo de 26, el equipo ajustará el compromiso en la Retrospectiva del Sprint 1 para calibrar la velocidad de referencia del proyecto."),
 ];
 
 // ============== DOCUMENTO ==============

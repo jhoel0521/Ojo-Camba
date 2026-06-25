@@ -1,0 +1,425 @@
+{
+  "info": {
+    "_postman_id": "ojo-camba-api-v1",
+    "name": "Ojo Camba — API Gateway (Sprint 1)",
+    "description": "Colección completa del API Gateway principal (localhost:3000).\nMicroservicios: ms-auth (3001), ms-register (3002), ms-admin (3003).\nFlujo recomendado: Auth → Reportes → Admin.\nRepositorio: github.com/jhoel0521/Ojo-Camba",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:3000", "type": "string" },
+    { "key": "access_token", "value": "", "type": "string" },
+    { "key": "refresh_token", "value": "", "type": "string" },
+    { "key": "user_id", "value": "", "type": "string" },
+    { "key": "report_id", "value": "1", "type": "string" },
+    { "key": "group_id", "value": "1", "type": "string" },
+    { "key": "device_id", "value": "test-device-001", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "POST register",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "if (pm.response.code === 201) {",
+                "  const body = pm.response.json();",
+                "  pm.collectionVariables.set('access_token', body.access_token);",
+                "  pm.collectionVariables.set('refresh_token', body.refresh_token);",
+                "  pm.collectionVariables.set('user_id', String(body.user.id));",
+                "  pm.test('Registro exitoso', () => pm.response.to.have.status(201));",
+                "}"
+              ],
+              "type": "text/javascript"
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Juan Pérez\",\n  \"email\": \"juan@example.com\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/auth/register", "host": ["{{base_url}}"], "path": ["auth", "register"] }
+          }
+        },
+        {
+          "name": "POST login",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "if (pm.response.code === 201) {",
+                "  const body = pm.response.json();",
+                "  pm.collectionVariables.set('access_token', body.access_token);",
+                "  pm.collectionVariables.set('refresh_token', body.refresh_token);",
+                "  pm.collectionVariables.set('user_id', String(body.user.id));",
+                "  pm.test('Login exitoso', () => pm.response.to.have.status(201));",
+                "}"
+              ],
+              "type": "text/javascript"
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@ojocamba.bo\",\n  \"password\": \"admin123\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/auth/login", "host": ["{{base_url}}"], "path": ["auth", "login"] }
+          }
+        },
+        {
+          "name": "POST refresh",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh_token\": \"{{refresh_token}}\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/auth/refresh", "host": ["{{base_url}}"], "path": ["auth", "refresh"] }
+          }
+        },
+        {
+          "name": "POST validate token",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"{{access_token}}\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/auth/validate", "host": ["{{base_url}}"], "path": ["auth", "validate"] }
+          }
+        },
+        {
+          "name": "GET profile",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/auth/profile/{{user_id}}", "host": ["{{base_url}}"], "path": ["auth", "profile", "{{user_id}}"] }
+          }
+        },
+        {
+          "name": "GET users (paginado)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/auth/users?page=1&limit=20",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "users"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST logout",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_id\": {{user_id}}\n}"
+            },
+            "url": { "raw": "{{base_url}}/auth/logout", "host": ["{{base_url}}"], "path": ["auth", "logout"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reportes",
+      "item": [
+        {
+          "name": "POST crear reporte",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "if (pm.response.code === 201) {",
+                "  const body = pm.response.json();",
+                "  if (body.id) pm.collectionVariables.set('report_id', String(body.id));",
+                "  pm.test('Reporte creado', () => pm.response.to.have.status(201));",
+                "}"
+              ],
+              "type": "text/javascript"
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"device_id\": \"{{device_id}}\",\n  \"lat\": -17.7833,\n  \"lng\": -63.1821,\n  \"categoria_id\": 1,\n  \"gravedad\": \"Media\",\n  \"imagen_base64\": \"iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/reportes", "host": ["{{base_url}}"], "path": ["reportes"] }
+          }
+        },
+        {
+          "name": "GET listar reportes",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/reportes?page=1&limit=20",
+              "host": ["{{base_url}}"],
+              "path": ["reportes"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" },
+                { "key": "estado", "value": "Reportado", "disabled": true },
+                { "key": "categoria_id", "value": "1", "disabled": true },
+                { "key": "h3_cell", "value": "88755a6aebfffff", "disabled": true },
+                { "key": "h3_resolution", "value": "8", "disabled": true },
+                { "key": "grupo_id", "value": "1", "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET heatmap (resolución H3)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/reportes/heatmap?resolution=8",
+              "host": ["{{base_url}}"],
+              "path": ["reportes", "heatmap"],
+              "query": [{ "key": "resolution", "value": "8" }]
+            }
+          }
+        },
+        {
+          "name": "GET heatmap-detailed",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/reportes/heatmap-detailed?resolution=8&solo_activos=true",
+              "host": ["{{base_url}}"],
+              "path": ["reportes", "heatmap-detailed"],
+              "query": [
+                { "key": "resolution", "value": "8" },
+                { "key": "solo_activos", "value": "true" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET reporte por ID",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/reportes/{{report_id}}", "host": ["{{base_url}}"], "path": ["reportes", "{{report_id}}"] }
+          }
+        },
+        {
+          "name": "GET imagen del reporte",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/reportes/{{report_id}}/imagen", "host": ["{{base_url}}"], "path": ["reportes", "{{report_id}}", "imagen"] }
+          }
+        },
+        {
+          "name": "POST vincular device a usuario",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"usuario_id\": {{user_id}},\n  \"device_id\": \"{{device_id}}\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/reportes/vincular", "host": ["{{base_url}}"], "path": ["reportes", "vincular"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin (Moderación)",
+      "item": [
+        {
+          "name": "GET reportes pendientes",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/admin/reports/pending?page=1&limit=20",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "reports", "pending"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST aceptar reporte (HU-07)",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "if (pm.response.code === 201) {",
+                "  const body = pm.response.json();",
+                "  if (body.grupo_id) pm.collectionVariables.set('group_id', String(body.grupo_id));",
+                "  pm.test('Reporte aceptado', () => pm.response.to.have.status(201));",
+                "}"
+              ],
+              "type": "text/javascript"
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"moderador_id\": {{user_id}},\n  \"categoria_id\": 1\n}"
+            },
+            "url": { "raw": "{{base_url}}/admin/reports/{{report_id}}/accept", "host": ["{{base_url}}"], "path": ["admin", "reports", "{{report_id}}", "accept"] }
+          }
+        },
+        {
+          "name": "POST rechazar reporte (HU-07)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{}" },
+            "url": { "raw": "{{base_url}}/admin/reports/{{report_id}}/reject", "host": ["{{base_url}}"], "path": ["admin", "reports", "{{report_id}}", "reject"] }
+          }
+        },
+        {
+          "name": "POST crear grupo / Caso de Obra (HU-08)",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "if (pm.response.code === 201) {",
+                "  const body = pm.response.json();",
+                "  if (body.id) pm.collectionVariables.set('group_id', String(body.id));",
+                "  pm.test('Grupo creado', () => pm.response.to.have.status(201));",
+                "}"
+              ],
+              "type": "text/javascript"
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"report_ids\": [1, 2, 3],\n  \"creado_por_usuario_id\": {{user_id}}\n}"
+            },
+            "url": { "raw": "{{base_url}}/admin/groups", "host": ["{{base_url}}"], "path": ["admin", "groups"] }
+          }
+        },
+        {
+          "name": "POST agregar actualización al caso",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"usuario_id\": {{user_id}},\n  \"comentario\": \"Cuadrilla enviada al lugar\",\n  \"estado_nuevo\": \"EnTrabajo\",\n  \"recursos_solicitados\": \"1 retroexcavadora, 3 operarios\",\n  \"fecha_estimada_fin\": \"2026-07-15\",\n  \"lat_actualizada\": -17.7833,\n  \"lng_actualizada\": -63.1821\n}"
+            },
+            "url": { "raw": "{{base_url}}/admin/groups/{{group_id}}/updates", "host": ["{{base_url}}"], "path": ["admin", "groups", "{{group_id}}", "updates"] }
+          }
+        },
+        {
+          "name": "POST banear dispositivo (HU-09)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"device_id\": \"{{device_id}}\",\n  \"motivo\": \"Envío masivo de reportes falsos\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/admin/devices/ban", "host": ["{{base_url}}"], "path": ["admin", "devices", "ban"] }
+          }
+        },
+        {
+          "name": "GET grupos (Casos de Obra)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/admin/groups?page=1&limit=20",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "groups"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET grupo por ID",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/admin/groups/{{group_id}}", "host": ["{{base_url}}"], "path": ["admin", "groups", "{{group_id}}"] }
+          }
+        },
+        {
+          "name": "GET timeline del caso",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/admin/groups/{{group_id}}/timeline", "host": ["{{base_url}}"], "path": ["admin", "groups", "{{group_id}}", "timeline"] }
+          }
+        },
+        {
+          "name": "GET grupos heatmap H3",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/admin/groups/heatmap?resolution=8&solo_activos=true",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "groups", "heatmap"],
+              "query": [
+                { "key": "resolution", "value": "8" },
+                { "key": "solo_activos", "value": "true" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET grupos por celda H3",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/admin/groups/by-cell?h3_cell=88755a6aebfffff&h3_resolution=8&solo_activos=true",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "groups", "by-cell"],
+              "query": [
+                { "key": "h3_cell", "value": "88755a6aebfffff" },
+                { "key": "h3_resolution", "value": "8" },
+                { "key": "solo_activos", "value": "true" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET dashboard DSS",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/admin/dashboard", "host": ["{{base_url}}"], "path": ["admin", "dashboard"] }
+          }
+        },
+        {
+          "name": "GET dispositivos",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/admin/devices?page=1&limit=20&banned_only=false",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "devices"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" },
+                { "key": "banned_only", "value": "false" }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
