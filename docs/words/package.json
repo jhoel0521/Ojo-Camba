@@ -5,7 +5,8 @@
   "scripts": {
     "act4":        "node src/act4.js",
     "act4:slides": "node src/act4-slides.js",
-    "act5":        "node src/act5.js"
+    "act5":        "node src/act5.js",
+    "act5:slides": "node src/act5-slides.js"
   },
   "dependencies": {
     "docx": "^9.7.1",
