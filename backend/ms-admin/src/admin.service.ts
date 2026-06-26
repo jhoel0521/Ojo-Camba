@@ -1,6 +1,6 @@
 import { Injectable, BadRequestException, NotFoundException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import {
   Reporte,
   Dispositivo,
@@ -36,6 +36,8 @@ export class AdminService {
     });
     const mapped = data.map((r) => ({
       ...r,
+      lat: Number(r.lat),
+      lng: Number(r.lng),
       url_imagen: r.url_imagen
         ? r.url_imagen.startsWith('http')
           ? r.url_imagen
@@ -55,6 +57,14 @@ export class AdminService {
     }
 
     reporte.estado = EstadoReporte.Aceptado;
+
+    if (dto.grupo_id) {
+      const grupo = await this.grupoRepo.findOne({ where: { id: dto.grupo_id } });
+      if (!grupo) throw new NotFoundException('Caso de Obra no encontrado');
+      reporte.grupo_id = grupo.id;
+      await this.reporteRepo.save(reporte);
+      return { id: reporte.id, estado: reporte.estado, grupo_id: grupo.id, codigo_obra: grupo.codigo_obra };
+    }
 
     const year = new Date().getFullYear();
     const count = (await this.grupoRepo.count()) + 1;
@@ -109,15 +119,14 @@ export class AdminService {
       throw new BadRequestException('Se necesitan al menos 2 reportes');
     }
 
-    const reportes = await this.reporteRepo.findByIds(dto.report_ids);
+    const reportes = await this.reporteRepo.find({ where: { id: In(dto.report_ids) } });
     if (reportes.length !== dto.report_ids.length) {
       throw new BadRequestException('Uno o mas reportes no existen');
     }
 
-    const h3 = reportes[0].h3_res_11;
-    const distintos = reportes.some((r) => r.h3_res_11 !== h3);
-    if (distintos) {
-      throw new BadRequestException('Todos los reportes deben pertenecer al mismo hexagono H3');
+    const noReportados = reportes.filter((r) => r.estado !== EstadoReporte.Reportado);
+    if (noReportados.length > 0) {
+      throw new BadRequestException('Solo se pueden agrupar reportes en estado Reportado');
     }
 
     const year = new Date().getFullYear();
@@ -225,6 +234,7 @@ export class AdminService {
       .createQueryBuilder('g')
       .innerJoin(Reporte, 'r', `r.grupo_id = g.id AND ${col} = :cell`, { cell: h3_cell })
       .select('g.id', 'id')
+      .addSelect('g.codigo_obra', 'codigo_obra')
       .addSelect('g.estado_actual', 'estado_actual')
       .addSelect('g.categoria_id', 'categoria_id')
       .addSelect('g.creado_en', 'creado_en')

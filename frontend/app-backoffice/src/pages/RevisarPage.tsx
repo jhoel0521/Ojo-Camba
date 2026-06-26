@@ -1,7 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import {
   List,
-  X,
   CheckCircle,
   XCircle,
   Ban,
@@ -11,27 +10,39 @@ import {
   Camera,
   Edit3,
   AlertTriangle,
-  Map as MapIcon,
+  FolderPlus,
+  RefreshCw,
+  Inbox,
+  X,
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import {
   listPending,
+  listNearbyGroups,
   acceptReport,
   rejectReport as rejectReportApi,
   createGroup,
   banDevice,
   type PendingReport,
+  type GrupoReporte,
 } from '../lib/adminApi';
 import { friendlyError } from '../lib/errors';
 import { getImageUrl } from '../lib/api';
 import { CATEGORIA_NAMES, CATEGORIA_IDS } from '../lib/categories';
-import PendingGroupCard from '../components/PendingGroupCard';
+import PendingReportCard from '../components/PendingReportCard';
+import NearbyReportsList, { type NearbyReport } from '../components/NearbyReportsList';
 import ConfirmModal from '../components/ConfirmModal';
 import Pagination from '../components/Pagination';
 
-interface GroupedReports {
-  h3Cell: string;
-  reportes: PendingReport[];
+function haversineM(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371000;
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
 export default function RevisarPage() {
@@ -41,17 +52,21 @@ export default function RevisarPage() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [actionLoading, setActionLoading] = useState(false);
+
+  const [selectedReport, setSelectedReport] = useState<PendingReport | null>(null);
+  const [editedCategoriaId, setEditedCategoriaId] = useState<number>(0);
+  const [nearbySelected, setNearbySelected] = useState<Set<number>>(new Set());
+  const [nearbyObras, setNearbyObras] = useState<GrupoReporte[]>([]);
+
+  // Modal de detalle de un reporte cercano
+  const [nearbyDetailReport, setNearbyDetailReport] = useState<NearbyReport | null>(null);
+
   const [confirmModal, setConfirmModal] = useState<{
     title: string;
     message: string;
     action: () => Promise<void>;
   } | null>(null);
-
-  // Slide-over de detalle
-  const [selectedReport, setSelectedReport] = useState<PendingReport | null>(null);
-  const [editedCategoriaId, setEditedCategoriaId] = useState<number>(0);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -60,7 +75,9 @@ export default function RevisarPage() {
       const res = await listPending(page);
       setReportes(res.data);
       setTotal(res.total);
-      setSelectedIds(new Set());
+      setSelectedReport(null);
+      setNearbySelected(new Set());
+      setNearbyObras([]);
     } catch (err) {
       setError(friendlyError(err));
     } finally {
@@ -72,20 +89,49 @@ export default function RevisarPage() {
     fetchData();
   }, [fetchData]);
 
-  const removeReport = (id: number) => {
-    setReportes((prev) => prev.filter((r) => r.id !== id));
-    setTotal((t) => t - 1);
-    if (selectedReport?.id === id) setSelectedReport(null);
+  const removeReports = (ids: number[]) => {
+    setReportes((prev) => prev.filter((r) => !ids.includes(r.id)));
+    setTotal((t) => t - ids.length);
+    if (selectedReport && ids.includes(selectedReport.id)) {
+      setSelectedReport(null);
+      setNearbySelected(new Set());
+      setNearbyObras([]);
+    }
+    setNearbySelected((prev) => {
+      const next = new Set(prev);
+      ids.forEach((id) => next.delete(id));
+      return next;
+    });
   };
+
+  const openDetail = async (report: PendingReport) => {
+    setSelectedReport(report);
+    setEditedCategoriaId(report.categoria_id);
+    setNearbySelected(new Set());
+    setNearbyObras([]);
+    try {
+      const obras = await listNearbyGroups(report.h3_res_11);
+      setNearbyObras(obras);
+    } catch {
+      // obras son contexto opcional, no bloqueamos si falla
+    }
+  };
+
+  const getNearby = (report: PendingReport): NearbyReport[] =>
+    reportes
+      .filter((r) => r.id !== report.id)
+      .map((r) => ({ ...r, distanciaM: haversineM(report.lat, report.lng, r.lat, r.lng) }))
+      .filter((r) => r.distanciaM <= 100)
+      .sort((a, b) => a.distanciaM - b.distanciaM);
 
   const handleAccept = (id: number, categoriaId?: number) => {
     if (!user) return;
     setConfirmModal({
       title: 'Aceptar reporte',
-      message: `Al aceptar el reporte #${id}, se creara automaticamente un Caso de Obra.`,
+      message: `Al aceptar el reporte #${id} se creará automáticamente un Caso de Obra individual.`,
       action: async () => {
         await acceptReport(id, user.id, categoriaId);
-        removeReport(id);
+        removeReports([id]);
       },
     });
   };
@@ -93,41 +139,36 @@ export default function RevisarPage() {
   const handleReject = (id: number) => {
     setConfirmModal({
       title: 'Rechazar reporte',
-      message: `El reporte #${id} sera rechazado permanentemente.`,
+      message: `El reporte #${id} será rechazado permanentemente.`,
       action: async () => {
         await rejectReportApi(id);
-        removeReport(id);
+        removeReports([id]);
       },
     });
   };
 
-  const handleGroupSelected = () => {
-    if (!user || selectedIds.size < 2) return;
-    const ids = Array.from(selectedIds);
+  const handleGroupWithNearby = () => {
+    if (!user || !selectedReport) return;
+    const ids = [selectedReport.id, ...Array.from(nearbySelected)];
     setConfirmModal({
       title: 'Crear Caso de Obra',
-      message: `Se agruparan ${ids.length} reportes en un solo Caso de Obra con codigo unico.`,
+      message: `Se agruparán ${ids.length} reportes en un Caso de Obra con código único.`,
       action: async () => {
         await createGroup(ids, user.id);
-        setReportes((prev) => prev.filter((r) => !selectedIds.has(r.id)));
-        setTotal((t) => t - ids.length);
-        setSelectedIds(new Set());
-        if (selectedReport && selectedIds.has(selectedReport.id)) setSelectedReport(null);
+        removeReports(ids);
       },
     });
   };
 
-  const handleRejectSelected = () => {
-    const ids = Array.from(selectedIds);
+  const handleAddToObra = (grupoId: number) => {
+    if (!user || !selectedReport) return;
+    const obra = nearbyObras.find((o) => o.id === grupoId);
     setConfirmModal({
-      title: 'Rechazar seleccionados',
-      message: `Se rechazaran ${ids.length} reportes permanentemente.`,
+      title: 'Añadir a obra existente',
+      message: `El reporte #${selectedReport.id} se añadirá a ${obra?.codigo_obra ?? `obra #${grupoId}`}.`,
       action: async () => {
-        await Promise.all(ids.map((id) => rejectReportApi(id)));
-        setReportes((prev) => prev.filter((r) => !selectedIds.has(r.id)));
-        setTotal((t) => t - ids.length);
-        setSelectedIds(new Set());
-        if (selectedReport && selectedIds.has(selectedReport.id)) setSelectedReport(null);
+        await acceptReport(selectedReport.id, user.id, editedCategoriaId, grupoId);
+        removeReports([selectedReport.id]);
       },
     });
   };
@@ -139,13 +180,13 @@ export default function RevisarPage() {
       action: async () => {
         await banDevice(report.device_id, 'Marcado como spam por moderador');
         await rejectReportApi(report.id);
-        removeReport(report.id);
+        removeReports([report.id]);
       },
     });
   };
 
-  const toggleSelect = (id: number) => {
-    setSelectedIds((prev) => {
+  const toggleNearby = (id: number) => {
+    setNearbySelected((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
@@ -153,65 +194,39 @@ export default function RevisarPage() {
     });
   };
 
-  const openDetail = (report: PendingReport) => {
-    setSelectedReport(report);
-    setEditedCategoriaId(report.categoria_id);
-  };
-
-  const getNearbyReports = (report: PendingReport) =>
-    reportes.filter((r) => r.h3_res_11 === report.h3_res_11 && r.id !== report.id);
-
-  const groups: GroupedReports[] = (() => {
-    const map = new Map<string, PendingReport[]>();
-    reportes.forEach((r) => {
-      const cell = r.h3_res_11;
-      if (!map.has(cell)) map.set(cell, []);
-      map.get(cell)!.push(r);
-    });
-    return Array.from(map.entries())
-      .map(([h3Cell, reportes]) => ({ h3Cell, reportes }))
-      .sort((a, b) => b.reportes.length - a.reportes.length);
-  })();
-
-  // Posiciones simuladas de marcadores en el mapa
-  const markerPositions = reportes.map((r, idx) => ({
-    id: r.id,
-    top: `${25 + (idx % 4) * 16}%`,
-    left: `${28 + (idx % 5) * 16}%`,
-  }));
+  const nearbyReports = selectedReport ? getNearby(selectedReport) : [];
 
   return (
-    <div className="-m-6 h-full overflow-hidden flex relative">
+    <div className="-m-6 h-full overflow-hidden flex">
 
-      {/* ── PANEL IZQUIERDO: Bandeja de entrada ── */}
-      <section className="w-[420px] shrink-0 bg-perla border-r border-arcilla flex flex-col shadow-[2px_0_12px_rgba(27,20,16,0.06)]">
-        <div className="px-4 py-3.5 border-b border-arcilla flex items-center justify-between bg-lienzo/60">
+      {/* ── COL 1: Bandeja de entrada ── */}
+      <section className="w-[300px] shrink-0 bg-perla border-r border-arcilla flex flex-col shadow-[2px_0_8px_rgba(27,20,16,0.05)]">
+        <div className="px-4 py-3 border-b border-arcilla flex items-center justify-between bg-lienzo/60">
           <h2 className="font-semibold text-tierra text-sm flex items-center gap-2">
             <List className="w-4 h-4 text-caoba" />
-            Bandeja de Entrada
+            Bandeja
           </h2>
           <div className="flex items-center gap-2">
             <span className="bg-yeso text-tierra text-xs px-2.5 py-1 rounded-pill font-semibold border border-arcilla">
-              {total} Pendientes
+              {total} pendientes
             </span>
             <button
               onClick={fetchData}
               disabled={loading}
-              className="text-[11px] font-medium text-caoba hover:text-tierra disabled:opacity-40 transition-colors"
+              title="Actualizar"
+              data-testid="btn-actualizar"
+              className="text-caoba hover:text-tierra disabled:opacity-40 transition-colors p-1"
             >
-              Actualizar
+              <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
             </button>
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-3 space-y-2">
+        <div className="flex-1 overflow-y-auto p-2.5 space-y-1.5">
           {loading && reportes.length === 0 && (
-            <div className="space-y-2 pt-1">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="bg-lienzo rounded-3xl-3 p-4 animate-pulse border border-arcilla">
-                  <div className="h-3.5 bg-yeso rounded w-28 mb-2.5" />
-                  <div className="h-10 bg-yeso rounded-2xl" />
-                </div>
+            <div className="space-y-1.5 pt-1">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="bg-lienzo rounded-3xl-2 p-3 animate-pulse border border-arcilla h-20" />
               ))}
             </div>
           )}
@@ -222,37 +237,32 @@ export default function RevisarPage() {
             </div>
           )}
 
-          {!loading && !error && groups.length === 0 && (
+          {!loading && !error && reportes.length === 0 && (
             <div className="text-center py-16">
               <CheckCircle className="w-8 h-8 text-arcilla mx-auto mb-2" />
               <p className="text-sm text-arena">No hay reportes pendientes.</p>
             </div>
           )}
 
-          {groups.map((g) => (
-            <PendingGroupCard
-              key={g.h3Cell}
-              h3Cell={g.h3Cell}
-              reportes={g.reportes}
-              selectedIds={selectedIds}
-              selectedReportId={selectedReport?.id}
-              onToggleSelect={toggleSelect}
-              onSelectAll={() => {
-                const allSelected = g.reportes.every((r) => selectedIds.has(r.id));
-                setSelectedIds((prev) => {
-                  const next = new Set(prev);
-                  g.reportes.forEach((r) => {
-                    if (allSelected) next.delete(r.id);
-                    else next.add(r.id);
-                  });
-                  return next;
-                });
-              }}
-              onGroupSelected={handleGroupSelected}
-              onRejectSelected={handleRejectSelected}
-              onOpenDetail={openDetail}
-              loading={actionLoading}
-            />
+          {reportes.map((r) => (
+            <div
+              key={r.id}
+              onClick={() => openDetail(r)}
+              className={`rounded-3xl-2 transition-all ${
+                selectedReport?.id === r.id ? 'ring-2 ring-caoba ring-offset-1' : ''
+              }`}
+            >
+              <PendingReportCard
+                id={r.id}
+                categoria_id={r.categoria_id}
+                url_imagen={r.url_imagen}
+                device_id={r.device_id}
+                creado_en={r.creado_en}
+                selected={selectedReport?.id === r.id}
+                onSelect={() => openDetail(r)}
+                loading={actionLoading}
+              />
+            </div>
           ))}
         </div>
 
@@ -261,217 +271,245 @@ export default function RevisarPage() {
         </div>
       </section>
 
-      {/* ── PANEL DERECHO: Mapa DSS ── */}
-      <section className="flex-1 bg-catedral relative overflow-hidden">
-        <div
-          className="absolute inset-0 opacity-10"
-          style={{
-            backgroundImage:
-              'linear-gradient(to right, #5e483a 1px, transparent 1px), linear-gradient(to bottom, #5e483a 1px, transparent 1px)',
-            backgroundSize: '40px 40px',
-          }}
-        />
-
-        <div className="absolute top-1/4 left-1/3 w-64 h-64 bg-sol-camba rounded-full mix-blend-screen filter blur-[80px] opacity-40 animate-pulse" />
-        <div className="absolute top-1/3 left-1/4 w-48 h-48 bg-ladrillo rounded-full mix-blend-screen filter blur-[60px] opacity-30" />
-        <div className="absolute bottom-1/3 right-1/4 w-72 h-72 bg-caoba rounded-full mix-blend-screen filter blur-[100px] opacity-20" />
-
-        {markerPositions.map((pos) => {
-          const isSelected = selectedReport?.id === pos.id;
-          return (
-            <div
-              key={`map-${pos.id}`}
-              className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none"
-              style={{ top: pos.top, left: pos.left }}
-            >
-              <div
-                className={`rounded-full border-2 border-perla shadow-lg transition-all duration-300 ${
-                  isSelected
-                    ? 'w-5 h-5 bg-sol-camba scale-125 animate-pulse'
-                    : 'w-3.5 h-3.5 bg-ladrillo'
-                }`}
-              />
-              {isSelected && (
-                <div className="mt-1.5 bg-perla px-2 py-0.5 rounded-xl shadow text-[10px] font-bold text-catedral flex items-center gap-1">
-                  <Hexagon className="w-2.5 h-2.5 text-sol-camba" />
-                  #{pos.id}
-                </div>
-              )}
+      {/* ── COL 2: Detalle del reporte ── */}
+      <section className="flex-1 bg-lienzo/40 border-r border-arcilla flex flex-col overflow-y-auto">
+        {!selectedReport ? (
+          <div className="flex-1 flex flex-col items-center justify-center gap-3 text-center p-8">
+            <Inbox className="w-10 h-10 text-arcilla" />
+            <p className="text-sm text-arena max-w-[180px] leading-relaxed">
+              Selecciona un reporte de la bandeja para inspeccionarlo.
+            </p>
+          </div>
+        ) : (
+          <div className="p-5 space-y-4">
+            <div className="flex items-center gap-3">
+              <span className="bg-yeso text-ladrillo px-3 py-1 rounded-xl text-xs font-mono font-bold border border-arcilla">
+                #{selectedReport.id}
+              </span>
+              <h2 className="text-base font-bold text-tierra">Inspección del Reporte</h2>
             </div>
-          );
-        })}
 
-        <div className="absolute bottom-5 right-5 bg-catedral/80 backdrop-blur-md p-4 rounded-3xl-2 border border-ladrillo/40 text-perla shadow-2xl">
-          <h4 className="text-xs font-bold flex items-center gap-1.5 mb-1.5 text-sol-camba">
-            <MapIcon className="w-3.5 h-3.5" /> DSS Espacial Activo
-          </h4>
-          <p className="text-[10px] text-arena leading-relaxed max-w-[180px]">
-            Concentración de reportes por índice H3. Selecciona un reporte para ver su ubicación.
-          </p>
-        </div>
+            <div className="rounded-3xl-2 overflow-hidden border border-arcilla relative group">
+              <div className="absolute top-2.5 left-2.5 bg-catedral/70 backdrop-blur-md text-perla text-[10px] px-2 py-1 rounded-xl flex items-center gap-1 z-10">
+                <Camera className="w-3 h-3" /> Evidencia
+              </div>
+              <img
+                src={getImageUrl(selectedReport.url_imagen)}
+                alt="Evidencia"
+                className="w-full h-56 object-cover transform group-hover:scale-105 transition-transform duration-500 bg-yeso"
+              />
+            </div>
 
-        {reportes.length === 0 && !loading && (
-          <div className="absolute inset-0 flex items-center justify-center">
-            <p className="text-arena text-sm">Sin reportes activos en el mapa.</p>
+            <div className="bg-perla rounded-3xl-2 p-4 border border-arcilla space-y-3">
+              <div>
+                <label className="text-[10px] font-bold text-sol-camba uppercase tracking-wider mb-1.5 flex items-center gap-1">
+                  <Edit3 className="w-3 h-3" /> Categoría
+                </label>
+                <select
+                  value={editedCategoriaId}
+                  onChange={(e) => setEditedCategoriaId(Number(e.target.value))}
+                  className="w-full mt-1 p-2 border border-arcilla rounded-2xl bg-lienzo text-tierra font-semibold text-sm focus:outline-none focus:border-caoba transition-colors"
+                >
+                  {Object.entries(CATEGORIA_IDS).map(([name, id]) => (
+                    <option key={id} value={id}>{name}</option>
+                  ))}
+                </select>
+                {selectedReport.categoria_id !== editedCategoriaId && (
+                  <p className="text-[10px] text-caoba mt-1.5">
+                    Ciudadano reportó: &ldquo;{CATEGORIA_NAMES[selectedReport.categoria_id] ?? 'Otro'}&rdquo;
+                  </p>
+                )}
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 pt-1 border-t border-arcilla">
+                <div>
+                  <h3 className="text-[10px] font-bold text-arena uppercase tracking-wide mb-1 flex items-center gap-1">
+                    <MapPin className="w-3 h-3" /> Coordenadas
+                  </h3>
+                  <p className="font-mono text-xs text-tierra">
+                    {Number(selectedReport.lat).toFixed(5)}, {Number(selectedReport.lng).toFixed(5)}
+                  </p>
+                </div>
+                <div>
+                  <h3 className="text-[10px] font-bold text-arena uppercase tracking-wide mb-1 flex items-center gap-1">
+                    <Smartphone className="w-3 h-3" /> Device ID
+                  </h3>
+                  <p className="font-mono text-xs text-tierra truncate">{selectedReport.device_id}</p>
+                </div>
+              </div>
+
+              <div className="pt-1 border-t border-arcilla">
+                <h3 className="text-[10px] font-bold text-arena uppercase tracking-wide mb-1 flex items-center gap-1">
+                  <Hexagon className="w-3 h-3" /> Celda H3
+                </h3>
+                <p className="font-mono text-xs text-caoba break-all">{selectedReport.h3_res_11}</p>
+              </div>
+            </div>
+
+            {nearbySelected.size > 0 && (
+              <div className="bg-yeso border border-caoba/40 rounded-3xl-2 px-4 py-3 flex items-center gap-2">
+                <AlertTriangle className="w-3.5 h-3.5 text-sol-camba shrink-0" />
+                <p className="text-xs text-tierra">
+                  <span className="font-bold">{nearbySelected.size}</span> reporte{nearbySelected.size > 1 ? 's' : ''} cercano{nearbySelected.size > 1 ? 's' : ''} marcado{nearbySelected.size > 1 ? 's' : ''} para agrupar.
+                </p>
+              </div>
+            )}
+
+            <div className="space-y-2.5 pb-4">
+              {nearbySelected.size > 0 ? (
+                <button
+                  onClick={handleGroupWithNearby}
+                  disabled={actionLoading}
+                  data-testid="btn-crear-caso"
+                  className="w-full flex items-center justify-center gap-2 bg-caoba text-perla font-bold text-sm min-h-11 px-5 rounded-3xl-3 hover:brightness-110 disabled:opacity-50 transition-all shadow-sm"
+                >
+                  <FolderPlus className="w-4 h-4" />
+                  Crear Caso de Obra ({1 + nearbySelected.size} reportes)
+                </button>
+              ) : (
+                <button
+                  onClick={() => handleAccept(selectedReport.id, editedCategoriaId)}
+                  disabled={actionLoading}
+                  data-testid="btn-aceptar"
+                  className="w-full flex items-center justify-center gap-2 bg-sol-camba text-perla font-bold text-sm min-h-11 px-5 rounded-3xl-3 hover:brightness-110 disabled:opacity-50 transition-all shadow-sm"
+                >
+                  <CheckCircle className="w-4 h-4" />
+                  Aceptar solo
+                </button>
+              )}
+
+              <button
+                onClick={() => handleReject(selectedReport.id)}
+                disabled={actionLoading}
+                data-testid="btn-rechazar"
+                className="w-full flex items-center justify-center gap-2 bg-yeso text-ladrillo font-semibold text-sm min-h-11 px-5 rounded-3xl-3 border border-arcilla hover:bg-arcilla disabled:opacity-50 transition-all"
+              >
+                <XCircle className="w-4 h-4" />
+                Rechazar reporte
+              </button>
+
+              <button
+                onClick={() => handleBanDevice(selectedReport)}
+                disabled={actionLoading}
+                className="w-full flex items-center justify-center gap-1.5 text-arena hover:text-ladrillo hover:bg-yeso min-h-9 px-5 rounded-3xl-3 text-xs font-medium transition-colors"
+              >
+                <Ban className="w-3.5 h-3.5" />
+                Marcar como spam / Banear dispositivo
+              </button>
+            </div>
           </div>
         )}
       </section>
 
-      {/* ── SLIDE-OVER: Detalle del reporte ── */}
-      {selectedReport && (
-        <div className="absolute inset-0 z-40 flex items-center justify-center bg-catedral/50 backdrop-blur-sm p-4">
-          <div className="bg-perla w-full max-w-4xl max-h-[92vh] overflow-y-auto rounded-3xl-3 shadow-2xl flex flex-col">
+      {/* ── COL 3: Contexto espacial (obras + reportes cercanos) ── */}
+      <section className="w-[300px] shrink-0 bg-perla flex flex-col">
+        <div className="px-4 py-3 border-b border-arcilla bg-lienzo/60">
+          <h2 className="font-semibold text-tierra text-sm flex items-center gap-2">
+            <MapPin className="w-4 h-4 text-caoba" />
+            Contexto espacial
+          </h2>
+          {selectedReport && (
+            <p className="text-[10px] text-arena mt-0.5">
+              {nearbyObras.length > 0 && `${nearbyObras.length} obra${nearbyObras.length > 1 ? 's' : ''} activa${nearbyObras.length > 1 ? 's' : ''}`}
+              {nearbyObras.length > 0 && nearbyReports.length > 0 && ' · '}
+              {nearbyReports.length > 0 && `${nearbyReports.length} reporte${nearbyReports.length > 1 ? 's' : ''} ≤100 m`}
+              {nearbyObras.length === 0 && nearbyReports.length === 0 && 'Sin contexto cercano'}
+            </p>
+          )}
+        </div>
 
-            <div className="flex justify-between items-center px-6 py-4 border-b border-arcilla sticky top-0 bg-perla z-10 rounded-t-3xl-3">
-              <div className="flex items-center gap-3">
-                <span className="bg-yeso text-ladrillo px-3 py-1 rounded-xl text-xs font-mono font-bold border border-arcilla">
-                  #{selectedReport.id}
+        {!selectedReport ? (
+          <div className="flex-1 flex items-center justify-center p-6">
+            <p className="text-xs text-arena text-center italic">
+              Selecciona un reporte para ver el contexto espacial.
+            </p>
+          </div>
+        ) : (
+          <NearbyReportsList
+            nearby={nearbyReports}
+            nearbyObras={nearbyObras}
+            selectedIds={nearbySelected}
+            onToggle={toggleNearby}
+            onOpenDetail={setNearbyDetailReport}
+            onAddToObra={handleAddToObra}
+          />
+        )}
+      </section>
+
+      {/* ── Modal: Detalle de reporte cercano ── */}
+      {nearbyDetailReport && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-catedral/50 backdrop-blur-sm p-4">
+          <div className="bg-perla w-full max-w-sm rounded-3xl-3 shadow-2xl border border-arcilla overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-arcilla bg-lienzo/60">
+              <div className="flex items-center gap-2">
+                <span className="bg-yeso text-ladrillo px-2 py-0.5 rounded-xl text-xs font-mono font-bold border border-arcilla">
+                  #{nearbyDetailReport.id}
                 </span>
-                <h2 className="text-base font-bold text-tierra">Inspección del Reporte</h2>
+                <span className="text-xs font-semibold text-tierra">
+                  {CATEGORIA_NAMES[nearbyDetailReport.categoria_id] ?? 'Otro'}
+                </span>
               </div>
               <button
-                onClick={() => setSelectedReport(null)}
-                className="text-arena hover:text-tierra hover:bg-yeso p-2 rounded-pill transition-colors"
+                onClick={() => setNearbyDetailReport(null)}
+                className="text-arena hover:text-tierra hover:bg-yeso p-1.5 rounded-pill transition-colors"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="flex flex-col md:flex-row p-6 gap-6 flex-1">
+            <img
+              src={getImageUrl(nearbyDetailReport.url_imagen)}
+              alt="Evidencia"
+              className="w-full h-48 object-cover bg-yeso"
+            />
 
-              {/* Columna izquierda: Evidencia + Metadatos */}
-              <div className="w-full md:w-1/2 space-y-4">
-                <div className="rounded-3xl-2 overflow-hidden border border-arcilla relative group">
-                  <div className="absolute top-2.5 left-2.5 bg-catedral/70 backdrop-blur-md text-perla text-[10px] px-2 py-1 rounded-xl flex items-center gap-1 z-10">
-                    <Camera className="w-3 h-3" /> S3 Storage
-                  </div>
-                  <img
-                    src={getImageUrl(selectedReport.url_imagen)}
-                    alt="Evidencia"
-                    className="w-full h-60 object-cover transform group-hover:scale-105 transition-transform duration-500 bg-yeso"
-                  />
+            <div className="p-4 space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <p className="text-[10px] font-bold text-arena uppercase tracking-wide mb-0.5 flex items-center gap-1">
+                    <MapPin className="w-3 h-3" /> Coordenadas
+                  </p>
+                  <p className="font-mono text-xs text-tierra">
+                    {Number(nearbyDetailReport.lat).toFixed(5)},<br />{Number(nearbyDetailReport.lng).toFixed(5)}
+                  </p>
                 </div>
-
-                <div className="bg-lienzo rounded-3xl-2 p-4 border border-arcilla space-y-3">
-                  <div className="bg-perla p-3 rounded-3xl-2 border border-arcilla">
-                    <label className="text-[10px] font-bold text-sol-camba uppercase tracking-wider mb-1.5 flex items-center gap-1">
-                      <Edit3 className="w-3 h-3" /> Corregir Categoría
-                    </label>
-                    <select
-                      value={editedCategoriaId}
-                      onChange={(e) => setEditedCategoriaId(Number(e.target.value))}
-                      className="w-full mt-1 p-2 border border-arcilla rounded-2xl bg-lienzo text-tierra font-semibold text-sm focus:outline-none focus:border-caoba transition-colors"
-                    >
-                      {Object.entries(CATEGORIA_IDS).map(([name, id]) => (
-                        <option key={id} value={id}>
-                          {name}
-                        </option>
-                      ))}
-                    </select>
-                    {selectedReport.categoria_id !== editedCategoriaId && (
-                      <p className="text-[10px] text-caoba mt-1.5">
-                        El ciudadano reportó: "{CATEGORIA_NAMES[selectedReport.categoria_id] ?? 'Otro'}"
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3 pt-1">
-                    <div>
-                      <h3 className="text-[10px] font-bold text-arena uppercase tracking-wide mb-1 flex items-center gap-1">
-                        <MapPin className="w-3 h-3" /> Coordenadas
-                      </h3>
-                      <p className="font-mono text-xs text-tierra">
-                        {Number(selectedReport.lat).toFixed(5)}, {Number(selectedReport.lng).toFixed(5)}
-                      </p>
-                    </div>
-                    <div>
-                      <h3 className="text-[10px] font-bold text-arena uppercase tracking-wide mb-1 flex items-center gap-1">
-                        <Smartphone className="w-3 h-3" /> Device ID
-                      </h3>
-                      <p className="font-mono text-xs text-tierra truncate">{selectedReport.device_id}</p>
-                    </div>
-                  </div>
-
-                  <div className="pt-1 border-t border-arcilla">
-                    <h3 className="text-[10px] font-bold text-arena uppercase tracking-wide mb-1 flex items-center gap-1">
-                      <Hexagon className="w-3 h-3" /> Celda H3
-                    </h3>
-                    <p className="font-mono text-xs text-caoba break-all">{selectedReport.h3_res_11}</p>
-                  </div>
+                <div>
+                  <p className="text-[10px] font-bold text-arena uppercase tracking-wide mb-0.5 flex items-center gap-1">
+                    <MapPin className="w-3 h-3" /> Distancia
+                  </p>
+                  <p className="text-sm font-bold text-caoba">
+                    {nearbyDetailReport.distanciaM < 1000
+                      ? `${Math.round(nearbyDetailReport.distanciaM)} m`
+                      : `${(nearbyDetailReport.distanciaM / 1000).toFixed(1)} km`}
+                  </p>
                 </div>
               </div>
 
-              {/* Columna derecha: H3 Intelligence + Acciones */}
-              <div className="w-full md:w-1/2 flex flex-col gap-4">
-                {(() => {
-                  const nearby = getNearbyReports(selectedReport);
-                  return nearby.length > 0 ? (
-                    <div className="bg-yeso border border-arcilla rounded-3xl-2 p-4">
-                      <p className="text-xs font-bold text-ladrillo mb-2 flex items-center gap-1.5">
-                        <AlertTriangle className="w-3.5 h-3.5 text-sol-camba" />
-                        {nearby.length} Reporte{nearby.length > 1 ? 's' : ''} más en esta zona H3
-                      </p>
-                      <p className="text-[10px] text-caoba mb-3 leading-snug">
-                        Considera agrupar reportes de la misma zona para crear un Caso de Obra.
-                      </p>
-                      <ul className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
-                        {nearby.map((r) => (
-                          <li
-                            key={r.id}
-                            className="flex justify-between items-center bg-perla rounded-2xl px-3 py-1.5 border border-arcilla"
-                          >
-                            <span className="font-mono text-[10px] text-caoba">#{r.id}</span>
-                            <span className="text-[10px] font-semibold text-tierra bg-yeso px-2 py-0.5 rounded-pill border border-arcilla">
-                              {CATEGORIA_NAMES[r.categoria_id] ?? 'Otro'}
-                            </span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  ) : (
-                    <div className="bg-yeso border border-arcilla rounded-3xl-2 p-4">
-                      <p className="text-xs text-arena italic text-center py-2">
-                        No hay otros reportes en este hexágono H3.
-                      </p>
-                    </div>
-                  );
-                })()}
-
-                {/* Panel de acciones */}
-                <div className="bg-perla rounded-3xl-2 border border-arcilla p-5 mt-auto space-y-3">
-                  <button
-                    onClick={() => handleAccept(selectedReport.id, editedCategoriaId)}
-                    disabled={actionLoading}
-                    className="w-full flex items-center justify-center gap-2 bg-sol-camba text-perla font-bold text-sm min-h-11 px-5 rounded-3xl-3 hover:brightness-110 disabled:opacity-50 transition-all shadow-sm"
-                  >
-                    <CheckCircle className="w-4 h-4" />
-                    Aceptar reporte
-                  </button>
-
-                  <button
-                    onClick={() => handleReject(selectedReport.id)}
-                    disabled={actionLoading}
-                    className="w-full flex items-center justify-center gap-2 bg-yeso text-ladrillo font-semibold text-sm min-h-11 px-5 rounded-3xl-3 border border-arcilla hover:bg-arcilla disabled:opacity-50 transition-all"
-                  >
-                    <XCircle className="w-4 h-4" />
-                    Rechazar reporte
-                  </button>
-
-                  <button
-                    onClick={() => handleBanDevice(selectedReport)}
-                    className="w-full flex items-center justify-center gap-1.5 text-arena hover:text-ladrillo hover:bg-yeso min-h-9 px-5 rounded-3xl-3 text-xs font-medium transition-colors"
-                  >
-                    <Ban className="w-3.5 h-3.5" />
-                    Marcar como spam / Banear dispositivo
-                  </button>
-                </div>
+              <div>
+                <p className="text-[10px] font-bold text-arena uppercase tracking-wide mb-0.5 flex items-center gap-1">
+                  <Smartphone className="w-3 h-3" /> Device ID
+                </p>
+                <p className="font-mono text-xs text-tierra truncate">{nearbyDetailReport.device_id}</p>
               </div>
+
+              <label className="flex items-center gap-3 bg-yeso rounded-3xl-2 px-3 py-2.5 border border-arcilla cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={nearbySelected.has(nearbyDetailReport.id)}
+                  onChange={() => toggleNearby(nearbyDetailReport.id)}
+                  className="w-4 h-4 rounded accent-catedral shrink-0"
+                />
+                <span className="text-xs font-semibold text-tierra">
+                  {nearbySelected.has(nearbyDetailReport.id)
+                    ? 'Incluido en el grupo'
+                    : 'Incluir en el grupo'}
+                </span>
+              </label>
             </div>
           </div>
         </div>
       )}
 
-      {/* Modal de confirmación */}
       <ConfirmModal
         open={!!confirmModal}
         title={confirmModal?.title ?? ''}
