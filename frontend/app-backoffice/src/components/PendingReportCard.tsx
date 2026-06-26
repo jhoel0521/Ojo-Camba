@@ -1,4 +1,3 @@
-import { Check, X } from 'lucide-react';
 import { getImageUrl } from '../lib/api';
 import { CATEGORIA_NAMES } from '../lib/categories';
 import StatusBadge from './StatusBadge';
@@ -10,9 +9,7 @@ interface PendingReportCardProps {
   device_id: string;
   creado_en: string;
   selected?: boolean;
-  onSelect?: (id: number) => void;
-  onAccept?: (id: number) => void;
-  onReject?: (id: number) => void;
+  onSelect: (id: number) => void;
   loading?: boolean;
 }
 
@@ -24,8 +21,6 @@ export default function PendingReportCard({
   creado_en,
   selected,
   onSelect,
-  onAccept,
-  onReject,
   loading,
 }: PendingReportCardProps) {
   const fecha = new Date(creado_en).toLocaleDateString('es-BO', {
@@ -36,15 +31,20 @@ export default function PendingReportCard({
   });
 
   return (
-    <div className="bg-perla rounded-3xl-2 p-3 flex items-center gap-3">
-      {onSelect && (
-        <input
-          type="checkbox"
-          checked={selected}
-          onChange={() => onSelect(id)}
-          className="w-4 h-4 rounded accent-catedral shrink-0"
-        />
-      )}
+    <div
+      data-testid={`report-card-${id}`}
+      className={`bg-perla rounded-3xl-2 p-3 flex items-center gap-3 cursor-pointer transition-all ${
+        selected ? 'ring-2 ring-caoba ring-offset-1' : 'hover:ring-1 hover:ring-arcilla'
+      } ${loading ? 'opacity-60 pointer-events-none' : ''}`}
+    >
+      <input
+        type="checkbox"
+        checked={!!selected}
+        onChange={() => onSelect(id)}
+        onClick={(e) => e.stopPropagation()}
+        className="w-4 h-4 rounded accent-catedral shrink-0"
+        aria-label={`Seleccionar reporte #${id}`}
+      />
       <img
         src={getImageUrl(url_imagen)}
         alt=""
@@ -56,30 +56,8 @@ export default function PendingReportCard({
           {CATEGORIA_NAMES[categoria_id] || 'Otro'}
         </p>
         <p className="text-[10px] text-arena mt-0.5">
-          ID #{id} · {device_id.slice(0, 8)} · {fecha}
+          #{id} · {device_id.slice(0, 8)} · {fecha}
         </p>
-      </div>
-      <div className="flex items-center gap-1.5 shrink-0">
-        {onAccept && (
-          <button
-            onClick={() => onAccept(id)}
-            disabled={loading}
-            className="w-9 h-9 flex items-center justify-center bg-sol-camba text-perla rounded-2xl hover:brightness-110 disabled:opacity-50 transition-all"
-            title="Aceptar"
-          >
-            <Check className="w-4 h-4" />
-          </button>
-        )}
-        {onReject && (
-          <button
-            onClick={() => onReject(id)}
-            disabled={loading}
-            className="w-9 h-9 flex items-center justify-center bg-catedral text-arena rounded-2xl hover:brightness-125 disabled:opacity-50 transition-all"
-            title="Rechazar"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        )}
       </div>
     </div>
   );

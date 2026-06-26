@@ -25,6 +25,7 @@ export interface GrupoReporte {
   categoria_id: number | null;
   creado_en: string;
   total_reportes?: number;
+  preview_imagen?: string;
 }
 
 export interface Actualizacion {
@@ -86,11 +87,19 @@ export async function acceptReport(
   id: number,
   moderador_id: number,
   categoria_id?: number,
+  grupo_id?: number,
 ): Promise<{ id: number; estado: string; grupo_id: number; codigo_obra: string }> {
   return fetchAPI(`/admin/reports/${id}/accept`, {
     method: 'POST',
-    body: JSON.stringify({ moderador_id, categoria_id }),
+    body: JSON.stringify({ moderador_id, categoria_id, grupo_id }),
   });
+}
+
+export async function listNearbyGroups(h3_cell: string): Promise<GrupoReporte[]> {
+  const res = await fetchAPI<GrupoReporte[] | { data: GrupoReporte[] }>(
+    `/admin/groups/by-cell?h3_cell=${encodeURIComponent(h3_cell)}&h3_resolution=11`,
+  );
+  return Array.isArray(res) ? res : ((res as { data: GrupoReporte[] }).data ?? []);
 }
 
 export async function rejectReport(id: number): Promise<{ id: number; estado: string }> {
@@ -136,6 +145,13 @@ export async function updateCase(
     method: 'POST',
     body: JSON.stringify(dto),
   });
+}
+
+export async function listReportesByGrupo(grupo_id: number, limit = 6): Promise<PendingReport[]> {
+  const res = await fetchAPI<PaginatedResponse<PendingReport>>(
+    `/reportes?grupo_id=${grupo_id}&limit=${limit}`,
+  );
+  return res.data ?? [];
 }
 
 export async function banDevice(device_id: string, motivo: string) {
