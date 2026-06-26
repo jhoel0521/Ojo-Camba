@@ -316,7 +316,7 @@ export default function RevisarPage() {
                 </select>
                 {selectedReport.categoria_id !== editedCategoriaId && (
                   <p className="text-[10px] text-caoba mt-1.5">
-                    Ciudadano reportó: "{CATEGORIA_NAMES[selectedReport.categoria_id] ?? 'Otro'}"
+                    Ciudadano reportó: &ldquo;{CATEGORIA_NAMES[selectedReport.categoria_id] ?? 'Otro'}&rdquo;
                   </p>
                 )}
               </div>
