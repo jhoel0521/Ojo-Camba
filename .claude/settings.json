@@ -4,11 +4,9 @@
       "PowerShell(gh project **)",
       "Bash(ls \"J:\\\\www\\\\word\" 2>&1)",
       "Read(//j/www/word/**)",
-      "Bash(node act4.js)",
-      "Bash(node -e ' *)",
-      "Bash(node act4_tmp.js)",
-      "Bash(del act4_tmp.js)",
-      "Bash(npm install *)"
+      "Bash(node *)",
+      "Bash(pnpm *)",
+      "Bash(pnpm tsc *)"
     ],
     "additionalDirectories": [
       "J:\\www\\word"
