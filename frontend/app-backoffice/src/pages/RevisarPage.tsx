@@ -117,6 +117,8 @@ export default function RevisarPage() {
     }
   };
 
+  // Limitación conocida: solo busca entre los reportes de la página actual (max 20).
+  // Para detección completa de duplicados se necesita GET /admin/reports/nearby?lat&lng&radius.
   const getNearby = (report: PendingReport): NearbyReport[] =>
     reportes
       .filter((r) => r.id !== report.id)
@@ -198,7 +200,6 @@ export default function RevisarPage() {
 
   return (
     <div className="-m-6 h-full overflow-hidden flex">
-
       {/* ── COL 1: Bandeja de entrada ── */}
       <section className="w-[300px] shrink-0 bg-perla border-r border-arcilla flex flex-col shadow-[2px_0_8px_rgba(27,20,16,0.05)]">
         <div className="px-4 py-3 border-b border-arcilla flex items-center justify-between bg-lienzo/60">
@@ -226,7 +227,10 @@ export default function RevisarPage() {
           {loading && reportes.length === 0 && (
             <div className="space-y-1.5 pt-1">
               {[1, 2, 3, 4].map((i) => (
-                <div key={i} className="bg-lienzo rounded-3xl-2 p-3 animate-pulse border border-arcilla h-20" />
+                <div
+                  key={i}
+                  className="bg-lienzo rounded-3xl-2 p-3 animate-pulse border border-arcilla h-20"
+                />
               ))}
             </div>
           )}
@@ -311,12 +315,15 @@ export default function RevisarPage() {
                   className="w-full mt-1 p-2 border border-arcilla rounded-2xl bg-lienzo text-tierra font-semibold text-sm focus:outline-none focus:border-caoba transition-colors"
                 >
                   {Object.entries(CATEGORIA_IDS).map(([name, id]) => (
-                    <option key={id} value={id}>{name}</option>
+                    <option key={id} value={id}>
+                      {name}
+                    </option>
                   ))}
                 </select>
                 {selectedReport.categoria_id !== editedCategoriaId && (
                   <p className="text-[10px] text-caoba mt-1.5">
-                    Ciudadano reportó: &ldquo;{CATEGORIA_NAMES[selectedReport.categoria_id] ?? 'Otro'}&rdquo;
+                    Ciudadano reportó: &ldquo;
+                    {CATEGORIA_NAMES[selectedReport.categoria_id] ?? 'Otro'}&rdquo;
                   </p>
                 )}
               </div>
@@ -334,7 +341,9 @@ export default function RevisarPage() {
                   <h3 className="text-[10px] font-bold text-arena uppercase tracking-wide mb-1 flex items-center gap-1">
                     <Smartphone className="w-3 h-3" /> Device ID
                   </h3>
-                  <p className="font-mono text-xs text-tierra truncate">{selectedReport.device_id}</p>
+                  <p className="font-mono text-xs text-tierra truncate">
+                    {selectedReport.device_id}
+                  </p>
                 </div>
               </div>
 
@@ -350,7 +359,9 @@ export default function RevisarPage() {
               <div className="bg-yeso border border-caoba/40 rounded-3xl-2 px-4 py-3 flex items-center gap-2">
                 <AlertTriangle className="w-3.5 h-3.5 text-sol-camba shrink-0" />
                 <p className="text-xs text-tierra">
-                  <span className="font-bold">{nearbySelected.size}</span> reporte{nearbySelected.size > 1 ? 's' : ''} cercano{nearbySelected.size > 1 ? 's' : ''} marcado{nearbySelected.size > 1 ? 's' : ''} para agrupar.
+                  <span className="font-bold">{nearbySelected.size}</span> reporte
+                  {nearbySelected.size > 1 ? 's' : ''} cercano{nearbySelected.size > 1 ? 's' : ''}{' '}
+                  marcado{nearbySelected.size > 1 ? 's' : ''} para agrupar.
                 </p>
               </div>
             )}
@@ -410,9 +421,11 @@ export default function RevisarPage() {
           </h2>
           {selectedReport && (
             <p className="text-[10px] text-arena mt-0.5">
-              {nearbyObras.length > 0 && `${nearbyObras.length} obra${nearbyObras.length > 1 ? 's' : ''} activa${nearbyObras.length > 1 ? 's' : ''}`}
+              {nearbyObras.length > 0 &&
+                `${nearbyObras.length} obra${nearbyObras.length > 1 ? 's' : ''} activa${nearbyObras.length > 1 ? 's' : ''}`}
               {nearbyObras.length > 0 && nearbyReports.length > 0 && ' · '}
-              {nearbyReports.length > 0 && `${nearbyReports.length} reporte${nearbyReports.length > 1 ? 's' : ''} ≤100 m`}
+              {nearbyReports.length > 0 &&
+                `${nearbyReports.length} reporte${nearbyReports.length > 1 ? 's' : ''} ≤100 m`}
               {nearbyObras.length === 0 && nearbyReports.length === 0 && 'Sin contexto cercano'}
             </p>
           )}
@@ -438,8 +451,14 @@ export default function RevisarPage() {
 
       {/* ── Modal: Detalle de reporte cercano ── */}
       {nearbyDetailReport && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-catedral/50 backdrop-blur-sm p-4">
-          <div className="bg-perla w-full max-w-sm rounded-3xl-3 shadow-2xl border border-arcilla overflow-hidden">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-catedral/50 backdrop-blur-sm p-4"
+          onClick={() => setNearbyDetailReport(null)}
+        >
+          <div
+            className="bg-perla w-full max-w-sm rounded-3xl-3 shadow-2xl border border-arcilla overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex items-center justify-between px-4 py-3 border-b border-arcilla bg-lienzo/60">
               <div className="flex items-center gap-2">
                 <span className="bg-yeso text-ladrillo px-2 py-0.5 rounded-xl text-xs font-mono font-bold border border-arcilla">
@@ -470,7 +489,8 @@ export default function RevisarPage() {
                     <MapPin className="w-3 h-3" /> Coordenadas
                   </p>
                   <p className="font-mono text-xs text-tierra">
-                    {Number(nearbyDetailReport.lat).toFixed(5)},<br />{Number(nearbyDetailReport.lng).toFixed(5)}
+                    {Number(nearbyDetailReport.lat).toFixed(5)},<br />
+                    {Number(nearbyDetailReport.lng).toFixed(5)}
                   </p>
                 </div>
                 <div>
@@ -489,7 +509,9 @@ export default function RevisarPage() {
                 <p className="text-[10px] font-bold text-arena uppercase tracking-wide mb-0.5 flex items-center gap-1">
                   <Smartphone className="w-3 h-3" /> Device ID
                 </p>
-                <p className="font-mono text-xs text-tierra truncate">{nearbyDetailReport.device_id}</p>
+                <p className="font-mono text-xs text-tierra truncate">
+                  {nearbyDetailReport.device_id}
+                </p>
               </div>
 
               <label className="flex items-center gap-3 bg-yeso rounded-3xl-2 px-3 py-2.5 border border-arcilla cursor-pointer">

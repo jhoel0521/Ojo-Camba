@@ -47,10 +47,11 @@ export default function CasoDetallePage() {
   });
 
   useEffect(() => {
-    if (!id) return;
+    const numId = parseInt(id ?? '', 10);
+    if (!id || isNaN(numId)) return;
     setLoading(true);
     setError('');
-    Promise.all([getGroup(parseInt(id)), getCaseTimeline(parseInt(id))])
+    Promise.all([getGroup(numId), getCaseTimeline(numId)])
       .then(([g, t]) => {
         setGrupo(g);
         setTimeline(t);
@@ -60,18 +61,19 @@ export default function CasoDetallePage() {
   }, [id]);
 
   const onSubmit = async (data: UpdateForm) => {
-    if (!id || !user) return;
+    const numId = parseInt(id ?? '', 10);
+    if (!id || isNaN(numId) || !user) return;
     setSending(true);
     setSuccessMsg('');
     try {
-      await updateCase(parseInt(id), {
+      await updateCase(numId, {
         usuario_id: user.id,
         comentario: data.comentario,
         estado_nuevo: data.estado_nuevo || undefined,
         recursos_solicitados: data.recursos_solicitados || undefined,
         fecha_estimada_fin: data.fecha_estimada_fin || undefined,
       });
-      const freshTimeline = await getCaseTimeline(parseInt(id));
+      const freshTimeline = await getCaseTimeline(numId);
       setTimeline(freshTimeline);
       if (data.estado_nuevo) {
         setGrupo((prev) => (prev ? { ...prev, estado_actual: data.estado_nuevo! } : prev));
