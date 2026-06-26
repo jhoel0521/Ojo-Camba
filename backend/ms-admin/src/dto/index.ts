@@ -40,6 +40,10 @@ export class AcceptReportDto {
   @IsOptional()
   @IsInt()
   categoria_id?: number;
+
+  @IsOptional()
+  @IsInt()
+  grupo_id?: number;
 }
 
 export class RejectReportDto {
