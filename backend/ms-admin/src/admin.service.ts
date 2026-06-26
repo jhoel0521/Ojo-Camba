@@ -63,7 +63,12 @@ export class AdminService {
       if (!grupo) throw new NotFoundException('Caso de Obra no encontrado');
       reporte.grupo_id = grupo.id;
       await this.reporteRepo.save(reporte);
-      return { id: reporte.id, estado: reporte.estado, grupo_id: grupo.id, codigo_obra: grupo.codigo_obra };
+      return {
+        id: reporte.id,
+        estado: reporte.estado,
+        grupo_id: grupo.id,
+        codigo_obra: grupo.codigo_obra,
+      };
     }
 
     const year = new Date().getFullYear();
@@ -252,11 +257,23 @@ export class AdminService {
   }
 
   async listGroups(page = 1, limit = 20) {
-    const [data, total] = await this.grupoRepo.findAndCount({
-      skip: (page - 1) * limit,
-      take: limit,
-      order: { creado_en: 'DESC' },
-    });
+    const total = await this.grupoRepo.count();
+
+    const rows = await this.grupoRepo
+      .createQueryBuilder('g')
+      .leftJoin(Reporte, 'r', 'r.grupo_id = g.id')
+      .addSelect('COUNT(r.id)', 'total_reportes')
+      .groupBy('g.id')
+      .orderBy('g.creado_en', 'DESC')
+      .skip((page - 1) * limit)
+      .take(limit)
+      .getRawAndEntities();
+
+    const data = rows.entities.map((g, i) => ({
+      ...g,
+      total_reportes: parseInt(rows.raw[i]?.total_reportes ?? '0', 10),
+    }));
+
     return { data, total, page, limit };
   }
 
@@ -275,9 +292,10 @@ export class AdminService {
 
     const hoy = new Date();
     hoy.setHours(0, 0, 0, 0);
-    const aceptadosHoy = await this.grupoRepo
-      .createQueryBuilder('g')
-      .where('g.creado_en >= :hoy', { hoy: hoy.toISOString() })
+    const aceptadosHoy = await this.reporteRepo
+      .createQueryBuilder('r')
+      .where('r.estado = :estado', { estado: EstadoReporte.Aceptado })
+      .andWhere('r.creado_en >= :hoy', { hoy: hoy.toISOString() })
       .getCount();
 
     const casosActivos = await this.grupoRepo
