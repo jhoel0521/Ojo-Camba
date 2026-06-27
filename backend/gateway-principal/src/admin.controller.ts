@@ -97,11 +97,12 @@ export class AdminController {
   }
 
   @Get('groups')
-  listGroups(@Query() query: { page?: string; limit?: string }) {
+  listGroups(@Query() query: { page?: string; limit?: string; estado?: string }) {
     return sendRpc(
       this.client.send(TCP_PATTERNS.ADMIN.LIST_GROUPS, {
         page: query.page ? parseInt(query.page, 10) : undefined,
         limit: query.limit ? parseInt(query.limit, 10) : undefined,
+        estado: query.estado || undefined,
       }),
     );
   }

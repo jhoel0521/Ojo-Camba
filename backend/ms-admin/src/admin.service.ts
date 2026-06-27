@@ -256,15 +256,23 @@ export class AdminService {
     return qb.getRawMany();
   }
 
-  async listGroups(page = 1, limit = 20) {
-    const total = await this.grupoRepo.count();
-
-    const rows = await this.grupoRepo
+  async listGroups(page = 1, limit = 20, estado?: string) {
+    const qb = this.grupoRepo
       .createQueryBuilder('g')
       .leftJoin(Reporte, 'r', 'r.grupo_id = g.id')
       .addSelect('COUNT(r.id)', 'total_reportes')
       .groupBy('g.id')
-      .orderBy('g.creado_en', 'DESC')
+      .orderBy('g.creado_en', 'DESC');
+
+    if (estado) {
+      qb.where('g.estado_actual = :estado', { estado });
+    }
+
+    const total = await (estado
+      ? this.grupoRepo.count({ where: { estado_actual: estado } })
+      : this.grupoRepo.count());
+
+    const rows = await qb
       .skip((page - 1) * limit)
       .take(limit)
       .getRawAndEntities();
