@@ -49,8 +49,8 @@ export class AdminController {
   }
 
   @MessagePattern(TCP_PATTERNS.ADMIN.LIST_GROUPS)
-  listGroups(@Payload() dto: { page?: number; limit?: number }) {
-    return this.adminService.listGroups(dto.page, dto.limit);
+  listGroups(@Payload() dto: { page?: number; limit?: number; estado?: string }) {
+    return this.adminService.listGroups(dto.page, dto.limit, dto.estado);
   }
 
   @MessagePattern(TCP_PATTERNS.ADMIN.GET_CASE_TIMELINE)
@@ -78,5 +78,20 @@ export class AdminController {
   @MessagePattern(TCP_PATTERNS.ADMIN.LIST_DEVICES)
   listDevices(@Payload() dto: { page?: number; limit?: number; banned_only?: boolean }) {
     return this.adminService.listDevices(dto.page, dto.limit, dto.banned_only);
+  }
+
+  @MessagePattern(TCP_PATTERNS.ADMIN.LIST_GROUP_REPORTS)
+  listGroupReports(@Payload() dto: { grupo_id: number }) {
+    return this.adminService.listGroupReports(dto.grupo_id);
+  }
+
+  @MessagePattern(TCP_PATTERNS.ADMIN.LIST_NEARBY_REPORTS)
+  listNearbyReports(@Payload() dto: { lat: number; lng: number; radius?: number }) {
+    return this.adminService.listNearbyReports(dto.lat, dto.lng, dto.radius);
+  }
+
+  @MessagePattern(TCP_PATTERNS.ADMIN.UNBAN_DEVICE)
+  unbanDevice(@Payload() dto: { device_id: string }) {
+    return this.adminService.unbanDevice(dto.device_id);
   }
 }

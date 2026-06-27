@@ -32,6 +32,7 @@ const TINY_PNG = Buffer.from(
   'z8BQDwADhQGAWjR9awAAAABJRU5ErkJggg==',
   'base64',
 );
+const TINY_PNG_DATA_URL = `data:image/png;base64,${TINY_PNG.toString('base64')}`;
 
 function findResourceImage(): { name: string; mimeType: string; buffer: Buffer } | string {
   const dir = resolve(__dirname, '../resources');
@@ -120,6 +121,9 @@ test.describe('Flujo completo: ciudadano reporta → moderador acepta', () => {
 
     // Col 2 vuelve al estado vacío (no hay reporte seleccionado)
     await expect(page.getByText('Inspección del Reporte')).not.toBeVisible({ timeout: 8_000 });
+
+    // Limpiar route handlers para que no queden peticiones colgadas entre tests
+    await context.unrouteAll({ behavior: 'ignoreErrors' });
   });
 });
 
@@ -137,7 +141,7 @@ test.describe('Agrupación de reportes cercanos', () => {
           lat: -17.7833,
           lng: -63.1821,
           categoria_id: 1,
-          imagen_base64: TINY_PNG.toString('base64'),
+          imagen_base64: TINY_PNG_DATA_URL,
         },
       }).then((r) => r.json()),
       apiContext.post('/reportes', {
@@ -146,7 +150,7 @@ test.describe('Agrupación de reportes cercanos', () => {
           lat: -17.7834,  // ~11 metros al sur
           lng: -63.1821,
           categoria_id: 1,
-          imagen_base64: TINY_PNG.toString('base64'),
+          imagen_base64: TINY_PNG_DATA_URL,
         },
       }).then((r) => r.json()),
     ]);
@@ -196,6 +200,94 @@ test.describe('Agrupación de reportes cercanos', () => {
     // Ambos reportes deben desaparecer de la bandeja
     await expect(page.locator(`[data-testid="report-card-${r1.id}"]`)).not.toBeVisible({ timeout: 8_000 });
     await expect(page.locator(`[data-testid="report-card-${r2.id}"]`)).not.toBeVisible({ timeout: 3_000 });
+
+    // Col 2 vuelve al estado vacío
+    await expect(page.getByText('Inspección del Reporte')).not.toBeVisible({ timeout: 3_000 });
+  });
+});
+
+test.describe('Asignar reporte a Caso de Obra existente', () => {
+  test('agregar reporte pendiente a obra ya creada (CU-08 fusionar)', async ({ page }) => {
+    const apiContext = await playwrightRequest.newContext({ baseURL: API_URL });
+    const deviceId = `e2e-add-to-obra-${Date.now()}`;
+
+    // ── Setup vía API: login + crear Obra O1 + crear R2 pendiente ─────────────
+
+    const loginRes = await apiContext
+      .post('/auth/login', {
+        data: { email: MODERATOR_EMAIL, password: MODERATOR_PASSWORD },
+      })
+      .then((r) => r.json());
+    const moderador_id: number = loginRes.user.id;
+    expect(moderador_id).toBeTruthy();
+
+    // R1: crear y aceptar directamente → genera Obra O1
+    const r1 = await apiContext
+      .post('/reportes', {
+        data: {
+          device_id: deviceId,
+          lat: -17.7833,
+          lng: -63.1821,
+          categoria_id: 1,
+          imagen_base64: TINY_PNG_DATA_URL,
+        },
+      })
+      .then((r) => r.json());
+    expect(r1.id).toBeTruthy();
+
+    const accepted = await apiContext
+      .post(`/admin/reports/${r1.id}/accept`, { data: { moderador_id } })
+      .then((r) => r.json());
+    const obraId: number = accepted.grupo_id;
+    expect(obraId).toBeTruthy();
+
+    // R2: nuevo reporte pendiente en la misma ubicación
+    const r2 = await apiContext
+      .post('/reportes', {
+        data: {
+          device_id: deviceId,
+          lat: -17.7833,
+          lng: -63.1821,
+          categoria_id: 1,
+          imagen_base64: TINY_PNG_DATA_URL,
+        },
+      })
+      .then((r) => r.json());
+    expect(r2.id).toBeTruthy();
+
+    await apiContext.dispose();
+
+    // ── Login en backoffice ───────────────────────────────────────────────────
+
+    await loginBackoffice(page);
+    await page.goto(`${BACKOFFICE_URL}/revisar`);
+    await page.locator('[data-testid="btn-actualizar"]').click();
+
+    // ── Abrir R2 en la bandeja ────────────────────────────────────────────────
+
+    const r2Card = page.locator(`[data-testid="report-card-${r2.id}"]`);
+    await expect(r2Card).toBeVisible({ timeout: 10_000 });
+    await r2Card.click();
+
+    await expect(page.getByText('Inspección del Reporte')).toBeVisible({ timeout: 5_000 });
+
+    // ── Col 3 debe mostrar Obra O1 como obra cercana ──────────────────────────
+
+    const addToObraBtn = page.locator(`[data-testid="btn-add-to-obra-${obraId}"]`);
+    await expect(addToObraBtn).toBeVisible({ timeout: 8_000 });
+
+    // ── Clic en "Añadir a esta obra" ──────────────────────────────────────────
+
+    await addToObraBtn.click();
+
+    // Modal de confirmación
+    await expect(page.getByText(/se añadirá a/i)).toBeVisible({ timeout: 3_000 });
+    await page.getByRole('button', { name: 'Confirmar' }).click();
+
+    // R2 debe desaparecer de la bandeja
+    await expect(page.locator(`[data-testid="report-card-${r2.id}"]`)).not.toBeVisible({
+      timeout: 8_000,
+    });
 
     // Col 2 vuelve al estado vacío
     await expect(page.getByText('Inspección del Reporte')).not.toBeVisible({ timeout: 3_000 });

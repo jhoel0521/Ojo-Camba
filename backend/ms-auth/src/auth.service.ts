@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { ILike, Repository } from 'typeorm';
 import * as bcrypt from 'bcryptjs';
 import * as crypto from 'crypto';
 import { Usuario } from './entities/usuario.entity';
@@ -174,9 +174,12 @@ export class AuthService implements OnModuleInit {
     await this.refreshTokenRepo.update({ usuario_id: userId, revoked: false }, { revoked: true });
   }
 
-  async listUsers(page = 1, limit = 20) {
+  async listUsers(page = 1, limit = 20, q?: string) {
+    const where = q ? [{ nombre: ILike(`%${q}%`) }, { email: ILike(`%${q}%`) }] : undefined;
+
     const [data, total] = await this.usuarioRepo.findAndCount({
       select: ['id', 'nombre', 'email', 'puntos', 'nivel_id', 'creado_en'],
+      where,
       skip: (page - 1) * limit,
       take: limit,
       order: { creado_en: 'DESC' },

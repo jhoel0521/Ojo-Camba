@@ -38,11 +38,12 @@ export class AuthController {
   }
 
   @Get('users')
-  listUsers(@Query() query: { page?: string; limit?: string }) {
+  listUsers(@Query() query: { page?: string; limit?: string; q?: string }) {
     return sendRpc(
       this.client.send(TCP_PATTERNS.AUTH.LIST_USERS, {
         page: query.page ? parseInt(query.page, 10) : undefined,
         limit: query.limit ? parseInt(query.limit, 10) : undefined,
+        q: query.q || undefined,
       }),
     );
   }

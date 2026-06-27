@@ -74,7 +74,6 @@ export default function NearbyReportsList({
         </div>
       ) : (
         <div className="flex-1 overflow-y-auto p-3 space-y-4">
-
           {/* ── Obras activas cercanas ── */}
           <div>
             <p className="text-[10px] font-bold text-caoba uppercase tracking-wider mb-2 flex items-center gap-1">
@@ -91,9 +90,13 @@ export default function NearbyReportsList({
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0 flex-1">
-                        <p className="text-xs font-bold text-tierra font-mono">{obra.codigo_obra}</p>
+                        <p className="text-xs font-bold text-tierra font-mono">
+                          {obra.codigo_obra}
+                        </p>
                         <p className="text-[10px] text-arena mt-0.5">
-                          {obra.categoria_id ? (CATEGORIA_NAMES[obra.categoria_id] ?? 'Otro') : 'Sin categoría'}
+                          {obra.categoria_id
+                            ? (CATEGORIA_NAMES[obra.categoria_id] ?? 'Otro')
+                            : 'Sin categoría'}
                           {' · '}
                           {obra.estado_actual}
                         </p>
@@ -108,6 +111,7 @@ export default function NearbyReportsList({
                     </div>
                     <button
                       onClick={() => onAddToObra(obra.id)}
+                      data-testid={`btn-add-to-obra-${obra.id}`}
                       className="w-full flex items-center justify-center gap-1.5 bg-caoba/10 hover:bg-caoba/20 text-caoba font-semibold text-[11px] min-h-[44px] px-3 rounded-2xl border border-caoba/30 transition-colors"
                     >
                       <Plus className="w-3 h-3" />
@@ -125,7 +129,9 @@ export default function NearbyReportsList({
               <MapPin className="w-3 h-3" /> Reportes pendientes ≤ 100 m
             </p>
             {nearby.length === 0 ? (
-              <p className="text-[10px] text-arena italic px-1">Sin reportes pendientes cercanos.</p>
+              <p className="text-[10px] text-arena italic px-1">
+                Sin reportes pendientes cercanos.
+              </p>
             ) : (
               <div className="space-y-2">
                 {nearby.map((r) => {
@@ -183,14 +189,15 @@ export default function NearbyReportsList({
       {detailObra && (
         <div
           className="fixed inset-0 z-[60] flex justify-end"
-          onClick={(e) => { if (e.target === e.currentTarget) closeDrawer(); }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) closeDrawer();
+          }}
         >
           {/* Backdrop */}
           <div className="absolute inset-0 bg-catedral/50 backdrop-blur-sm" onClick={closeDrawer} />
 
           {/* Panel drawer */}
           <div className="relative w-full max-w-[520px] h-full bg-perla border-l border-arcilla flex flex-col shadow-2xl">
-
             {/* Header sticky */}
             <div className="shrink-0 bg-lienzo/80 backdrop-blur-md border-b border-arcilla px-5 py-4">
               <div className="flex items-center justify-between gap-3 mb-1">
@@ -210,7 +217,9 @@ export default function NearbyReportsList({
               </div>
               <div className="flex flex-wrap gap-2 mt-2">
                 <span className="bg-yeso text-tierra text-[10px] font-semibold px-2.5 py-1 rounded-pill border border-arcilla">
-                  {detailObra.categoria_id ? (CATEGORIA_NAMES[detailObra.categoria_id] ?? 'Otro') : 'Sin categoría'}
+                  {detailObra.categoria_id
+                    ? (CATEGORIA_NAMES[detailObra.categoria_id] ?? 'Otro')
+                    : 'Sin categoría'}
                 </span>
                 <span className="bg-caoba/10 text-caoba text-[10px] font-semibold px-2.5 py-1 rounded-pill border border-caoba/30">
                   {detailObra.estado_actual}
@@ -223,7 +232,9 @@ export default function NearbyReportsList({
                 {detailObra.creado_en && (
                   <span className="text-[10px] text-arena self-center">
                     {new Date(detailObra.creado_en).toLocaleDateString('es-BO', {
-                      day: 'numeric', month: 'short', year: 'numeric',
+                      day: 'numeric',
+                      month: 'short',
+                      year: 'numeric',
                     })}
                   </span>
                 )}
@@ -232,7 +243,6 @@ export default function NearbyReportsList({
 
             {/* Body scrollable */}
             <div className="flex-1 overflow-y-auto p-5 space-y-6">
-
               {/* ── Sección: Evidencias ── */}
               <div>
                 <h3 className="text-[11px] font-bold text-caoba uppercase tracking-wider mb-3 flex items-center gap-1.5">
@@ -242,7 +252,10 @@ export default function NearbyReportsList({
                 {loadingDetail ? (
                   <div className="grid grid-cols-3 gap-2">
                     {[1, 2, 3].map((i) => (
-                      <div key={i} className="aspect-square bg-yeso rounded-3xl-2 animate-pulse border border-arcilla" />
+                      <div
+                        key={i}
+                        className="aspect-square bg-yeso rounded-3xl-2 animate-pulse border border-arcilla"
+                      />
                     ))}
                   </div>
                 ) : obraReportes.length > 0 ? (
@@ -285,18 +298,25 @@ export default function NearbyReportsList({
                 {loadingDetail ? (
                   <div className="space-y-3 ml-3 pl-4 border-l-2 border-arcilla">
                     {[1, 2].map((i) => (
-                      <div key={i} className="bg-yeso rounded-3xl-2 p-3 border border-arcilla animate-pulse h-14" />
+                      <div
+                        key={i}
+                        className="bg-yeso rounded-3xl-2 p-3 border border-arcilla animate-pulse h-14"
+                      />
                     ))}
                   </div>
                 ) : obraTimeline.length === 0 ? (
-                  <p className="text-[10px] text-arena italic px-1">Sin actualizaciones registradas aún.</p>
+                  <p className="text-[10px] text-arena italic px-1">
+                    Sin actualizaciones registradas aún.
+                  </p>
                 ) : (
                   <div className="relative ml-3 border-l-2 border-arcilla space-y-4">
                     {obraTimeline.map((act, i) => (
                       <div key={act.id} className="relative pl-5">
-                        <span className={`absolute -left-[9px] top-1.5 w-4 h-4 rounded-full border-2 border-perla shadow-sm bg-caoba ${
-                          i === obraTimeline.length - 1 ? 'ring-2 ring-caoba/30' : ''
-                        }`} />
+                        <span
+                          className={`absolute -left-[9px] top-1.5 w-4 h-4 rounded-full border-2 border-perla shadow-sm bg-caoba ${
+                            i === obraTimeline.length - 1 ? 'ring-2 ring-caoba/30' : ''
+                          }`}
+                        />
                         <div className="bg-lienzo/60 rounded-3xl-2 border border-arcilla p-3">
                           <div className="flex justify-between items-start gap-2 mb-1">
                             <span className="text-[10px] font-bold text-tierra">
@@ -304,7 +324,10 @@ export default function NearbyReportsList({
                             </span>
                             <span className="text-[9px] text-arena shrink-0">
                               {new Date(act.creado_en).toLocaleDateString('es-BO', {
-                                day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
+                                day: 'numeric',
+                                month: 'short',
+                                hour: '2-digit',
+                                minute: '2-digit',
                               })}
                             </span>
                           </div>

@@ -63,7 +63,12 @@ export class AdminService {
       if (!grupo) throw new NotFoundException('Caso de Obra no encontrado');
       reporte.grupo_id = grupo.id;
       await this.reporteRepo.save(reporte);
-      return { id: reporte.id, estado: reporte.estado, grupo_id: grupo.id, codigo_obra: grupo.codigo_obra };
+      return {
+        id: reporte.id,
+        estado: reporte.estado,
+        grupo_id: grupo.id,
+        codigo_obra: grupo.codigo_obra,
+      };
     }
 
     const year = new Date().getFullYear();
@@ -251,12 +256,32 @@ export class AdminService {
     return qb.getRawMany();
   }
 
-  async listGroups(page = 1, limit = 20) {
-    const [data, total] = await this.grupoRepo.findAndCount({
-      skip: (page - 1) * limit,
-      take: limit,
-      order: { creado_en: 'DESC' },
-    });
+  async listGroups(page = 1, limit = 20, estado?: string) {
+    const qb = this.grupoRepo
+      .createQueryBuilder('g')
+      .leftJoin(Reporte, 'r', 'r.grupo_id = g.id')
+      .addSelect('COUNT(r.id)', 'total_reportes')
+      .groupBy('g.id')
+      .orderBy('g.creado_en', 'DESC');
+
+    if (estado) {
+      qb.where('g.estado_actual = :estado', { estado });
+    }
+
+    const total = await (estado
+      ? this.grupoRepo.count({ where: { estado_actual: estado } })
+      : this.grupoRepo.count());
+
+    const rows = await qb
+      .skip((page - 1) * limit)
+      .take(limit)
+      .getRawAndEntities();
+
+    const data = rows.entities.map((g, i) => ({
+      ...g,
+      total_reportes: parseInt(rows.raw[i]?.total_reportes ?? '0', 10),
+    }));
+
     return { data, total, page, limit };
   }
 
@@ -275,9 +300,10 @@ export class AdminService {
 
     const hoy = new Date();
     hoy.setHours(0, 0, 0, 0);
-    const aceptadosHoy = await this.grupoRepo
-      .createQueryBuilder('g')
-      .where('g.creado_en >= :hoy', { hoy: hoy.toISOString() })
+    const aceptadosHoy = await this.reporteRepo
+      .createQueryBuilder('r')
+      .where('r.estado = :estado', { estado: EstadoReporte.Aceptado })
+      .andWhere('r.creado_en >= :hoy', { hoy: hoy.toISOString() })
       .getCount();
 
     const casosActivos = await this.grupoRepo
@@ -295,6 +321,53 @@ export class AdminService {
       casos_activos: casosActivos,
       dispositivos_baneados: baneados,
     };
+  }
+
+  async listGroupReports(grupoId: number) {
+    const data = await this.reporteRepo.find({
+      where: { grupo_id: grupoId },
+      order: { creado_en: 'ASC' },
+    });
+    return data.map((r) => ({
+      ...r,
+      lat: Number(r.lat),
+      lng: Number(r.lng),
+      url_imagen: r.url_imagen?.startsWith('http') ? r.url_imagen : `/reportes/${r.id}/imagen`,
+    }));
+  }
+
+  async listNearbyReports(lat: number, lng: number, radiusM = 100) {
+    // Bounding box approximation: 1° ≈ 111,000m
+    const delta = radiusM / 111000;
+    const data = await this.reporteRepo
+      .createQueryBuilder('r')
+      .where('r.estado = :estado', { estado: EstadoReporte.Reportado })
+      .andWhere('CAST(r.lat AS FLOAT) BETWEEN :minLat AND :maxLat', {
+        minLat: lat - delta,
+        maxLat: lat + delta,
+      })
+      .andWhere('CAST(r.lng AS FLOAT) BETWEEN :minLng AND :maxLng', {
+        minLng: lng - delta,
+        maxLng: lng + delta,
+      })
+      .orderBy('r.creado_en', 'DESC')
+      .getMany();
+
+    return data.map((r) => ({
+      ...r,
+      lat: Number(r.lat),
+      lng: Number(r.lng),
+      url_imagen: r.url_imagen?.startsWith('http') ? r.url_imagen : `/reportes/${r.id}/imagen`,
+    }));
+  }
+
+  async unbanDevice(device_id: string) {
+    const dispositivo = await this.dispositivoRepo.findOne({ where: { device_id } });
+    if (!dispositivo) throw new NotFoundException('Dispositivo no encontrado');
+    dispositivo.is_banned = false;
+    dispositivo.motivo_ban = null;
+    await this.dispositivoRepo.save(dispositivo);
+    return { ok: true, device_id, is_banned: false };
   }
 
   async listDevices(page = 1, limit = 20, bannedOnly = false) {

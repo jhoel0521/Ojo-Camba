@@ -7,6 +7,21 @@ import { sendRpc } from './rpc.helper';
 export class AdminController {
   constructor(@Inject('MS_ADMIN') private readonly client: ClientProxy) {}
 
+  @Get('reports/nearby')
+  listNearbyReports(
+    @Query('lat') lat: string,
+    @Query('lng') lng: string,
+    @Query('radius') radius?: string,
+  ) {
+    return sendRpc(
+      this.client.send(TCP_PATTERNS.ADMIN.LIST_NEARBY_REPORTS, {
+        lat: parseFloat(lat),
+        lng: parseFloat(lng),
+        radius: radius ? parseInt(radius, 10) : undefined,
+      }),
+    );
+  }
+
   @Get('reports/pending')
   listPending(@Query() query: { page?: string; limit?: string }) {
     return sendRpc(
@@ -20,13 +35,14 @@ export class AdminController {
   @Post('reports/:id/accept')
   acceptReport(
     @Param('id') id: string,
-    @Body() dto: { moderador_id: number; categoria_id?: number },
+    @Body() dto: { moderador_id: number; categoria_id?: number; grupo_id?: number },
   ) {
     return sendRpc(
       this.client.send(TCP_PATTERNS.ADMIN.ACCEPT_REPORT, {
         report_id: parseInt(id, 10),
         moderador_id: dto.moderador_id,
         categoria_id: dto.categoria_id,
+        grupo_id: dto.grupo_id,
       }),
     );
   }
@@ -71,6 +87,11 @@ export class AdminController {
     return sendRpc(this.client.send(TCP_PATTERNS.ADMIN.BAN_DEVICE, dto));
   }
 
+  @Post('devices/unban')
+  unbanDevice(@Body() dto: { device_id: string }) {
+    return sendRpc(this.client.send(TCP_PATTERNS.ADMIN.UNBAN_DEVICE, dto));
+  }
+
   @Get('groups/heatmap')
   getGroupsHeatmap(
     @Query('resolution') resolution?: string,
@@ -96,11 +117,12 @@ export class AdminController {
   }
 
   @Get('groups')
-  listGroups(@Query() query: { page?: string; limit?: string }) {
+  listGroups(@Query() query: { page?: string; limit?: string; estado?: string }) {
     return sendRpc(
       this.client.send(TCP_PATTERNS.ADMIN.LIST_GROUPS, {
         page: query.page ? parseInt(query.page, 10) : undefined,
         limit: query.limit ? parseInt(query.limit, 10) : undefined,
+        estado: query.estado || undefined,
       }),
     );
   }
@@ -114,6 +136,15 @@ export class AdminController {
   getTimeline(@Param('id') id: string) {
     return sendRpc(
       this.client.send(TCP_PATTERNS.ADMIN.GET_CASE_TIMELINE, { grupo_id: parseInt(id, 10) }),
+    );
+  }
+
+  @Get('groups/:id/reports')
+  listGroupReports(@Param('id') id: string) {
+    return sendRpc(
+      this.client.send(TCP_PATTERNS.ADMIN.LIST_GROUP_REPORTS, {
+        grupo_id: parseInt(id, 10),
+      }),
     );
   }
 
