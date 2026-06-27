@@ -19,6 +19,7 @@ import { useAuthStore } from '../store/authStore';
 import {
   listPending,
   listNearbyGroups,
+  listNearbyReports,
   acceptReport,
   rejectReport as rejectReportApi,
   createGroup,
@@ -58,6 +59,7 @@ export default function RevisarPage() {
   const [editedCategoriaId, setEditedCategoriaId] = useState<number>(0);
   const [nearbySelected, setNearbySelected] = useState<Set<number>>(new Set());
   const [nearbyObras, setNearbyObras] = useState<GrupoReporte[]>([]);
+  const [nearbyPending, setNearbyPending] = useState<NearbyReport[]>([]);
 
   // Modal de detalle de un reporte cercano
   const [nearbyDetailReport, setNearbyDetailReport] = useState<NearbyReport | null>(null);
@@ -78,6 +80,7 @@ export default function RevisarPage() {
       setSelectedReport(null);
       setNearbySelected(new Set());
       setNearbyObras([]);
+      setNearbyPending([]);
     } catch (err) {
       setError(friendlyError(err));
     } finally {
@@ -96,6 +99,7 @@ export default function RevisarPage() {
       setSelectedReport(null);
       setNearbySelected(new Set());
       setNearbyObras([]);
+      setNearbyPending([]);
     }
     setNearbySelected((prev) => {
       const next = new Set(prev);
@@ -109,22 +113,23 @@ export default function RevisarPage() {
     setEditedCategoriaId(report.categoria_id);
     setNearbySelected(new Set());
     setNearbyObras([]);
+    setNearbyPending([]);
     try {
-      const obras = await listNearbyGroups(report.h3_res_11);
+      const [obras, nearby] = await Promise.all([
+        listNearbyGroups(report.h3_res_11),
+        listNearbyReports(report.lat, report.lng, 100),
+      ]);
       setNearbyObras(obras);
+      setNearbyPending(
+        nearby
+          .filter((r) => r.id !== report.id)
+          .map((r) => ({ ...r, distanciaM: haversineM(report.lat, report.lng, r.lat, r.lng) }))
+          .sort((a, b) => a.distanciaM - b.distanciaM),
+      );
     } catch {
-      // obras son contexto opcional, no bloqueamos si falla
+      // contexto opcional, no bloqueamos si falla
     }
   };
-
-  // Limitación conocida: solo busca entre los reportes de la página actual (max 20).
-  // Para detección completa de duplicados se necesita GET /admin/reports/nearby?lat&lng&radius.
-  const getNearby = (report: PendingReport): NearbyReport[] =>
-    reportes
-      .filter((r) => r.id !== report.id)
-      .map((r) => ({ ...r, distanciaM: haversineM(report.lat, report.lng, r.lat, r.lng) }))
-      .filter((r) => r.distanciaM <= 100)
-      .sort((a, b) => a.distanciaM - b.distanciaM);
 
   const handleAccept = (id: number, categoriaId?: number) => {
     if (!user) return;
@@ -196,7 +201,7 @@ export default function RevisarPage() {
     });
   };
 
-  const nearbyReports = selectedReport ? getNearby(selectedReport) : [];
+  const nearbyReports = nearbyPending;
 
   return (
     <div className="-m-6 h-full overflow-hidden flex">
