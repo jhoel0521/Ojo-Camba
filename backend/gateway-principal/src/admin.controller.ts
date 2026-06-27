@@ -119,6 +119,15 @@ export class AdminController {
     );
   }
 
+  @Get('groups/:id/reports')
+  listGroupReports(@Param('id') id: string) {
+    return sendRpc(
+      this.client.send(TCP_PATTERNS.ADMIN.LIST_GROUP_REPORTS, {
+        grupo_id: parseInt(id, 10),
+      }),
+    );
+  }
+
   @Get('dashboard')
   getDashboard() {
     return sendRpc(this.client.send(TCP_PATTERNS.ADMIN.DASHBOARD, {}));

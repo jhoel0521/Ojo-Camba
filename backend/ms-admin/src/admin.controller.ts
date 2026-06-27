@@ -79,4 +79,9 @@ export class AdminController {
   listDevices(@Payload() dto: { page?: number; limit?: number; banned_only?: boolean }) {
     return this.adminService.listDevices(dto.page, dto.limit, dto.banned_only);
   }
+
+  @MessagePattern(TCP_PATTERNS.ADMIN.LIST_GROUP_REPORTS)
+  listGroupReports(@Payload() dto: { grupo_id: number }) {
+    return this.adminService.listGroupReports(dto.grupo_id);
+  }
 }

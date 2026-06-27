@@ -34,6 +34,7 @@ export const TCP_PATTERNS = {
     GET_CASE_TIMELINE: 'admin.get_case_timeline',
     DASHBOARD: 'admin.dashboard',
     LIST_DEVICES: 'admin.list_devices',
+    LIST_GROUP_REPORTS: 'admin.list_group_reports',
   },
   GAMIFY: {
     PING: 'gamify.ping',

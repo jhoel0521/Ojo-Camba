@@ -323,6 +323,19 @@ export class AdminService {
     };
   }
 
+  async listGroupReports(grupoId: number) {
+    const data = await this.reporteRepo.find({
+      where: { grupo_id: grupoId },
+      order: { creado_en: 'ASC' },
+    });
+    return data.map((r) => ({
+      ...r,
+      lat: Number(r.lat),
+      lng: Number(r.lng),
+      url_imagen: r.url_imagen?.startsWith('http') ? r.url_imagen : `/reportes/${r.id}/imagen`,
+    }));
+  }
+
   async listDevices(page = 1, limit = 20, bannedOnly = false) {
     const where: Record<string, unknown> = {};
     if (bannedOnly) where.is_banned = true;

@@ -134,6 +134,22 @@ export async function getCaseTimeline(id: number): Promise<Actualizacion[]> {
   return fetchAPI<Actualizacion[]>(`/admin/groups/${id}/timeline`);
 }
 
+export interface GroupedReport {
+  id: number;
+  categoria_id: number;
+  lat: number;
+  lng: number;
+  url_imagen: string | null;
+  estado: string;
+  device_id: string;
+  creado_en: string;
+  h3_res_11: string;
+}
+
+export async function getGroupReports(grupoId: number): Promise<GroupedReport[]> {
+  return fetchAPI<GroupedReport[]>(`/admin/groups/${grupoId}/reports`);
+}
+
 export async function updateCase(
   grupo_id: number,
   dto: {
