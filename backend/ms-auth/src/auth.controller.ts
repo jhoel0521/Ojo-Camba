@@ -45,7 +45,7 @@ export class AuthController {
   }
 
   @MessagePattern(TCP_PATTERNS.AUTH.LIST_USERS)
-  listUsers(@Payload() dto: { page?: number; limit?: number }) {
-    return this.authService.listUsers(dto.page, dto.limit);
+  listUsers(@Payload() dto: { page?: number; limit?: number; q?: string }) {
+    return this.authService.listUsers(dto.page, dto.limit, dto.q);
   }
 }

@@ -336,6 +336,40 @@ export class AdminService {
     }));
   }
 
+  async listNearbyReports(lat: number, lng: number, radiusM = 100) {
+    // Bounding box approximation: 1° ≈ 111,000m
+    const delta = radiusM / 111000;
+    const data = await this.reporteRepo
+      .createQueryBuilder('r')
+      .where('r.estado = :estado', { estado: EstadoReporte.Reportado })
+      .andWhere('CAST(r.lat AS FLOAT) BETWEEN :minLat AND :maxLat', {
+        minLat: lat - delta,
+        maxLat: lat + delta,
+      })
+      .andWhere('CAST(r.lng AS FLOAT) BETWEEN :minLng AND :maxLng', {
+        minLng: lng - delta,
+        maxLng: lng + delta,
+      })
+      .orderBy('r.creado_en', 'DESC')
+      .getMany();
+
+    return data.map((r) => ({
+      ...r,
+      lat: Number(r.lat),
+      lng: Number(r.lng),
+      url_imagen: r.url_imagen?.startsWith('http') ? r.url_imagen : `/reportes/${r.id}/imagen`,
+    }));
+  }
+
+  async unbanDevice(device_id: string) {
+    const dispositivo = await this.dispositivoRepo.findOne({ where: { device_id } });
+    if (!dispositivo) throw new NotFoundException('Dispositivo no encontrado');
+    dispositivo.is_banned = false;
+    dispositivo.motivo_ban = null;
+    await this.dispositivoRepo.save(dispositivo);
+    return { ok: true, device_id, is_banned: false };
+  }
+
   async listDevices(page = 1, limit = 20, bannedOnly = false) {
     const where: Record<string, unknown> = {};
     if (bannedOnly) where.is_banned = true;

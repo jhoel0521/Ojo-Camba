@@ -84,4 +84,14 @@ export class AdminController {
   listGroupReports(@Payload() dto: { grupo_id: number }) {
     return this.adminService.listGroupReports(dto.grupo_id);
   }
+
+  @MessagePattern(TCP_PATTERNS.ADMIN.LIST_NEARBY_REPORTS)
+  listNearbyReports(@Payload() dto: { lat: number; lng: number; radius?: number }) {
+    return this.adminService.listNearbyReports(dto.lat, dto.lng, dto.radius);
+  }
+
+  @MessagePattern(TCP_PATTERNS.ADMIN.UNBAN_DEVICE)
+  unbanDevice(@Payload() dto: { device_id: string }) {
+    return this.adminService.unbanDevice(dto.device_id);
+  }
 }

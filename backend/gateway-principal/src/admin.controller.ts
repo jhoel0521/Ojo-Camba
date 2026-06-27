@@ -7,6 +7,21 @@ import { sendRpc } from './rpc.helper';
 export class AdminController {
   constructor(@Inject('MS_ADMIN') private readonly client: ClientProxy) {}
 
+  @Get('reports/nearby')
+  listNearbyReports(
+    @Query('lat') lat: string,
+    @Query('lng') lng: string,
+    @Query('radius') radius?: string,
+  ) {
+    return sendRpc(
+      this.client.send(TCP_PATTERNS.ADMIN.LIST_NEARBY_REPORTS, {
+        lat: parseFloat(lat),
+        lng: parseFloat(lng),
+        radius: radius ? parseInt(radius, 10) : undefined,
+      }),
+    );
+  }
+
   @Get('reports/pending')
   listPending(@Query() query: { page?: string; limit?: string }) {
     return sendRpc(
@@ -70,6 +85,11 @@ export class AdminController {
   @Post('devices/ban')
   banDevice(@Body() dto: { device_id: string; motivo?: string }) {
     return sendRpc(this.client.send(TCP_PATTERNS.ADMIN.BAN_DEVICE, dto));
+  }
+
+  @Post('devices/unban')
+  unbanDevice(@Body() dto: { device_id: string }) {
+    return sendRpc(this.client.send(TCP_PATTERNS.ADMIN.UNBAN_DEVICE, dto));
   }
 
   @Get('groups/heatmap')
