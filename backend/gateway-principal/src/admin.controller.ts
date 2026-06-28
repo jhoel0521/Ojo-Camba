@@ -20,13 +20,14 @@ export class AdminController {
   @Post('reports/:id/accept')
   acceptReport(
     @Param('id') id: string,
-    @Body() dto: { moderador_id: number; categoria_id?: number },
+    @Body() dto: { moderador_id: number; categoria_id?: number; grupo_id?: number },
   ) {
     return sendRpc(
       this.client.send(TCP_PATTERNS.ADMIN.ACCEPT_REPORT, {
         report_id: parseInt(id, 10),
         moderador_id: dto.moderador_id,
         categoria_id: dto.categoria_id,
+        grupo_id: dto.grupo_id,
       }),
     );
   }
@@ -114,6 +115,22 @@ export class AdminController {
   getTimeline(@Param('id') id: string) {
     return sendRpc(
       this.client.send(TCP_PATTERNS.ADMIN.GET_CASE_TIMELINE, { grupo_id: parseInt(id, 10) }),
+    );
+  }
+
+  @Get('dashboard')
+  getDashboard() {
+    return sendRpc(this.client.send(TCP_PATTERNS.ADMIN.DASHBOARD, {}));
+  }
+
+  @Get('devices')
+  listDevices(@Query() query: { page?: string; limit?: string; banned_only?: string }) {
+    return sendRpc(
+      this.client.send(TCP_PATTERNS.ADMIN.LIST_DEVICES, {
+        page: query.page ? parseInt(query.page, 10) : undefined,
+        limit: query.limit ? parseInt(query.limit, 10) : undefined,
+        banned_only: query.banned_only === 'true',
+      }),
     );
   }
 }

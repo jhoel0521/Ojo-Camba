@@ -69,4 +69,14 @@ export class AdminController {
   getGroupsHeatmap(@Payload() dto: { resolution?: number; solo_activos?: boolean }) {
     return this.adminService.getGroupsHeatmap(dto.resolution, dto.solo_activos);
   }
+
+  @MessagePattern(TCP_PATTERNS.ADMIN.DASHBOARD)
+  dashboard() {
+    return this.adminService.getDashboard();
+  }
+
+  @MessagePattern(TCP_PATTERNS.ADMIN.LIST_DEVICES)
+  listDevices(@Payload() dto: { page?: number; limit?: number; banned_only?: boolean }) {
+    return this.adminService.listDevices(dto.page, dto.limit, dto.banned_only);
+  }
 }

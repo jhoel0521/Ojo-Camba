@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(gh project **)",
+      "Bash(ls \"J:\\\\www\\\\word\" 2>&1)",
+      "Read(//j/www/word/**)",
+      "Bash(node *)",
+      "Bash(pnpm *)",
+      "Bash(pnpm tsc *)"
+    ],
+    "additionalDirectories": [
+      "J:\\www\\word"
+    ]
+  }
+}

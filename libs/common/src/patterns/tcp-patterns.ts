@@ -9,6 +9,7 @@ export const TCP_PATTERNS = {
     LOGOUT: 'auth.logout',
     ADD_POINTS: 'auth.add_points',
     UPDATE_LEVEL: 'auth.update_level',
+    LIST_USERS: 'auth.list_users',
   },
   REGISTER: {
     PING: 'register.ping',
@@ -33,6 +34,8 @@ export const TCP_PATTERNS = {
     LIST_GROUPS_BY_CELL: 'admin.list_groups_by_cell',
     GET_GROUPS_HEATMAP: 'admin.get_groups_heatmap',
     GET_CASE_TIMELINE: 'admin.get_case_timeline',
+    DASHBOARD: 'admin.dashboard',
+    LIST_DEVICES: 'admin.list_devices',
   },
   GAMIFY: {
     PING: 'gamify.ping',

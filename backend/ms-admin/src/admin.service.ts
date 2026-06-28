@@ -1,7 +1,7 @@
 import { Injectable, BadRequestException, NotFoundException, Logger, Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ClientProxy } from '@nestjs/microservices';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import {
   Reporte,
   Dispositivo,
@@ -38,7 +38,17 @@ export class AdminService {
       take: limit,
       order: { creado_en: 'DESC' },
     });
-    return { data, total, page, limit };
+    const mapped = data.map((r) => ({
+      ...r,
+      lat: Number(r.lat),
+      lng: Number(r.lng),
+      url_imagen: r.url_imagen
+        ? r.url_imagen.startsWith('http')
+          ? r.url_imagen
+          : `/reportes/${r.id}/imagen`
+        : null,
+    }));
+    return { data: mapped, total, page, limit };
   }
 
   // ── CU-07: Aceptar / Rechazar ─────────────────────────────
@@ -51,6 +61,19 @@ export class AdminService {
     }
 
     reporte.estado = EstadoReporte.Aceptado;
+
+    if (dto.grupo_id) {
+      const grupo = await this.grupoRepo.findOne({ where: { id: dto.grupo_id } });
+      if (!grupo) throw new NotFoundException('Caso de Obra no encontrado');
+      reporte.grupo_id = grupo.id;
+      await this.reporteRepo.save(reporte);
+      return {
+        id: reporte.id,
+        estado: reporte.estado,
+        grupo_id: grupo.id,
+        codigo_obra: grupo.codigo_obra,
+      };
+    }
 
     const year = new Date().getFullYear();
     const count = (await this.grupoRepo.count()) + 1;
@@ -121,15 +144,14 @@ export class AdminService {
       throw new BadRequestException('Se necesitan al menos 2 reportes');
     }
 
-    const reportes = await this.reporteRepo.findByIds(dto.report_ids);
+    const reportes = await this.reporteRepo.find({ where: { id: In(dto.report_ids) } });
     if (reportes.length !== dto.report_ids.length) {
       throw new BadRequestException('Uno o mas reportes no existen');
     }
 
-    const h3 = reportes[0].h3_res_11;
-    const distintos = reportes.some((r) => r.h3_res_11 !== h3);
-    if (distintos) {
-      throw new BadRequestException('Todos los reportes deben pertenecer al mismo hexagono H3');
+    const noReportados = reportes.filter((r) => r.estado !== EstadoReporte.Reportado);
+    if (noReportados.length > 0) {
+      throw new BadRequestException('Solo se pueden agrupar reportes en estado Reportado');
     }
 
     const year = new Date().getFullYear();
@@ -237,6 +259,7 @@ export class AdminService {
       .createQueryBuilder('g')
       .innerJoin(Reporte, 'r', `r.grupo_id = g.id AND ${col} = :cell`, { cell: h3_cell })
       .select('g.id', 'id')
+      .addSelect('g.codigo_obra', 'codigo_obra')
       .addSelect('g.estado_actual', 'estado_actual')
       .addSelect('g.categoria_id', 'categoria_id')
       .addSelect('g.creado_en', 'creado_en')
@@ -254,11 +277,23 @@ export class AdminService {
   }
 
   async listGroups(page = 1, limit = 20) {
-    const [data, total] = await this.grupoRepo.findAndCount({
-      skip: (page - 1) * limit,
-      take: limit,
-      order: { creado_en: 'DESC' },
-    });
+    const total = await this.grupoRepo.count();
+
+    const rows = await this.grupoRepo
+      .createQueryBuilder('g')
+      .leftJoin(Reporte, 'r', 'r.grupo_id = g.id')
+      .addSelect('COUNT(r.id)', 'total_reportes')
+      .groupBy('g.id')
+      .orderBy('g.creado_en', 'DESC')
+      .skip((page - 1) * limit)
+      .take(limit)
+      .getRawAndEntities();
+
+    const data = rows.entities.map((g, i) => ({
+      ...g,
+      total_reportes: parseInt(rows.raw[i]?.total_reportes ?? '0', 10),
+    }));
+
     return { data, total, page, limit };
   }
 
@@ -270,5 +305,46 @@ export class AdminService {
       where: { grupo_id: grupoId },
       order: { creado_en: 'ASC' },
     });
+  }
+
+  async getDashboard() {
+    const pendientes = await this.reporteRepo.count({ where: { estado: EstadoReporte.Reportado } });
+
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+    const aceptadosHoy = await this.reporteRepo
+      .createQueryBuilder('r')
+      .where('r.estado = :estado', { estado: EstadoReporte.Aceptado })
+      .andWhere('r.creado_en >= :hoy', { hoy: hoy.toISOString() })
+      .getCount();
+
+    const casosActivos = await this.grupoRepo
+      .createQueryBuilder('g')
+      .where('g.estado_actual NOT IN (:...estados)', {
+        estados: [EstadoReporte.Rechazado, EstadoReporte.Finalizado],
+      })
+      .getCount();
+
+    const baneados = await this.dispositivoRepo.count({ where: { is_banned: true } });
+
+    return {
+      pendientes,
+      aceptados_hoy: aceptadosHoy,
+      casos_activos: casosActivos,
+      dispositivos_baneados: baneados,
+    };
+  }
+
+  async listDevices(page = 1, limit = 20, bannedOnly = false) {
+    const where: Record<string, unknown> = {};
+    if (bannedOnly) where.is_banned = true;
+
+    const [data, total] = await this.dispositivoRepo.findAndCount({
+      where,
+      skip: (page - 1) * limit,
+      take: limit,
+      order: { ultimo_uso: 'DESC' },
+    });
+    return { data, total, page, limit };
   }
 }

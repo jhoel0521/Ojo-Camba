@@ -53,4 +53,9 @@ export class AuthController {
   updateLevel(@Payload() dto: { user_id: number; nivel_id: number }) {
     return this.authService.updateLevel(dto.user_id, dto.nivel_id);
   }
+
+  @MessagePattern(TCP_PATTERNS.AUTH.LIST_USERS)
+  listUsers(@Payload() dto: { page?: number; limit?: number }) {
+    return this.authService.listUsers(dto.page, dto.limit);
+  }
 }

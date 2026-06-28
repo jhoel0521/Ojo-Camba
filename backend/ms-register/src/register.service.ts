@@ -30,7 +30,7 @@ const isExternalUrl = (url: string | null): boolean => url?.startsWith('http') =
 function imageApiPath(reporte: { id: number; url_imagen: string }): string | null {
   if (!reporte.url_imagen) return null;
   if (isExternalUrl(reporte.url_imagen)) return reporte.url_imagen;
-  return `/api/reportes/${reporte.id}/imagen`;
+  return `/reportes/${reporte.id}/imagen`;
 }
 
 @Injectable()
@@ -142,7 +142,7 @@ export class RegisterService implements OnModuleInit {
       h3_res_8: reporte.h3_res_8,
       h3_res_11: reporte.h3_res_11,
       h3_res_13: reporte.h3_res_13,
-      url_imagen: `/api/reportes/${reporte.id}/imagen`,
+      url_imagen: `/reportes/${reporte.id}/imagen`,
       estado: reporte.estado,
       creado_en: reporte.creado_en,
     };
