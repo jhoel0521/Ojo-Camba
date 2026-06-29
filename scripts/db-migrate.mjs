@@ -34,13 +34,18 @@ async function migrate() {
           CONSTRAINT "PK_8c82d7f526340ab734260ea46be" PRIMARY KEY (id)
         )
       `);
-      await AppDataSource.query(`
-        INSERT INTO migrations (timestamp, name)
-        SELECT $1, $2
-        WHERE NOT EXISTS (
-          SELECT 1 FROM migrations WHERE name = $2
-        )
-      `, [INITIAL_MIGRATION_TIMESTAMP.toString(), INITIAL_MIGRATION_NAME]);
+      // Dos queries separadas para evitar ambigüedad de tipo en $2 (PostgreSQL no
+      // puede inferir el tipo cuando el mismo parámetro aparece en SELECT y WHERE).
+      const existing = await AppDataSource.query(
+        `SELECT id FROM migrations WHERE name = $1`,
+        [INITIAL_MIGRATION_NAME],
+      );
+      if (existing.length === 0) {
+        await AppDataSource.query(
+          `INSERT INTO migrations (timestamp, name) VALUES ($1::bigint, $2::text)`,
+          [INITIAL_MIGRATION_TIMESTAMP.toString(), INITIAL_MIGRATION_NAME],
+        );
+      }
       console.log('Migration marcada como aplicada. Iniciando servicio...');
     } else {
       await AppDataSource.destroy();
