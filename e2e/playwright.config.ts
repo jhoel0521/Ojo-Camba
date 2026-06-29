@@ -35,5 +35,12 @@ export default defineConfig({
       reuseExistingServer: true,
       timeout: 30_000,
     },
+    {
+      command: 'npm run dev',
+      cwd: resolve(ROOT, 'frontend/app-tecnico'),
+      port: 5175,
+      reuseExistingServer: true,
+      timeout: 30_000,
+    },
   ],
 });
