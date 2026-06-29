@@ -13,7 +13,7 @@ import { AuthModule } from './auth.module';
         type: 'postgres',
         url: configService.get<string>('DATABASE_URL'),
         autoLoadEntities: true,
-        synchronize: true,
+        synchronize: false,
         logging: ['error'],
         retryAttempts: 5,
         retryDelay: 3000,

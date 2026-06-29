@@ -10,7 +10,7 @@ import { GamifyModule } from './gamify.module';
       type: 'postgres',
       url: process.env.DATABASE_URL,
       autoLoadEntities: true,
-      synchronize: true,
+      synchronize: false,
       logging: ['error'],
       retryAttempts: 5,
       retryDelay: 3000,
