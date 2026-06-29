@@ -127,7 +127,9 @@ export default function CasoDetallePage() {
           <span>{grupo.total_reportes ?? 0} reportes agrupados</span>
           <span>Creado {new Date(grupo.creado_en).toLocaleDateString('es-BO')}</span>
           {grupo.fecha_estimada_fin && (
-            <span>Entrega est.: {new Date(grupo.fecha_estimada_fin).toLocaleDateString('es-BO')}</span>
+            <span>
+              Entrega est.: {new Date(grupo.fecha_estimada_fin).toLocaleDateString('es-BO')}
+            </span>
           )}
         </div>
       </div>
@@ -254,7 +256,11 @@ export default function CasoDetallePage() {
           data-testid="btn-enviar"
           className="w-full flex items-center justify-center gap-2 bg-selva text-perla font-medium text-sm px-8 py-3.5 rounded-3xl-3 shadow-md hover:brightness-110 disabled:opacity-60 transition-all"
         >
-          {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+          {sending ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <CheckCircle2 className="w-4 h-4" />
+          )}
           {sending ? 'Registrando...' : 'Registrar avance'}
         </button>
       </form>

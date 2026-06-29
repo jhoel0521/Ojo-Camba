@@ -6,9 +6,7 @@ import CasosPage from './pages/CasosPage';
 import CasoDetallePage from './pages/CasoDetallePage';
 
 function NotFound() {
-  return (
-    <div className="text-center text-sm text-arena py-16">Pagina no encontrada.</div>
-  );
+  return <div className="text-center text-sm text-arena py-16">Pagina no encontrada.</div>;
 }
 
 export default function App() {

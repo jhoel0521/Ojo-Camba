@@ -101,12 +101,15 @@ export function useModeration(opts: UseModerationOpts) {
   );
 
   // Liberar al desmontar (cerrar pestaña/cambiar de página).
-  useEffect(() => () => {
-    if (claimedRef.current !== null) {
-      getSocket().emit('report:release', { reportId: claimedRef.current });
-    }
-    stopHeartbeat();
-  }, [stopHeartbeat]);
+  useEffect(
+    () => () => {
+      if (claimedRef.current !== null) {
+        getSocket().emit('report:release', { reportId: claimedRef.current });
+      }
+      stopHeartbeat();
+    },
+    [stopHeartbeat],
+  );
 
   return { claim, release };
 }

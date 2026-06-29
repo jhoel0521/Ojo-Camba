@@ -21,8 +21,7 @@ export const useModerationStore = create<ModerationState>((set, get) => ({
   claims: {},
   connected: false,
   setConnected: (v) => set({ connected: v }),
-  setClaim: (reportId, info) =>
-    set((s) => ({ claims: { ...s.claims, [reportId]: info } })),
+  setClaim: (reportId, info) => set((s) => ({ claims: { ...s.claims, [reportId]: info } })),
   removeClaim: (reportId) =>
     set((s) => {
       const next = { ...s.claims };

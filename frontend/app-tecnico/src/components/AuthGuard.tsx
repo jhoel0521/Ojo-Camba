@@ -26,10 +26,13 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    fetchAPI<{ valid: boolean; user_id: number; roles: string[]; email: string }>('/auth/validate', {
-      method: 'POST',
-      body: JSON.stringify({ token }),
-    })
+    fetchAPI<{ valid: boolean; user_id: number; roles: string[]; email: string }>(
+      '/auth/validate',
+      {
+        method: 'POST',
+        body: JSON.stringify({ token }),
+      },
+    )
       .then((res) => {
         if (res.valid) {
           login({
