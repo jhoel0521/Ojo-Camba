@@ -18,6 +18,6 @@ export class HistorialPuntos {
   @Column({ type: 'varchar', length: 255, nullable: true })
   motivo: string | null;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ type: 'timestamptz' })
   creado_en: Date;
 }

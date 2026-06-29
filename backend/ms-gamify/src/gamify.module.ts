@@ -1,8 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ClientsModule, Transport } from '@nestjs/microservices';
-import { Nivel } from './entities/nivel.entity';
-import { HistorialPuntos } from './entities/historial-puntos.entity';
+import { Nivel, HistorialPuntos } from '@ojo-camba/common';
 import { GamifyController } from './gamify.controller';
 import { GamifyService } from './gamify.service';
 

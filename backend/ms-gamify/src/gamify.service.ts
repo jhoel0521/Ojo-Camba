@@ -3,9 +3,7 @@ import { ClientProxy } from '@nestjs/microservices';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { firstValueFrom } from 'rxjs';
-import { TCP_PATTERNS } from '@ojo-camba/common';
-import { Nivel } from './entities/nivel.entity';
-import { HistorialPuntos } from './entities/historial-puntos.entity';
+import { TCP_PATTERNS, Nivel, HistorialPuntos } from '@ojo-camba/common';
 import { AwardPointsDto } from './dto';
 
 @Injectable()

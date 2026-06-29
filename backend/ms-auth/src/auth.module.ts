@@ -3,10 +3,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
-import { Usuario } from './entities/usuario.entity';
-import { Rol } from './entities/rol.entity';
-import { UsuarioRol } from './entities/usuario-rol.entity';
-import { RefreshToken } from './entities/refresh-token.entity';
+import { Usuario, Rol, UsuarioRol, RefreshToken } from '@ojo-camba/common';
 
 @Module({
   imports: [

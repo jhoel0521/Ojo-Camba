@@ -10,10 +10,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { ILike, Repository } from 'typeorm';
 import * as bcrypt from 'bcryptjs';
 import * as crypto from 'crypto';
-import { Usuario } from './entities/usuario.entity';
-import { UsuarioRol } from './entities/usuario-rol.entity';
-import { Rol } from './entities/rol.entity';
-import { RefreshToken } from './entities/refresh-token.entity';
+import { Usuario, UsuarioRol, Rol, RefreshToken } from '@ojo-camba/common';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 
