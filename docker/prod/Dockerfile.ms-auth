@@ -1,4 +1,5 @@
 # ── Stage 1: Build ──────────────────────────────────────────
+# fix: db-migrate maneja "relation already exists" (sincronización → migrations)
 FROM node:22-alpine AS builder
 
 ENV PNPM_HOME="/pnpm"
