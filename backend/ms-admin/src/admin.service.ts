@@ -1,5 +1,6 @@
-import { Injectable, BadRequestException, NotFoundException, Logger } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException, Logger, Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { ClientProxy } from '@nestjs/microservices';
 import { In, Repository } from 'typeorm';
 import {
   Reporte,
@@ -7,6 +8,7 @@ import {
   GrupoReporte,
   ActualizacionCaso,
   EstadoReporte,
+  TCP_PATTERNS,
 } from '@ojo-camba/common';
 import { CreateGroupDto, UpdateCaseDto, AcceptReportDto, BanDeviceDto } from './dto';
 
@@ -23,6 +25,8 @@ export class AdminService {
     private readonly grupoRepo: Repository<GrupoReporte>,
     @InjectRepository(ActualizacionCaso)
     private readonly actualizacionRepo: Repository<ActualizacionCaso>,
+    @Inject('MS_GAMIFY')
+    private readonly gamifyClient: ClientProxy,
   ) {}
 
   // ── CU-06: Bandeja de pendientes ──────────────────────────
@@ -85,6 +89,22 @@ export class AdminService {
     );
     reporte.grupo_id = grupo.id;
     await this.reporteRepo.save(reporte);
+
+    // HU-06: al aceptar, se otorgan puntos al dueño del reporte (si es un usuario registrado).
+    // Fire-and-forget: la aceptación no falla si ms-gamify esta caido; el error solo se loguea.
+    if (reporte.usuario_id != null) {
+      this.gamifyClient
+        .emit(TCP_PATTERNS.GAMIFY.AWARD_POINTS, {
+          user_id: reporte.usuario_id,
+          report_id: reporte.id,
+        })
+        .subscribe({
+          error: (err) =>
+            this.logger.error(
+              `No se pudieron otorgar puntos (reporte ${reporte.id}, usuario ${reporte.usuario_id}): ${err?.message ?? err}`,
+            ),
+        });
+    }
 
     return { id: reporte.id, estado: reporte.estado, grupo_id: grupo.id, codigo_obra: codigoObra };
   }

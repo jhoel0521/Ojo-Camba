@@ -93,6 +93,8 @@ services:
     environment:
       TCP_PORT: 3003
       DATABASE_URL: postgresql://ojocamba:ojocamba_secret@postgres:5432/ojocamba
+      MS_GAMIFY_HOST: ms-gamify
+      MS_GAMIFY_PORT: 3004
     networks:
       - ojo-camba-net
     depends_on:
@@ -108,6 +110,9 @@ services:
     environment:
       TCP_PORT: 3004
       DATABASE_URL: postgresql://ojocamba:ojocamba_secret@postgres:5432/ojocamba
+      MS_AUTH_HOST: ms-auth
+      MS_AUTH_PORT: 3001
+      PUNTOS_POR_REPORTE_ACEPTADO: 10
     networks:
       - ojo-camba-net
     depends_on:

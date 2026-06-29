@@ -51,14 +51,14 @@ pnpm ping
 |---|:---:|:---:|:---:|:---:|:---:|:---:|
 | `PORT` | ✅ (3000) | ✅ (3005) | — | — | — | — |
 | `TCP_PORT` | — | — | ✅ (3001) | ✅ (3002) | ✅ (3003) | ✅ (3004) |
-| `MS_AUTH_HOST` | ✅ | ✅ | — | — | — | — |
-| `MS_AUTH_PORT` | ✅ | ✅ | — | — | — | — |
+| `MS_AUTH_HOST` | ✅ | ✅ | — | — | — | ✅ |
+| `MS_AUTH_PORT` | ✅ | ✅ | — | — | — | ✅ |
 | `MS_REGISTER_HOST` | ✅ | ✅ | — | — | — | — |
 | `MS_REGISTER_PORT` | ✅ | ✅ | — | — | — | — |
 | `MS_ADMIN_HOST` | ✅ | ✅ | — | — | — | — |
 | `MS_ADMIN_PORT` | ✅ | ✅ | — | — | — | — |
-| `MS_GAMIFY_HOST` | ✅ | ✅ | — | — | — | — |
-| `MS_GAMIFY_PORT` | ✅ | ✅ | — | — | — | — |
+| `MS_GAMIFY_HOST` | ✅ | ✅ | — | — | ✅ | — |
+| `MS_GAMIFY_PORT` | ✅ | ✅ | — | — | ✅ | — |
 | `DATABASE_URL` | — | — | ✅ | ✅ | ✅ | ✅ |
 | `JWT_SECRET` | — | — | ✅ | — | — | — |
 | `JWT_EXPIRES_IN` | — | — | ✅ | — | — | — |
@@ -66,6 +66,7 @@ pnpm ping
 | `S3_ACCESS_KEY` | — | — | — | ✅ | — | — |
 | `S3_SECRET_KEY` | — | — | — | ✅ | — | — |
 | `S3_BUCKET` | — | — | — | ✅ | — | — |
+| `PUNTOS_POR_REPORTE_ACEPTADO` | — | — | — | — | — | ✅ (def. 10) |
 
 ### Variables de entorno — Frontend (build args)
 
@@ -159,6 +160,8 @@ Health check: (ninguno)
 Env vars:
   TCP_PORT=3003
   DATABASE_URL=postgresql://user:pass@host:5432/ojocamba
+  MS_GAMIFY_HOST=<host-interno-coolify>
+  MS_GAMIFY_PORT=3004
 Watch Paths:
   backend/ms-admin/**  libs/common/**  tsconfig.base.json  pnpm-workspace.yaml  docker/prod/Dockerfile.ms-admin
 ```
@@ -174,6 +177,9 @@ Health check: (ninguno)
 Env vars:
   TCP_PORT=3004
   DATABASE_URL=postgresql://user:pass@host:5432/ojocamba
+  MS_AUTH_HOST=<host-interno-coolify>
+  MS_AUTH_PORT=3001
+  PUNTOS_POR_REPORTE_ACEPTADO=10
 Watch Paths:
   backend/ms-gamify/**  libs/common/**  tsconfig.base.json  pnpm-workspace.yaml  docker/prod/Dockerfile.ms-gamify
 ```

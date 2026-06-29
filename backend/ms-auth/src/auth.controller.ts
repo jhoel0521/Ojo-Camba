@@ -44,6 +44,16 @@ export class AuthController {
     return this.authService.getProfile(dto.user_id);
   }
 
+  @MessagePattern(TCP_PATTERNS.AUTH.ADD_POINTS)
+  addPoints(@Payload() dto: { user_id: number; puntos: number }) {
+    return this.authService.addPoints(dto.user_id, dto.puntos);
+  }
+
+  @MessagePattern(TCP_PATTERNS.AUTH.UPDATE_LEVEL)
+  updateLevel(@Payload() dto: { user_id: number; nivel_id: number }) {
+    return this.authService.updateLevel(dto.user_id, dto.nivel_id);
+  }
+
   @MessagePattern(TCP_PATTERNS.AUTH.LIST_USERS)
   listUsers(@Payload() dto: { page?: number; limit?: number; q?: string }) {
     return this.authService.listUsers(dto.page, dto.limit, dto.q);
