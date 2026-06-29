@@ -42,6 +42,9 @@ async function bootstrap() {
     await crearUsuario(authService, 'Moderador Dos', 'moderador2@ojocamba.bo', 'mod123', [
       'moderador',
     ]);
+    await crearUsuario(authService, 'Técnico Municipal', 'tecnico@ojocamba.bo', 'tec123', [
+      'tecnico',
+    ]);
   } catch (e) {
     console.error('Error:', (e as Error).message);
   }
