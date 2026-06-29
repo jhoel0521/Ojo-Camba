@@ -1,23 +1,25 @@
-import { DataSource } from 'typeorm';
-import {
-  Reporte,
-  GrupoReporte,
-  Categoria,
-  Dispositivo,
-  ActualizacionCaso,
-} from '../libs/common/dist/index.js';
+import { createRequire } from 'module';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 
-const DATABASE_URL = process.env.DATABASE_URL ?? 'postgresql://ojocamba:ojocamba_secret@localhost:5432/ojocamba';
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const require = createRequire(import.meta.url);
 
-const ds = new DataSource({
-  type: 'postgres',
-  url: DATABASE_URL,
-  synchronize: false,
-  logging: true,
-  entities: [Reporte, GrupoReporte, Categoria, Dispositivo, ActualizacionCaso],
+async function migrate() {
+  // libs/common/dist/data-source.js detecta que corre como .js compilado
+  // y carga migrations desde libs/common/dist/migrations/*.js
+  const { AppDataSource } = require(join(__dirname, '..', 'libs', 'common', 'dist', 'data-source.js'));
+  await AppDataSource.initialize();
+  const applied = await AppDataSource.runMigrations();
+  if (applied.length > 0) {
+    console.log(`Migrations applied: ${applied.map((m) => m.name).join(', ')}`);
+  } else {
+    console.log('No pending migrations');
+  }
+  await AppDataSource.destroy();
+}
+
+migrate().catch((err) => {
+  console.error('Migration failed:', err.message);
+  process.exit(1);
 });
-
-await ds.initialize();
-await ds.synchronize();
-await ds.destroy();
-console.log('Schema sincronizado OK');
