@@ -2,10 +2,14 @@ import { Controller, Post, Get, Body, Param, Inject, Query } from '@nestjs/commo
 import { ClientProxy } from '@nestjs/microservices';
 import { TCP_PATTERNS } from '@ojo-camba/common';
 import { sendRpc } from './rpc.helper';
+import { EventsGateway } from './events/events.gateway';
 
 @Controller('admin')
 export class AdminController {
-  constructor(@Inject('MS_ADMIN') private readonly client: ClientProxy) {}
+  constructor(
+    @Inject('MS_ADMIN') private readonly client: ClientProxy,
+    private readonly events: EventsGateway,
+  ) {}
 
   @Get('reports/nearby')
   listNearbyReports(
@@ -33,11 +37,11 @@ export class AdminController {
   }
 
   @Post('reports/:id/accept')
-  acceptReport(
+  async acceptReport(
     @Param('id') id: string,
     @Body() dto: { moderador_id: number; categoria_id?: number; grupo_id?: number },
   ) {
-    return sendRpc(
+    const result = await sendRpc(
       this.client.send(TCP_PATTERNS.ADMIN.ACCEPT_REPORT, {
         report_id: parseInt(id, 10),
         moderador_id: dto.moderador_id,
@@ -45,18 +49,29 @@ export class AdminController {
         grupo_id: dto.grupo_id,
       }),
     );
+    // Tiempo real: sacar el reporte de las bandejas y refrescar contadores.
+    this.events.emitReportResolved(parseInt(id, 10));
+    this.events.emitStatsUpdate(null);
+    return result;
   }
 
   @Post('reports/:id/reject')
-  rejectReport(@Param('id') id: string) {
-    return sendRpc(
+  async rejectReport(@Param('id') id: string) {
+    const result = await sendRpc(
       this.client.send(TCP_PATTERNS.ADMIN.REJECT_REPORT, { report_id: parseInt(id, 10) }),
     );
+    this.events.emitReportResolved(parseInt(id, 10));
+    this.events.emitStatsUpdate(null);
+    return result;
   }
 
   @Post('groups')
-  createGroup(@Body() dto: { report_ids: number[]; creado_por_usuario_id: number }) {
-    return sendRpc(this.client.send(TCP_PATTERNS.ADMIN.CREATE_GROUP, dto));
+  async createGroup(@Body() dto: { report_ids: number[]; creado_por_usuario_id: number }) {
+    const result = await sendRpc(this.client.send(TCP_PATTERNS.ADMIN.CREATE_GROUP, dto));
+    // Cada reporte agrupado sale de las bandejas de todos los moderadores.
+    dto.report_ids.forEach((rid) => this.events.emitReportResolved(rid));
+    this.events.emitStatsUpdate(null);
+    return result;
   }
 
   @Post('groups/:id/updates')

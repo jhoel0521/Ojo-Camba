@@ -1,21 +1,34 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ClipboardList, FolderOpen, Ban, CheckCircle } from 'lucide-react';
 import { getDashboard, type DashboardStats } from '../lib/adminApi';
 import { friendlyError } from '../lib/errors';
+import { useAuthStore } from '../store/authStore';
+import { useModeration } from '../hooks/useModeration';
 
 export default function DashboardPage() {
   const navigate = useNavigate();
+  const user = useAuthStore((s) => s.user);
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  useEffect(() => {
+  const load = useCallback(() => {
     getDashboard()
       .then(setStats)
       .catch((err) => setError(friendlyError(err)))
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  // Tiempo real: refrescar contadores cuando cambian (stats:update).
+  useModeration({
+    user: user ? { id: user.id, nombre: user.nombre } : null,
+    onStats: load,
+  });
 
   if (loading) {
     return (
@@ -47,6 +60,7 @@ export default function DashboardPage() {
   const cards = [
     {
       label: 'Pendientes',
+      testid: 'stat-pendientes',
       value: stats?.pendientes ?? 0,
       icon: ClipboardList,
       color: 'text-sol-camba',
@@ -55,6 +69,7 @@ export default function DashboardPage() {
     },
     {
       label: 'Aceptados hoy',
+      testid: 'stat-aceptados',
       value: stats?.aceptados_hoy ?? 0,
       icon: CheckCircle,
       color: 'text-green-600',
@@ -62,6 +77,7 @@ export default function DashboardPage() {
     },
     {
       label: 'Casos activos',
+      testid: 'stat-casos',
       value: stats?.casos_activos ?? 0,
       icon: FolderOpen,
       color: 'text-caoba',
@@ -70,6 +86,7 @@ export default function DashboardPage() {
     },
     {
       label: 'Dispositivos baneados',
+      testid: 'stat-baneados',
       value: stats?.dispositivos_baneados ?? 0,
       icon: Ban,
       color: 'text-red-600',
@@ -82,7 +99,7 @@ export default function DashboardPage() {
     <div>
       <h2 className="font-semibold text-xl text-tierra mb-6">Dashboard</h2>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {cards.map(({ label, value, icon: Icon, color, bg, path }) => (
+        {cards.map(({ label, testid, value, icon: Icon, color, bg, path }) => (
           <button
             key={label}
             onClick={() => path && navigate(path)}
@@ -93,7 +110,9 @@ export default function DashboardPage() {
               <Icon className={`w-5 h-5 ${color}`} />
             </div>
             <p className="text-xs text-arena uppercase tracking-wide mb-1">{label}</p>
-            <p className="text-2xl font-bold text-tierra">{value}</p>
+            <p className="text-2xl font-bold text-tierra" data-testid={testid}>
+              {value}
+            </p>
           </button>
         ))}
       </div>
