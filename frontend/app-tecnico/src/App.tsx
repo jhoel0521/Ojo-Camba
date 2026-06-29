@@ -1,8 +1,34 @@
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import AuthGuard from './components/AuthGuard';
+import Layout from './components/Layout';
+import LoginPage from './pages/LoginPage';
+import CasosPage from './pages/CasosPage';
+import CasoDetallePage from './pages/CasoDetallePage';
+
+function NotFound() {
+  return <div className="text-center text-sm text-arena py-16">Pagina no encontrada.</div>;
+}
+
 export default function App() {
   return (
-    <main>
-      <h1>Ojo Camba — Técnicos</h1>
-      <p>App para técnicos en campo: ver casos cercanos y registrar avances.</p>
-    </main>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route
+          path="/*"
+          element={
+            <AuthGuard>
+              <Layout>
+                <Routes>
+                  <Route path="/" element={<CasosPage />} />
+                  <Route path="/casos/:id" element={<CasoDetallePage />} />
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </Layout>
+            </AuthGuard>
+          }
+        />
+      </Routes>
+    </BrowserRouter>
   );
 }

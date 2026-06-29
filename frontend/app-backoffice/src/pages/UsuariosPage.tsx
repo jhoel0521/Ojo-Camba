@@ -1,9 +1,16 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Ban, Search } from 'lucide-react';
-import { listUsers, listDevices, banDevice, type Usuario, type Dispositivo } from '../lib/adminApi';
+import { Ban, Search, ShieldOff } from 'lucide-react';
+import {
+  listUsers,
+  listDevices,
+  banDevice,
+  unbanDevice,
+  type Usuario,
+  type Dispositivo,
+} from '../lib/adminApi';
 import { friendlyError } from '../lib/errors';
 import Pagination from '../components/Pagination';
 
@@ -19,6 +26,9 @@ export default function UsuariosPage() {
   const [userPage, setUserPage] = useState(1);
   const [userTotal, setUserTotal] = useState(0);
   const [userLoading, setUserLoading] = useState(true);
+  const [userSearch, setUserSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [devices, setDevices] = useState<Dispositivo[]>([]);
   const [devPage, setDevPage] = useState(1);
@@ -28,6 +38,7 @@ export default function UsuariosPage() {
   const [error, setError] = useState('');
   const [banSuccess, setBanSuccess] = useState('');
   const [banning, setBanning] = useState(false);
+  const [unbanning, setUnbanning] = useState<string | null>(null);
 
   const {
     register,
@@ -41,7 +52,7 @@ export default function UsuariosPage() {
   const fetchUsers = useCallback(async () => {
     setUserLoading(true);
     try {
-      const res = await listUsers(userPage);
+      const res = await listUsers(userPage, 20, debouncedSearch || undefined);
       setUsuarios(res.data);
       setUserTotal(res.total);
     } catch (err) {
@@ -49,7 +60,7 @@ export default function UsuariosPage() {
     } finally {
       setUserLoading(false);
     }
-  }, [userPage]);
+  }, [userPage, debouncedSearch]);
 
   const fetchDevices = useCallback(async () => {
     setDevLoading(true);
@@ -72,6 +83,15 @@ export default function UsuariosPage() {
     fetchDevices();
   }, [fetchDevices]);
 
+  const handleSearchChange = (value: string) => {
+    setUserSearch(value);
+    setUserPage(1);
+    if (searchTimer.current) clearTimeout(searchTimer.current);
+    searchTimer.current = setTimeout(() => {
+      setDebouncedSearch(value);
+    }, 350);
+  };
+
   const onBan = async (data: BanForm) => {
     setBanning(true);
     setError('');
@@ -89,6 +109,21 @@ export default function UsuariosPage() {
     }
   };
 
+  const handleUnban = async (device_id: string) => {
+    setUnbanning(device_id);
+    setError('');
+    try {
+      await unbanDevice(device_id);
+      setBanSuccess(`Dispositivo ${device_id.slice(0, 12)}... desbaneado.`);
+      fetchDevices();
+      setTimeout(() => setBanSuccess(''), 4000);
+    } catch (err) {
+      setError(friendlyError(err));
+    } finally {
+      setUnbanning(null);
+    }
+  };
+
   return (
     <div>
       <h2 className="font-semibold text-xl text-tierra mb-6">Gestion de Usuarios</h2>
@@ -102,6 +137,17 @@ export default function UsuariosPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div>
           <h3 className="font-semibold text-sm text-tierra mb-3">Usuarios registrados</h3>
+
+          <div className="relative mb-3">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-arena" />
+            <input
+              value={userSearch}
+              onChange={(e) => handleSearchChange(e.target.value)}
+              placeholder="Buscar por nombre o email..."
+              className="bg-lienzo border border-arcilla rounded-3xl-3 pl-10 pr-4 py-2.5 text-sm text-tierra placeholder:text-almendra w-full focus:outline-none focus:border-caoba transition-colors"
+            />
+          </div>
+
           {userLoading && usuarios.length === 0 ? (
             <div className="space-y-2">
               {[1, 2, 3].map((i) => (
@@ -113,6 +159,11 @@ export default function UsuariosPage() {
             </div>
           ) : (
             <>
+              {usuarios.length === 0 && (
+                <p className="text-xs text-arena py-4 text-center">
+                  {userSearch ? `Sin resultados para "${userSearch}".` : 'No hay usuarios.'}
+                </p>
+              )}
               <div className="space-y-2">
                 {usuarios.map((u) => (
                   <div key={u.id} className="bg-perla rounded-3xl-2 p-3">
@@ -133,7 +184,8 @@ export default function UsuariosPage() {
                       </div>
                     </div>
                     <p className="text-[10px] text-arena mt-1">
-                      ID #{u.id} · Registro: {new Date(u.creado_en).toLocaleDateString('es-BO')}
+                      ID #{u.id} &middot; Registro:{' '}
+                      {new Date(u.creado_en).toLocaleDateString('es-BO')}
                     </p>
                   </div>
                 ))}
@@ -211,12 +263,23 @@ export default function UsuariosPage() {
                 {devices.map((d) => (
                   <div
                     key={d.device_id}
-                    className="bg-red-50 border border-red-200 rounded-3xl-2 p-3"
+                    className="bg-red-50 border border-red-200 rounded-3xl-2 p-3 flex items-start justify-between gap-2"
                   >
-                    <p className="text-xs font-medium text-tierra truncate">{d.device_id}</p>
-                    {d.motivo_ban && (
-                      <p className="text-[10px] text-red-700 mt-0.5">Motivo: {d.motivo_ban}</p>
-                    )}
+                    <div className="min-w-0">
+                      <p className="text-xs font-medium text-tierra truncate">{d.device_id}</p>
+                      {d.motivo_ban && (
+                        <p className="text-[10px] text-red-700 mt-0.5">Motivo: {d.motivo_ban}</p>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => handleUnban(d.device_id)}
+                      disabled={unbanning === d.device_id}
+                      title="Quitar ban"
+                      className="shrink-0 flex items-center gap-1 text-[10px] font-medium text-caoba hover:text-tierra disabled:opacity-50 transition-colors px-2 py-1 rounded-pill bg-perla border border-arcilla"
+                    >
+                      <ShieldOff className="w-3 h-3" />
+                      {unbanning === d.device_id ? '...' : 'Desbanear'}
+                    </button>
                   </div>
                 ))}
               </div>

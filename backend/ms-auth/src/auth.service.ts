@@ -7,13 +7,10 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { ILike, Repository } from 'typeorm';
 import * as bcrypt from 'bcryptjs';
 import * as crypto from 'crypto';
-import { Usuario } from './entities/usuario.entity';
-import { UsuarioRol } from './entities/usuario-rol.entity';
-import { Rol } from './entities/rol.entity';
-import { RefreshToken } from './entities/refresh-token.entity';
+import { Usuario, UsuarioRol, Rol, RefreshToken } from '@ojo-camba/common';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 
@@ -153,6 +150,30 @@ export class AuthService implements OnModuleInit {
     };
   }
 
+  async addPoints(userId: number, puntos: number) {
+    const usuario = await this.usuarioRepo.findOne({ where: { id: userId } });
+    if (!usuario) {
+      throw new NotFoundException('Usuario no encontrado');
+    }
+
+    await this.usuarioRepo.increment({ id: userId }, 'puntos', puntos);
+    const actualizado = await this.usuarioRepo.findOne({ where: { id: userId } });
+
+    return { user_id: userId, puntos: actualizado!.puntos, nivel_id: actualizado!.nivel_id };
+  }
+
+  async updateLevel(userId: number, nivelId: number) {
+    const usuario = await this.usuarioRepo.findOne({ where: { id: userId } });
+    if (!usuario) {
+      throw new NotFoundException('Usuario no encontrado');
+    }
+
+    usuario.nivel_id = nivelId;
+    await this.usuarioRepo.save(usuario);
+
+    return { user_id: userId, nivel_id: nivelId };
+  }
+
   private async generateTokens(userId: number) {
     const access_token = this.jwtService.sign({ sub: userId });
 
@@ -174,9 +195,12 @@ export class AuthService implements OnModuleInit {
     await this.refreshTokenRepo.update({ usuario_id: userId, revoked: false }, { revoked: true });
   }
 
-  async listUsers(page = 1, limit = 20) {
+  async listUsers(page = 1, limit = 20, q?: string) {
+    const where = q ? [{ nombre: ILike(`%${q}%`) }, { email: ILike(`%${q}%`) }] : undefined;
+
     const [data, total] = await this.usuarioRepo.findAndCount({
       select: ['id', 'nombre', 'email', 'puntos', 'nivel_id', 'creado_en'],
+      where,
       skip: (page - 1) * limit,
       take: limit,
       order: { creado_en: 'DESC' },

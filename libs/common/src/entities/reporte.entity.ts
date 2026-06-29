@@ -42,6 +42,6 @@ export class Reporte {
   @Column({ type: 'varchar', length: 500 })
   url_imagen: string;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ type: 'timestamptz' })
   creado_en: Date;
 }

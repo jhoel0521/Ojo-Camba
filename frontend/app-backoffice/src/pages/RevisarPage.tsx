@@ -14,11 +14,17 @@ import {
   RefreshCw,
   Inbox,
   X,
+  Lock,
+  Wifi,
+  WifiOff,
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
+import { useModeration } from '../hooks/useModeration';
+import { useModerationStore } from '../store/moderationStore';
 import {
   listPending,
   listNearbyGroups,
+  listNearbyReports,
   acceptReport,
   rejectReport as rejectReportApi,
   createGroup,
@@ -58,6 +64,7 @@ export default function RevisarPage() {
   const [editedCategoriaId, setEditedCategoriaId] = useState<number>(0);
   const [nearbySelected, setNearbySelected] = useState<Set<number>>(new Set());
   const [nearbyObras, setNearbyObras] = useState<GrupoReporte[]>([]);
+  const [nearbyPending, setNearbyPending] = useState<NearbyReport[]>([]);
 
   // Modal de detalle de un reporte cercano
   const [nearbyDetailReport, setNearbyDetailReport] = useState<NearbyReport | null>(null);
@@ -78,6 +85,7 @@ export default function RevisarPage() {
       setSelectedReport(null);
       setNearbySelected(new Set());
       setNearbyObras([]);
+      setNearbyPending([]);
     } catch (err) {
       setError(friendlyError(err));
     } finally {
@@ -96,6 +104,7 @@ export default function RevisarPage() {
       setSelectedReport(null);
       setNearbySelected(new Set());
       setNearbyObras([]);
+      setNearbyPending([]);
     }
     setNearbySelected((prev) => {
       const next = new Set(prev);
@@ -104,27 +113,51 @@ export default function RevisarPage() {
     });
   };
 
+  const silentRefresh = useCallback(async () => {
+    try {
+      const res = await listPending(page);
+      setReportes(res.data);
+      setTotal(res.total);
+    } catch {
+      // refresco en segundo plano: no molestamos al usuario si falla
+    }
+  }, [page]);
+
+  const claims = useModerationStore((s) => s.claims);
+  const connected = useModerationStore((s) => s.connected);
+  const { claim, release } = useModeration({
+    user: user ? { id: user.id, nombre: user.nombre } : null,
+    onNewReport: silentRefresh,
+    onResolved: (id) => removeReports([id]),
+  });
+
   const openDetail = async (report: PendingReport) => {
+    // No abrir un reporte que otro moderador ya tiene tomado.
+    if (user && claims[report.id] && claims[report.id].moderadorId !== user.id) return;
+    // Soltar el claim del reporte anterior antes de tomar el nuevo.
+    if (selectedReport && selectedReport.id !== report.id) release(selectedReport.id);
     setSelectedReport(report);
+    claim(report.id);
     setEditedCategoriaId(report.categoria_id);
     setNearbySelected(new Set());
     setNearbyObras([]);
+    setNearbyPending([]);
     try {
-      const obras = await listNearbyGroups(report.h3_res_11);
+      const [obras, nearby] = await Promise.all([
+        listNearbyGroups(report.h3_res_11),
+        listNearbyReports(report.lat, report.lng, 100),
+      ]);
       setNearbyObras(obras);
+      setNearbyPending(
+        nearby
+          .filter((r) => r.id !== report.id)
+          .map((r) => ({ ...r, distanciaM: haversineM(report.lat, report.lng, r.lat, r.lng) }))
+          .sort((a, b) => a.distanciaM - b.distanciaM),
+      );
     } catch {
-      // obras son contexto opcional, no bloqueamos si falla
+      // contexto opcional, no bloqueamos si falla
     }
   };
-
-  // Limitación conocida: solo busca entre los reportes de la página actual (max 20).
-  // Para detección completa de duplicados se necesita GET /admin/reports/nearby?lat&lng&radius.
-  const getNearby = (report: PendingReport): NearbyReport[] =>
-    reportes
-      .filter((r) => r.id !== report.id)
-      .map((r) => ({ ...r, distanciaM: haversineM(report.lat, report.lng, r.lat, r.lng) }))
-      .filter((r) => r.distanciaM <= 100)
-      .sort((a, b) => a.distanciaM - b.distanciaM);
 
   const handleAccept = (id: number, categoriaId?: number) => {
     if (!user) return;
@@ -196,7 +229,7 @@ export default function RevisarPage() {
     });
   };
 
-  const nearbyReports = selectedReport ? getNearby(selectedReport) : [];
+  const nearbyReports = nearbyPending;
 
   return (
     <div className="-m-6 h-full overflow-hidden flex">
@@ -208,6 +241,17 @@ export default function RevisarPage() {
             Bandeja
           </h2>
           <div className="flex items-center gap-2">
+            <span
+              title={connected ? 'Tiempo real conectado' : 'Sin conexión en vivo'}
+              data-testid="rt-status"
+              data-connected={connected}
+            >
+              {connected ? (
+                <Wifi className="w-3.5 h-3.5 text-green-600" />
+              ) : (
+                <WifiOff className="w-3.5 h-3.5 text-arena" />
+              )}
+            </span>
             <span className="bg-yeso text-tierra text-xs px-2.5 py-1 rounded-pill font-semibold border border-arcilla">
               {total} pendientes
             </span>
@@ -248,26 +292,42 @@ export default function RevisarPage() {
             </div>
           )}
 
-          {reportes.map((r) => (
-            <div
-              key={r.id}
-              onClick={() => openDetail(r)}
-              className={`rounded-3xl-2 transition-all ${
-                selectedReport?.id === r.id ? 'ring-2 ring-caoba ring-offset-1' : ''
-              }`}
-            >
-              <PendingReportCard
-                id={r.id}
-                categoria_id={r.categoria_id}
-                url_imagen={r.url_imagen}
-                device_id={r.device_id}
-                creado_en={r.creado_en}
-                selected={selectedReport?.id === r.id}
-                onSelect={() => openDetail(r)}
-                loading={actionLoading}
-              />
-            </div>
-          ))}
+          {reportes.map((r) => {
+            const lock = claims[r.id];
+            const lockedByOther = !!lock && lock.moderadorId !== user?.id;
+            return (
+              <div
+                key={r.id}
+                onClick={() => openDetail(r)}
+                data-testid={`report-row-${r.id}`}
+                className={`relative rounded-3xl-2 transition-all ${
+                  selectedReport?.id === r.id ? 'ring-2 ring-caoba ring-offset-1' : ''
+                } ${lockedByOther ? 'opacity-70' : ''}`}
+              >
+                {lockedByOther && (
+                  <div
+                    data-testid={`lock-${r.id}`}
+                    className="absolute inset-0 z-10 flex items-center justify-center rounded-3xl-2 bg-catedral/55 cursor-not-allowed px-2"
+                  >
+                    <span className="flex items-center gap-1.5 bg-perla/95 text-tierra text-[11px] font-semibold px-2.5 py-1 rounded-pill border border-arcilla shadow-sm text-center">
+                      <Lock className="w-3 h-3 text-sol-camba shrink-0" />
+                      {lock.nombre} está revisando
+                    </span>
+                  </div>
+                )}
+                <PendingReportCard
+                  id={r.id}
+                  categoria_id={r.categoria_id}
+                  url_imagen={r.url_imagen}
+                  device_id={r.device_id}
+                  creado_en={r.creado_en}
+                  selected={selectedReport?.id === r.id}
+                  onSelect={() => openDetail(r)}
+                  loading={actionLoading}
+                />
+              </div>
+            );
+          })}
         </div>
 
         <div className="border-t border-arcilla px-3 py-2">

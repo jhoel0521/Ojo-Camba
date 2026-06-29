@@ -1,5 +1,6 @@
-import { Injectable, BadRequestException, NotFoundException, Logger } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException, Logger, Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { ClientProxy } from '@nestjs/microservices';
 import { In, Repository } from 'typeorm';
 import {
   Reporte,
@@ -7,6 +8,7 @@ import {
   GrupoReporte,
   ActualizacionCaso,
   EstadoReporte,
+  TCP_PATTERNS,
 } from '@ojo-camba/common';
 import { CreateGroupDto, UpdateCaseDto, AcceptReportDto, BanDeviceDto } from './dto';
 
@@ -23,6 +25,8 @@ export class AdminService {
     private readonly grupoRepo: Repository<GrupoReporte>,
     @InjectRepository(ActualizacionCaso)
     private readonly actualizacionRepo: Repository<ActualizacionCaso>,
+    @Inject('MS_GAMIFY')
+    private readonly gamifyClient: ClientProxy,
   ) {}
 
   // ── CU-06: Bandeja de pendientes ──────────────────────────
@@ -85,6 +89,22 @@ export class AdminService {
     );
     reporte.grupo_id = grupo.id;
     await this.reporteRepo.save(reporte);
+
+    // HU-06: al aceptar, se otorgan puntos al dueño del reporte (si es un usuario registrado).
+    // Fire-and-forget: la aceptación no falla si ms-gamify esta caido; el error solo se loguea.
+    if (reporte.usuario_id != null) {
+      this.gamifyClient
+        .emit(TCP_PATTERNS.GAMIFY.AWARD_POINTS, {
+          user_id: reporte.usuario_id,
+          report_id: reporte.id,
+        })
+        .subscribe({
+          error: (err) =>
+            this.logger.error(
+              `No se pudieron otorgar puntos (reporte ${reporte.id}, usuario ${reporte.usuario_id}): ${err?.message ?? err}`,
+            ),
+        });
+    }
 
     return { id: reporte.id, estado: reporte.estado, grupo_id: grupo.id, codigo_obra: codigoObra };
   }
@@ -256,15 +276,23 @@ export class AdminService {
     return qb.getRawMany();
   }
 
-  async listGroups(page = 1, limit = 20) {
-    const total = await this.grupoRepo.count();
-
-    const rows = await this.grupoRepo
+  async listGroups(page = 1, limit = 20, estado?: string) {
+    const qb = this.grupoRepo
       .createQueryBuilder('g')
       .leftJoin(Reporte, 'r', 'r.grupo_id = g.id')
       .addSelect('COUNT(r.id)', 'total_reportes')
       .groupBy('g.id')
-      .orderBy('g.creado_en', 'DESC')
+      .orderBy('g.creado_en', 'DESC');
+
+    if (estado) {
+      qb.where('g.estado_actual = :estado', { estado });
+    }
+
+    const total = await (estado
+      ? this.grupoRepo.count({ where: { estado_actual: estado } })
+      : this.grupoRepo.count());
+
+    const rows = await qb
       .skip((page - 1) * limit)
       .take(limit)
       .getRawAndEntities();
@@ -313,6 +341,53 @@ export class AdminService {
       casos_activos: casosActivos,
       dispositivos_baneados: baneados,
     };
+  }
+
+  async listGroupReports(grupoId: number) {
+    const data = await this.reporteRepo.find({
+      where: { grupo_id: grupoId },
+      order: { creado_en: 'ASC' },
+    });
+    return data.map((r) => ({
+      ...r,
+      lat: Number(r.lat),
+      lng: Number(r.lng),
+      url_imagen: r.url_imagen?.startsWith('http') ? r.url_imagen : `/reportes/${r.id}/imagen`,
+    }));
+  }
+
+  async listNearbyReports(lat: number, lng: number, radiusM = 100) {
+    // Bounding box approximation: 1° ≈ 111,000m
+    const delta = radiusM / 111000;
+    const data = await this.reporteRepo
+      .createQueryBuilder('r')
+      .where('r.estado = :estado', { estado: EstadoReporte.Reportado })
+      .andWhere('CAST(r.lat AS FLOAT) BETWEEN :minLat AND :maxLat', {
+        minLat: lat - delta,
+        maxLat: lat + delta,
+      })
+      .andWhere('CAST(r.lng AS FLOAT) BETWEEN :minLng AND :maxLng', {
+        minLng: lng - delta,
+        maxLng: lng + delta,
+      })
+      .orderBy('r.creado_en', 'DESC')
+      .getMany();
+
+    return data.map((r) => ({
+      ...r,
+      lat: Number(r.lat),
+      lng: Number(r.lng),
+      url_imagen: r.url_imagen?.startsWith('http') ? r.url_imagen : `/reportes/${r.id}/imagen`,
+    }));
+  }
+
+  async unbanDevice(device_id: string) {
+    const dispositivo = await this.dispositivoRepo.findOne({ where: { device_id } });
+    if (!dispositivo) throw new NotFoundException('Dispositivo no encontrado');
+    dispositivo.is_banned = false;
+    dispositivo.motivo_ban = null;
+    await this.dispositivoRepo.save(dispositivo);
+    return { ok: true, device_id, is_banned: false };
   }
 
   async listDevices(page = 1, limit = 20, bannedOnly = false) {

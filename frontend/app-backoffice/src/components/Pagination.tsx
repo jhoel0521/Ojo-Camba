@@ -8,30 +8,33 @@ interface PaginationProps {
 }
 
 export default function Pagination({ page, total, limit, onPageChange }: PaginationProps) {
-  const totalPages = Math.ceil(total / limit);
-  if (totalPages <= 1) return null;
+  const totalPages = Math.max(1, Math.ceil(total / limit));
 
   return (
     <div className="flex items-center justify-between mt-4">
       <p className="text-xs text-arena">
-        Pagina {page} de {totalPages} · {total} resultados
+        {total === 0
+          ? 'Sin resultados'
+          : `Página ${page} de ${totalPages} · ${total} resultado${total !== 1 ? 's' : ''}`}
       </p>
-      <div className="flex items-center gap-1">
-        <button
-          onClick={() => onPageChange(page - 1)}
-          disabled={page <= 1}
-          className="w-8 h-8 flex items-center justify-center rounded-2xl text-arena hover:text-tierra hover:bg-yeso disabled:opacity-30 disabled:cursor-default transition-colors"
-        >
-          <ChevronLeft className="w-4 h-4" />
-        </button>
-        <button
-          onClick={() => onPageChange(page + 1)}
-          disabled={page >= totalPages}
-          className="w-8 h-8 flex items-center justify-center rounded-2xl text-arena hover:text-tierra hover:bg-yeso disabled:opacity-30 disabled:cursor-default transition-colors"
-        >
-          <ChevronRight className="w-4 h-4" />
-        </button>
-      </div>
+      {totalPages > 1 && (
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => onPageChange(page - 1)}
+            disabled={page <= 1}
+            className="w-8 h-8 flex items-center justify-center rounded-2xl text-arena hover:text-tierra hover:bg-yeso disabled:opacity-30 disabled:cursor-default transition-colors"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => onPageChange(page + 1)}
+            disabled={page >= totalPages}
+            className="w-8 h-8 flex items-center justify-center rounded-2xl text-arena hover:text-tierra hover:bg-yeso disabled:opacity-30 disabled:cursor-default transition-colors"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+      )}
     </div>
   );
 }

@@ -116,8 +116,14 @@ export async function createGroup(report_ids: number[], creado_por_usuario_id: n
   );
 }
 
-export async function listGroups(page = 1, limit = 20): Promise<PaginatedResponse<GrupoReporte>> {
-  return fetchAPI<PaginatedResponse<GrupoReporte>>(`/admin/groups?page=${page}&limit=${limit}`);
+export async function listGroups(
+  page = 1,
+  limit = 20,
+  estado?: string,
+): Promise<PaginatedResponse<GrupoReporte>> {
+  const q = new URLSearchParams({ page: String(page), limit: String(limit) });
+  if (estado) q.set('estado', estado);
+  return fetchAPI<PaginatedResponse<GrupoReporte>>(`/admin/groups?${q.toString()}`);
 }
 
 export async function getGroup(id: number): Promise<GrupoReporte> {
@@ -126,6 +132,22 @@ export async function getGroup(id: number): Promise<GrupoReporte> {
 
 export async function getCaseTimeline(id: number): Promise<Actualizacion[]> {
   return fetchAPI<Actualizacion[]>(`/admin/groups/${id}/timeline`);
+}
+
+export interface GroupedReport {
+  id: number;
+  categoria_id: number;
+  lat: number;
+  lng: number;
+  url_imagen: string | null;
+  estado: string;
+  device_id: string;
+  creado_en: string;
+  h3_res_11: string;
+}
+
+export async function getGroupReports(grupoId: number): Promise<GroupedReport[]> {
+  return fetchAPI<GroupedReport[]>(`/admin/groups/${grupoId}/reports`);
 }
 
 export async function updateCase(
@@ -161,8 +183,29 @@ export async function banDevice(device_id: string, motivo: string) {
   });
 }
 
-export async function listUsers(page = 1, limit = 20): Promise<PaginatedResponse<Usuario>> {
-  return fetchAPI<PaginatedResponse<Usuario>>(`/auth/users?page=${page}&limit=${limit}`);
+export async function unbanDevice(device_id: string) {
+  return fetchAPI('/admin/devices/unban', {
+    method: 'POST',
+    body: JSON.stringify({ device_id }),
+  });
+}
+
+export async function listNearbyReports(
+  lat: number,
+  lng: number,
+  radius = 100,
+): Promise<PendingReport[]> {
+  return fetchAPI<PendingReport[]>(`/admin/reports/nearby?lat=${lat}&lng=${lng}&radius=${radius}`);
+}
+
+export async function listUsers(
+  page = 1,
+  limit = 20,
+  q?: string,
+): Promise<PaginatedResponse<Usuario>> {
+  const params = new URLSearchParams({ page: String(page), limit: String(limit) });
+  if (q) params.set('q', q);
+  return fetchAPI<PaginatedResponse<Usuario>>(`/auth/users?${params.toString()}`);
 }
 
 export async function listDevices(

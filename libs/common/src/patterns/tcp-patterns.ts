@@ -7,6 +7,8 @@ export const TCP_PATTERNS = {
     GET_PROFILE: 'auth.get_profile',
     REFRESH: 'auth.refresh',
     LOGOUT: 'auth.logout',
+    ADD_POINTS: 'auth.add_points',
+    UPDATE_LEVEL: 'auth.update_level',
     LIST_USERS: 'auth.list_users',
   },
   REGISTER: {
@@ -34,6 +36,9 @@ export const TCP_PATTERNS = {
     GET_CASE_TIMELINE: 'admin.get_case_timeline',
     DASHBOARD: 'admin.dashboard',
     LIST_DEVICES: 'admin.list_devices',
+    LIST_GROUP_REPORTS: 'admin.list_group_reports',
+    LIST_NEARBY_REPORTS: 'admin.list_nearby_reports',
+    UNBAN_DEVICE: 'admin.unban_device',
   },
   GAMIFY: {
     PING: 'gamify.ping',

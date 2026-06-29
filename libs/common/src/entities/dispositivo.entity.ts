@@ -11,6 +11,6 @@ export class Dispositivo {
   @Column({ type: 'varchar', length: 255, nullable: true })
   motivo_ban: string | null;
 
-  @Column({ type: 'timestamp', nullable: true })
+  @Column({ type: 'timestamptz', nullable: true })
   ultimo_uso: Date | null;
 }

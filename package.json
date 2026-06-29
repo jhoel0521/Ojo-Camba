@@ -20,10 +20,16 @@
     "lint:frontend": "pnpm -r --filter \"./frontend/**\" lint",
     "lint": "pnpm run lint:backend && pnpm run lint:frontend",
     "format": "prettier --write \"backend/**/*.ts\" \"libs/**/*.ts\" \"frontend/**/*.tsx\" \"frontend/**/*.ts\"",
+    "typeorm": "ts-node -P tsconfig.migration.json node_modules/typeorm/cli",
+    "migration:generate": "pnpm typeorm migration:generate -d libs/common/src/data-source.ts",
+    "migration:run": "pnpm typeorm migration:run -d libs/common/src/data-source.ts",
+    "migration:revert": "pnpm typeorm migration:revert -d libs/common/src/data-source.ts",
+    "migration:show": "pnpm typeorm migration:show -d libs/common/src/data-source.ts",
     "db:fresh": "node scripts/db-fresh-seed.mjs",
-    "db:migrate": "node scripts/db-migrate.mjs",
+    "db:migrate": "pnpm migration:run",
     "db:fresh:seed": "pnpm db:fresh && pnpm db:migrate && pnpm db:seed",
     "db:seed": "pnpm --filter @ojo-camba/ms-auth seed && pnpm --filter @ojo-camba/ms-register seed",
+    "prod:db:fresh:seed": "node scripts/prod-db-fresh-seed.mjs",
     "pre-commit": "pnpm run format && pnpm run lint && pnpm run build"
   },
   "devDependencies": {
@@ -33,7 +39,9 @@
     "eslint-config-prettier": "^9.1.2",
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^4.6.2",
-    "prettier": "^3.8.4"
+    "prettier": "^3.8.4",
+    "ts-node": "^10.9.2",
+    "tsconfig-paths": "^4.2.0"
   },
   "engines": {
     "node": ">=22",

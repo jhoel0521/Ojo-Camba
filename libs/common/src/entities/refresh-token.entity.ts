@@ -23,12 +23,12 @@ export class RefreshToken {
   @Column({ type: 'varchar', length: 255, unique: true })
   token: string;
 
-  @Column({ type: 'timestamp' })
+  @Column({ type: 'timestamptz' })
   expires_at: Date;
 
   @Column({ type: 'boolean', default: false })
   revoked: boolean;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ type: 'timestamptz' })
   creado_en: Date;
 }

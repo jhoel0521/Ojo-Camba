@@ -111,6 +111,7 @@ export default function NearbyReportsList({
                     </div>
                     <button
                       onClick={() => onAddToObra(obra.id)}
+                      data-testid={`btn-add-to-obra-${obra.id}`}
                       className="w-full flex items-center justify-center gap-1.5 bg-caoba/10 hover:bg-caoba/20 text-caoba font-semibold text-[11px] min-h-[44px] px-3 rounded-2xl border border-caoba/30 transition-colors"
                     >
                       <Plus className="w-3 h-3" />

@@ -21,6 +21,6 @@ export class GrupoReporte {
   @Column({ type: 'int', nullable: true })
   categoria_id: number | null;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ type: 'timestamptz' })
   creado_en: Date;
 }

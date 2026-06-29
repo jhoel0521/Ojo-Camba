@@ -20,6 +20,6 @@ export class Usuario {
   @Column({ type: 'int', nullable: true })
   nivel_id: number | null;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ type: 'timestamptz' })
   creado_en: Date;
 }
