@@ -35,6 +35,6 @@ export class ActualizacionCaso {
   @Column({ type: 'varchar', length: 500, nullable: true })
   url_imagen: string | null;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ type: 'timestamptz' })
   creado_en: Date;
 }
