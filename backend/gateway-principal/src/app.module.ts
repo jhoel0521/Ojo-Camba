@@ -5,9 +5,11 @@ import { AuthController } from './auth.controller';
 import { ReportesController } from './reportes.controller';
 import { AdminController } from './admin.controller';
 import { GamifyController } from './gamify.controller';
+import { EventsModule } from './events/events.module';
 
 @Module({
   imports: [
+    EventsModule,
     ClientsModule.register([
       {
         name: 'MS_AUTH',

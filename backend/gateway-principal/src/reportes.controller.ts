@@ -3,14 +3,18 @@ import { ClientProxy } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
 import { TCP_PATTERNS } from '@ojo-camba/common';
 import { sendRpc } from './rpc.helper';
+import { EventsGateway } from './events/events.gateway';
 import type { FastifyReply } from 'fastify';
 
 @Controller('reportes')
 export class ReportesController {
-  constructor(@Inject('MS_REGISTER') private readonly client: ClientProxy) {}
+  constructor(
+    @Inject('MS_REGISTER') private readonly client: ClientProxy,
+    private readonly events: EventsGateway,
+  ) {}
 
   @Post()
-  create(
+  async create(
     @Body()
     dto: {
       device_id: string;
@@ -22,7 +26,10 @@ export class ReportesController {
       usuario_id?: number;
     },
   ) {
-    return sendRpc(this.client.send(TCP_PATTERNS.REGISTER.CREATE_REPORT, dto));
+    const reporte = await sendRpc(this.client.send(TCP_PATTERNS.REGISTER.CREATE_REPORT, dto));
+    // Tiempo real: avisar al backoffice del reporte nuevo (CU moderación).
+    this.events.emitNewReport(reporte);
+    return reporte;
   }
 
   @Get()
