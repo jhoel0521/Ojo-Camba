@@ -37,6 +37,27 @@ describe('AdminService', () => {
     actualizacionRepo = makeRepoMock();
     gamifyClient = { emit: jest.fn().mockReturnValue({ subscribe: jest.fn() }) };
 
+    // acceptReport corre dentro de reporteRepo.manager.transaction(); el manager
+    // fake enruta findOne/save/count/create al mock de Reporte o GrupoReporte segun
+    // la entidad pasada, replicando el comportamiento real de EntityManager.
+    const fakeManager = {
+      findOne: jest.fn((entity: unknown, opts: unknown) =>
+        entity === GrupoReporte ? grupoRepo.findOne(opts) : reporteRepo.findOne(opts),
+      ),
+      count: jest.fn((entity: unknown) =>
+        entity === GrupoReporte ? grupoRepo.count() : reporteRepo.count(),
+      ),
+      create: jest.fn((entity: unknown, x: unknown) =>
+        entity === GrupoReporte ? grupoRepo.create(x) : reporteRepo.create(x),
+      ),
+      save: jest.fn((x: Record<string, unknown>) =>
+        x && 'codigo_obra' in x ? grupoRepo.save(x) : reporteRepo.save(x),
+      ),
+    };
+    (reporteRepo as unknown as { manager: unknown }).manager = {
+      transaction: jest.fn((cb: (m: typeof fakeManager) => unknown) => cb(fakeManager)),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AdminService,

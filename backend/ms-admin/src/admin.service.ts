@@ -57,59 +57,73 @@ export class AdminService {
   // ── CU-07: Aceptar / Rechazar ─────────────────────────────
 
   async acceptReport(dto: AcceptReportDto) {
-    const reporte = await this.reporteRepo.findOne({ where: { id: dto.report_id } });
-    if (!reporte) throw new NotFoundException('Reporte no encontrado');
-    if (reporte.estado !== EstadoReporte.Reportado) {
-      throw new BadRequestException('Solo se pueden aceptar reportes en estado Reportado');
-    }
+    // Transaccion con bloqueo pesimista sobre el reporte: evita que dos accept_report
+    // concurrentes sobre el mismo reporte pasen ambos la verificacion de estado
+    // (atomicidad/aislamiento — ISSUE-18).
+    const result = await this.reporteRepo.manager.transaction(async (manager) => {
+      const reporte = await manager.findOne(Reporte, {
+        where: { id: dto.report_id },
+        lock: { mode: 'pessimistic_write' },
+      });
+      if (!reporte) throw new NotFoundException('Reporte no encontrado');
+      if (reporte.estado !== EstadoReporte.Reportado) {
+        throw new BadRequestException('Solo se pueden aceptar reportes en estado Reportado');
+      }
 
-    reporte.estado = EstadoReporte.Aceptado;
+      reporte.estado = EstadoReporte.Aceptado;
 
-    if (dto.grupo_id) {
-      const grupo = await this.grupoRepo.findOne({ where: { id: dto.grupo_id } });
-      if (!grupo) throw new NotFoundException('Caso de Obra no encontrado');
+      if (dto.grupo_id) {
+        const grupo = await manager.findOne(GrupoReporte, { where: { id: dto.grupo_id } });
+        if (!grupo) throw new NotFoundException('Caso de Obra no encontrado');
+        reporte.grupo_id = grupo.id;
+        await manager.save(reporte);
+        return {
+          reporte,
+          grupo_id: grupo.id,
+          codigo_obra: grupo.codigo_obra,
+        };
+      }
+
+      const year = new Date().getFullYear();
+      const count = (await manager.count(GrupoReporte)) + 1;
+      const codigoObra = `O-${String(year).slice(-2)}-${String(count).padStart(7, '0')}`;
+
+      const grupo = await manager.save(
+        manager.create(GrupoReporte, {
+          codigo_obra: codigoObra,
+          estado_actual: EstadoReporte.Aceptado,
+          creado_por_usuario_id: dto.moderador_id,
+          categoria_id: dto.categoria_id ?? reporte.categoria_id,
+        }),
+      );
       reporte.grupo_id = grupo.id;
-      await this.reporteRepo.save(reporte);
-      return {
-        id: reporte.id,
-        estado: reporte.estado,
-        grupo_id: grupo.id,
-        codigo_obra: grupo.codigo_obra,
-      };
-    }
+      await manager.save(reporte);
 
-    const year = new Date().getFullYear();
-    const count = (await this.grupoRepo.count()) + 1;
-    const codigoObra = `O-${String(year).slice(-2)}-${String(count).padStart(7, '0')}`;
-
-    const grupo = await this.grupoRepo.save(
-      this.grupoRepo.create({
-        codigo_obra: codigoObra,
-        estado_actual: EstadoReporte.Aceptado,
-        creado_por_usuario_id: dto.moderador_id,
-        categoria_id: dto.categoria_id ?? reporte.categoria_id,
-      }),
-    );
-    reporte.grupo_id = grupo.id;
-    await this.reporteRepo.save(reporte);
+      return { reporte, grupo_id: grupo.id, codigo_obra: codigoObra };
+    });
 
     // HU-06: al aceptar, se otorgan puntos al dueño del reporte (si es un usuario registrado).
     // Fire-and-forget: la aceptación no falla si ms-gamify esta caido; el error solo se loguea.
-    if (reporte.usuario_id != null) {
+    if (result.reporte.usuario_id != null) {
       this.gamifyClient
         .emit(TCP_PATTERNS.GAMIFY.AWARD_POINTS, {
-          user_id: reporte.usuario_id,
-          report_id: reporte.id,
+          user_id: result.reporte.usuario_id,
+          report_id: result.reporte.id,
         })
         .subscribe({
           error: (err) =>
             this.logger.error(
-              `No se pudieron otorgar puntos (reporte ${reporte.id}, usuario ${reporte.usuario_id}): ${err?.message ?? err}`,
+              `No se pudieron otorgar puntos (reporte ${result.reporte.id}, usuario ${result.reporte.usuario_id}): ${err?.message ?? err}`,
             ),
         });
     }
 
-    return { id: reporte.id, estado: reporte.estado, grupo_id: grupo.id, codigo_obra: codigoObra };
+    return {
+      id: result.reporte.id,
+      estado: result.reporte.estado,
+      grupo_id: result.grupo_id,
+      codigo_obra: result.codigo_obra,
+    };
   }
 
   async rejectReport(reportId: number) {

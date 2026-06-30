@@ -47,8 +47,11 @@ async function test() {
     if (r.estado !== 'Rechazado') throw new Error(r.estado);
   });
   await assert('aceptar ya aceptado lanza error', async () => {
-    try { await firstValueFrom(admin.send('admin.accept_report', { report_id: ids[0], moderador_id: 1 }).pipe(timeout(5000))); throw new Error('no fallo'); }
-    catch { /* esperado */ }
+    // El RpcExceptionFilter de ms-admin convierte excepciones en payloads
+    // { status: 'error', ... } en vez de rechazar la promesa: hay que inspeccionar
+    // el contenido de la respuesta, no asumir que el throw siempre se dispara.
+    const r = await firstValueFrom(admin.send('admin.accept_report', { report_id: ids[0], moderador_id: 1 }).pipe(timeout(5000)));
+    if (r.status !== 'error') throw new Error(`se esperaba error, se obtuvo: ${JSON.stringify(r)}`);
   });
 
   console.log('\n=== FASE 12.3: CU-09 Banear DeviceID ===');
@@ -57,8 +60,8 @@ async function test() {
     if (!r.ok || !r.is_banned) throw new Error(JSON.stringify(r));
   });
   await assert('ban_device inexistente lanza error', async () => {
-    try { await firstValueFrom(admin.send('admin.ban_device', { device_id: 'no-existe-xyz' }).pipe(timeout(5000))); throw new Error('no fallo'); }
-    catch { /* esperado */ }
+    const r = await firstValueFrom(admin.send('admin.ban_device', { device_id: 'no-existe-xyz' }).pipe(timeout(5000)));
+    if (r.status !== 'error') throw new Error(`se esperaba error, se obtuvo: ${JSON.stringify(r)}`);
   });
 
   console.log('\n=== FASE 12.4: CU-08/CU-11 Crear Caso de Obra ===');
@@ -124,12 +127,10 @@ async function test() {
     if (r.estado_nuevo !== 'Finalizado') throw new Error(r.estado_nuevo);
   });
   await assert('update_case estado invalido lanza error', async () => {
-    try {
-      await firstValueFrom(admin.send('admin.update_case', {
-        grupo_id: grupoId, usuario_id: 2, estado_nuevo: 'Inexistente', comentario: 'test',
-      }).pipe(timeout(5000)));
-      throw new Error('no fallo');
-    } catch { /* esperado */ }
+    const r = await firstValueFrom(admin.send('admin.update_case', {
+      grupo_id: grupoId, usuario_id: 2, estado_nuevo: 'Inexistente', comentario: 'test',
+    }).pipe(timeout(5000)));
+    if (r.status !== 'error') throw new Error(`se esperaba error, se obtuvo: ${JSON.stringify(r)}`);
   });
 
   console.log('\n=== FASE 12.8: CU-04 Bitacora publica / Timeline ===');
@@ -146,8 +147,8 @@ async function test() {
     if (r.length < 4) throw new Error(`solo ${r.length} actualizaciones`);
   });
   await assert('get_group no existente lanza error', async () => {
-    try { await firstValueFrom(admin.send('admin.get_group', { grupo_id: 99999 }).pipe(timeout(5000))); throw new Error('no fallo'); }
-    catch { /* esperado */ }
+    const r = await firstValueFrom(admin.send('admin.get_group', { grupo_id: 99999 }).pipe(timeout(5000)));
+    if (r.status !== 'error') throw new Error(`se esperaba error, se obtuvo: ${JSON.stringify(r)}`);
   });
 
   console.log('\n=== FASE 12.9: ACID — concurrencia en accept_report (ISSUE-18) ===');
@@ -156,17 +157,20 @@ async function test() {
       device_id: 'test-concurrencia', lat: -17.79, lng: -63.19, categoria_id: 1, imagen_base64: IMG,
     }).pipe(timeout(5000)))).id;
 
-    const intentos = await Promise.allSettled([
+    // El RpcExceptionFilter de ms-admin devuelve { status: 'error' } en vez de
+    // rechazar la promesa, asi que ambas llamadas "fulfillean": hay que revisar
+    // el contenido de cada respuesta para saber cual transiciono de verdad.
+    const respuestas = await Promise.all([
       firstValueFrom(admin.send('admin.accept_report', { report_id: concurrenteId, moderador_id: 1 }).pipe(timeout(5000))),
       firstValueFrom(admin.send('admin.accept_report', { report_id: concurrenteId, moderador_id: 2 }).pipe(timeout(5000))),
     ]);
 
-    const exitosos = intentos.filter((r) => r.status === 'fulfilled');
+    const exitosos = respuestas.filter((r) => r.status !== 'error');
     if (exitosos.length !== 1) {
-      throw new Error(`se esperaba exactamente 1 transicion exitosa, hubo ${exitosos.length}`);
+      throw new Error(`se esperaba exactamente 1 transicion exitosa, hubo ${exitosos.length}: ${JSON.stringify(respuestas)}`);
     }
 
-    const grupoIds = new Set(exitosos.map((r) => r.value.grupo_id));
+    const grupoIds = new Set(exitosos.map((r) => r.grupo_id));
     if (grupoIds.size !== 1) throw new Error('se creo mas de un Caso de Obra para el mismo reporte');
   });
 
