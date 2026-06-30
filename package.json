@@ -20,6 +20,7 @@
     "lint:frontend": "pnpm -r --filter \"./frontend/**\" lint",
     "lint": "pnpm run lint:backend && pnpm run lint:frontend",
     "format": "prettier --write \"backend/**/*.ts\" \"libs/**/*.ts\" \"frontend/**/*.tsx\" \"frontend/**/*.ts\"",
+    "test": "pnpm run build:libs && pnpm -r --if-present --filter \"./backend/**\" run test",
     "typeorm": "ts-node -P tsconfig.migration.json node_modules/typeorm/cli",
     "migration:generate": "pnpm typeorm migration:generate -d libs/common/src/data-source.ts",
     "migration:run": "pnpm typeorm migration:run -d libs/common/src/data-source.ts",
@@ -30,7 +31,8 @@
     "db:fresh:seed": "pnpm db:fresh && pnpm db:migrate && pnpm db:seed",
     "db:seed": "pnpm --filter @ojo-camba/ms-auth seed && pnpm --filter @ojo-camba/ms-register seed",
     "prod:db:fresh:seed": "node scripts/prod-db-fresh-seed.mjs",
-    "pre-commit": "pnpm run format && pnpm run lint && pnpm run build"
+    "pre-commit": "pnpm run format && pnpm run lint && pnpm run test && pnpm run build",
+    "prepare": "husky"
   },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^8.61.1",
@@ -39,6 +41,7 @@
     "eslint-config-prettier": "^9.1.2",
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^4.6.2",
+    "husky": "^9.1.7",
     "prettier": "^3.8.4",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0"
