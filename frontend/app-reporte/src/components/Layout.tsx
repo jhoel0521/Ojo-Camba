@@ -1,4 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
+import { isMobile as isMobileDevice } from 'react-device-detect';
 import { MapPin, Plus, SlidersHorizontal, User } from 'lucide-react';
 import { useAppStore } from '../store/appStore';
 import { useAuthStore } from '../store/authStore';
@@ -12,7 +13,6 @@ import { useState, useEffect } from 'react';
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
-  const { device } = useAppStore();
   const setFilterOpen = useAppStore((s) => s.setFilterOpen);
   const { isLoggedIn, loadFromStorage } = useAuthStore();
   const [authOpen, setAuthOpen] = useState(false);
@@ -25,8 +25,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
   const isHome = location.pathname === '/';
   const isReporte = location.pathname === '/nuevo';
-  const canReport = device?.canReport ?? false;
-  const isMobile = device?.isMobile ?? true;
+  const isMobile = isMobileDevice;
 
   return (
     <div className="h-dvh flex flex-col bg-lienzo font-pirai overflow-hidden">
@@ -77,25 +76,16 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 Iniciar sesion
               </button>
             )}
-
-            {canReport && !isMobile && !isReporte && (
-              <Link
-                to="/nuevo"
-                className="px-5 py-2.5 bg-sol-camba text-catedral text-sm font-bold rounded-pill hover:shadow-lg transition-all"
-              >
-                Reportar
-              </Link>
-            )}
           </div>
         </div>
       </header>
 
       <div className="flex-1 min-h-0">{children}</div>
 
-      {canReport && !isReporte && (
+      {isMobile && !isReporte && (
         <Link
           to="/nuevo"
-          className="fixed bottom-20 md:bottom-6 right-4 z-[9999] w-14 h-14 bg-sol-camba text-catedral rounded-pill shadow-lg active:scale-95 transition-all flex items-center justify-center"
+          className="fixed bottom-20 right-4 z-[9999] w-14 h-14 bg-sol-camba text-catedral rounded-pill shadow-lg active:scale-95 transition-all flex items-center justify-center"
         >
           <Plus className="w-7 h-7" />
         </Link>

@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import { isMobile } from 'react-device-detect';
 import { useGeolocation } from '../hooks/useGeolocation';
 import { getDeviceId } from '../lib/device';
 import { fetchAPI } from '../lib/api';
@@ -17,6 +18,7 @@ import {
   Droplets,
   TrafficCone,
   HelpCircle,
+  Smartphone,
 } from 'lucide-react';
 
 const CATEGORIAS = [
@@ -82,6 +84,22 @@ export default function ReportePage() {
   };
 
   const puedeEnviar = geo.status === 'granted' && imagen && categoriaId && !enviando;
+
+  if (!isMobile) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6 text-center px-8">
+        <Smartphone className="w-16 h-16 text-arcilla" />
+        <div>
+          <h2 className="text-xl font-bold text-catedral font-pirai mb-2">
+            Solo disponible en móvil
+          </h2>
+          <p className="text-arena text-sm max-w-xs leading-relaxed">
+            Para reportar un problema necesitás tu teléfono — cámara y GPS son requeridos.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   if (enviado) {
     const pendientes = getQueue().length;
