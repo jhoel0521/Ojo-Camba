@@ -1,13 +1,19 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ClientsModule, Transport } from '@nestjs/microservices';
-import { Reporte, Dispositivo, GrupoReporte, ActualizacionCaso } from '@ojo-camba/common';
+import {
+  Reporte,
+  Dispositivo,
+  GrupoReporte,
+  ActualizacionCaso,
+  Categoria,
+} from '@ojo-camba/common';
 import { AdminController } from './admin.controller';
 import { AdminService } from './admin.service';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Reporte, Dispositivo, GrupoReporte, ActualizacionCaso]),
+    TypeOrmModule.forFeature([Reporte, Dispositivo, GrupoReporte, ActualizacionCaso, Categoria]),
     ClientsModule.register([
       {
         name: 'MS_GAMIFY',

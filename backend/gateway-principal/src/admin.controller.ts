@@ -168,6 +168,11 @@ export class AdminController {
     return sendRpc(this.client.send(TCP_PATTERNS.ADMIN.DASHBOARD, {}));
   }
 
+  @Get('dashboard/kpis')
+  getDashboardKpis() {
+    return sendRpc(this.client.send(TCP_PATTERNS.ADMIN.DASHBOARD_KPIS, {}));
+  }
+
   @Get('devices')
   listDevices(@Query() query: { page?: string; limit?: string; banned_only?: string }) {
     return sendRpc(
