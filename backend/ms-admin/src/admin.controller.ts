@@ -75,6 +75,11 @@ export class AdminController {
     return this.adminService.getDashboard();
   }
 
+  @MessagePattern(TCP_PATTERNS.ADMIN.DASHBOARD_KPIS)
+  dashboardKpis() {
+    return this.adminService.getDashboardKpis();
+  }
+
   @MessagePattern(TCP_PATTERNS.ADMIN.LIST_DEVICES)
   listDevices(@Payload() dto: { page?: number; limit?: number; banned_only?: boolean }) {
     return this.adminService.listDevices(dto.page, dto.limit, dto.banned_only);

@@ -45,6 +45,11 @@ async function bootstrap() {
     await crearUsuario(authService, 'Técnico Municipal', 'tecnico@ojocamba.bo', 'tec123', [
       'tecnico',
     ]);
+    // Usuario de demo pública — credenciales conocidas para la presentación final.
+    await crearUsuario(authService, 'Admin Demo', 'admin@demo.com', 'Demo2026!', [
+      'admin',
+      'moderador',
+    ]);
   } catch (e) {
     console.error('Error:', (e as Error).message);
   }

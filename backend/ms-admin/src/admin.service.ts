@@ -7,6 +7,7 @@ import {
   Dispositivo,
   GrupoReporte,
   ActualizacionCaso,
+  Categoria,
   EstadoReporte,
   TCP_PATTERNS,
 } from '@ojo-camba/common';
@@ -25,6 +26,8 @@ export class AdminService {
     private readonly grupoRepo: Repository<GrupoReporte>,
     @InjectRepository(ActualizacionCaso)
     private readonly actualizacionRepo: Repository<ActualizacionCaso>,
+    @InjectRepository(Categoria)
+    private readonly categoriaRepo: Repository<Categoria>,
     @Inject('MS_GAMIFY')
     private readonly gamifyClient: ClientProxy,
   ) {}
@@ -77,7 +80,7 @@ export class AdminService {
 
     const year = new Date().getFullYear();
     const count = (await this.grupoRepo.count()) + 1;
-    const codigoObra = `OBRA-${year}-${String(count).padStart(3, '0')}`;
+    const codigoObra = `O-${String(year).slice(-2)}-${String(count).padStart(7, '0')}`;
 
     const grupo = await this.grupoRepo.save(
       this.grupoRepo.create({
@@ -156,7 +159,7 @@ export class AdminService {
 
     const year = new Date().getFullYear();
     const count = (await this.grupoRepo.count()) + 1;
-    const codigoObra = `OBRA-${year}-${String(count).padStart(3, '0')}`;
+    const codigoObra = `O-${String(year).slice(-2)}-${String(count).padStart(7, '0')}`;
 
     const grupo = this.grupoRepo.create({
       codigo_obra: codigoObra,
@@ -401,5 +404,79 @@ export class AdminService {
       order: { ultimo_uso: 'DESC' },
     });
     return { data, total, page, limit };
+  }
+
+  // ── Sprint 3: Dashboard KPIs con datos históricos ─────────
+
+  async getDashboardKpis() {
+    // KPI base (reutiliza getDashboard)
+    const base = await this.getDashboard();
+
+    // KPI 2: Reportes creados por mes — últimos 6 meses
+    const seisMesesAtras = new Date();
+    seisMesesAtras.setMonth(seisMesesAtras.getMonth() - 5);
+    seisMesesAtras.setDate(1);
+    seisMesesAtras.setHours(0, 0, 0, 0);
+
+    const reportesPorMesRaw: { mes: string; total: string }[] = await this.reporteRepo
+      .createQueryBuilder('r')
+      .select("TO_CHAR(DATE_TRUNC('month', r.creado_en), 'YYYY-MM')", 'mes')
+      .addSelect('COUNT(r.id)', 'total')
+      .where('r.creado_en >= :desde', { desde: seisMesesAtras.toISOString() })
+      .groupBy("DATE_TRUNC('month', r.creado_en)")
+      .orderBy("DATE_TRUNC('month', r.creado_en)", 'ASC')
+      .getRawMany();
+
+    const reportesPorMes = reportesPorMesRaw.map((r) => ({
+      mes: r.mes,
+      total: parseInt(r.total, 10),
+    }));
+
+    // KPI 3: Distribución por categoría (solo reportes con categoría asignada)
+    const porCategoriaRaw: { categoria_id: string; nombre: string; total: string }[] =
+      await this.reporteRepo
+        .createQueryBuilder('r')
+        .innerJoin(Categoria, 'c', 'c.id = r.categoria_id')
+        .select('r.categoria_id', 'categoria_id')
+        .addSelect('c.nombre', 'nombre')
+        .addSelect('COUNT(r.id)', 'total')
+        .where('r.categoria_id IS NOT NULL')
+        .groupBy('r.categoria_id')
+        .addGroupBy('c.nombre')
+        .orderBy('total', 'DESC')
+        .getRawMany();
+
+    const porCategoria = porCategoriaRaw.map((r) => ({
+      categoria_id: parseInt(r.categoria_id, 10),
+      nombre: r.nombre,
+      total: parseInt(r.total, 10),
+    }));
+
+    // KPI 4: Casos por estado actual
+    const casosPorEstadoRaw: { estado: string; total: string }[] = await this.grupoRepo
+      .createQueryBuilder('g')
+      .select('g.estado_actual', 'estado')
+      .addSelect('COUNT(g.id)', 'total')
+      .groupBy('g.estado_actual')
+      .getRawMany();
+
+    const casosPorEstado = casosPorEstadoRaw.map((r) => ({
+      estado: r.estado,
+      total: parseInt(r.total, 10),
+    }));
+
+    // KPI 5: Tasa de resolución — Finalizados / (Finalizados + Aceptados + EnTrabajo)
+    const finalizados =
+      casosPorEstado.find((e) => e.estado === EstadoReporte.Finalizado)?.total ?? 0;
+    const totalActivos = casosPorEstado.reduce((acc, e) => acc + e.total, 0);
+    const tasaResolucion = totalActivos > 0 ? Math.round((finalizados / totalActivos) * 100) : 0;
+
+    return {
+      ...base,
+      reportes_por_mes: reportesPorMes,
+      por_categoria: porCategoria,
+      casos_por_estado: casosPorEstado,
+      tasa_resolucion: tasaResolucion,
+    };
   }
 }

@@ -21,587 +21,62 @@ const ds = new DataSource({
   entities: [Reporte, GrupoReporte, Categoria, Dispositivo, ActualizacionCaso],
 });
 
-interface RSeed {
-  lat: number;
-  lng: number;
-  cat: number;
-  gravedad: string;
+// Bounding box de Santa Cruz de la Sierra
+function randCoord() {
+  return {
+    lat: -(17.7 + Math.random() * 0.2),
+    lng: -(63.1 + Math.random() * 0.15),
+  };
 }
 
-interface ASeed {
-  comentario: string;
-  estado_nuevo?: string;
-  fecha_estimada_fin?: string;
-  recursos_solicitados?: string;
-  url_imagen?: string;
-}
+// Distribución ponderada de categorías (35% bache, 20% luminaria, 20% residuos, 10% alcant, 10% tráfico, 5% otro)
+const CAT_POOL = [1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 5, 5, 6];
+const randCat = () => CAT_POOL[Math.floor(Math.random() * CAT_POOL.length)];
 
-interface GSeed {
-  cat: number;
-  estado: string;
-  fecha_estimada_fin?: string;
-  reportes: RSeed[];
-  actualizaciones?: ASeed[];
-}
-
-// Genera N coordenadas con pequeños offsets desde un punto base
-function r(lat: number, lng: number, cat: number, gravedad: string, dLat = 0, dLng = 0): RSeed {
-  return { lat: lat + dLat, lng: lng + dLng, cat, gravedad };
-}
-
-// ── Datos de seed: 25 grupos, ~105 reportes ───────────────────────────────────
-const GRUPOS: GSeed[] = [
-  // ──────────────── FINALIZADO (8 grupos) ──────────────────────────────────────
-  {
-    // 1. Centro Histórico – Baches
-    cat: 1,
-    estado: EstadoReporte.Finalizado,
-    fecha_estimada_fin: '2026-05-20',
-    reportes: [
-      r(-17.7834, -63.1825, 1, 'Alta'),
-      r(-17.7834, -63.1825, 1, 'Alta', 0.001, 0.001),
-      r(-17.7834, -63.1825, 1, 'Media', -0.001, 0.002),
-      r(-17.7834, -63.1825, 1, 'Emergencia', 0.002, -0.001),
-    ],
-    actualizaciones: [
-      {
-        comentario:
-          'Inspector verificó 4 baches en Av. Monseñor Rivero. Se constata deterioro severo del pavimento.',
-        estado_nuevo: EstadoReporte.ValidacionEnCampo,
-      },
-      {
-        comentario: 'Cuadrilla N°3 asignada con 2 camiones de asfalto y 6 operarios.',
-        estado_nuevo: EstadoReporte.EnTrabajo,
-        fecha_estimada_fin: '2026-05-20',
-        recursos_solicitados: '2 camiones de asfalto, 6 operarios, selladora de grietas',
-        url_imagen: 'https://picsum.photos/seed/obra1b/400/300',
-      },
-      {
-        comentario:
-          'Trabajos de bacheo concluidos en su totalidad. Superficie habilitada al tráfico.',
-        estado_nuevo: EstadoReporte.Finalizado,
-        url_imagen: 'https://picsum.photos/seed/obra1c/400/300',
-      },
-    ],
-  },
-  {
-    // 2. Equipetrol – Luminarias
-    cat: 2,
-    estado: EstadoReporte.Finalizado,
-    fecha_estimada_fin: '2026-05-10',
-    reportes: [
-      r(-17.7628, -63.1965, 2, 'Media'),
-      r(-17.7628, -63.1965, 2, 'Media', 0.001, -0.001),
-      r(-17.7628, -63.1965, 2, 'Alta', -0.001, 0.002),
-    ],
-    actualizaciones: [
-      {
-        comentario:
-          'Se verificó falla eléctrica en 3 postes de luminaria en Av. San Martín. Cables pelados visibles.',
-        estado_nuevo: EstadoReporte.ValidacionEnCampo,
-      },
-      {
-        comentario:
-          'Técnicos eléctricos en sitio. Reposición de luminarias LED y revisión del cableado.',
-        estado_nuevo: EstadoReporte.EnTrabajo,
-        fecha_estimada_fin: '2026-05-10',
-        recursos_solicitados: 'Unidad de trabajo eléctrico, 3 luminarias LED, 4 técnicos',
-        url_imagen: 'https://picsum.photos/seed/obra2b/400/300',
-      },
-      {
-        comentario:
-          'Las 3 luminarias fueron repuestas y el sistema eléctrico revisado. Zona iluminada correctamente.',
-        estado_nuevo: EstadoReporte.Finalizado,
-        url_imagen: 'https://picsum.photos/seed/obra2c/400/300',
-      },
-    ],
-  },
-  {
-    // 3. Satélite Norte – Tráfico
-    cat: 5,
-    estado: EstadoReporte.Finalizado,
-    fecha_estimada_fin: '2026-06-01',
-    reportes: [
-      r(-17.7452, -63.1815, 5, 'Alta'),
-      r(-17.7452, -63.1815, 5, 'Alta', 0.001, 0.001),
-      r(-17.7452, -63.1815, 5, 'Media', -0.001, -0.001),
-      r(-17.7452, -63.1815, 5, 'Media', 0.002, 0),
-    ],
-    actualizaciones: [
-      {
-        comentario:
-          'Se constató ausencia de señalización vial en cruce de Radial 17. Riesgo elevado.',
-        estado_nuevo: EstadoReporte.ValidacionEnCampo,
-      },
-      {
-        comentario:
-          'Equipo vial instalando señalización horizontal y vertical. Pintado de cebras peatonales.',
-        estado_nuevo: EstadoReporte.EnTrabajo,
-        fecha_estimada_fin: '2026-06-01',
-        recursos_solicitados: 'Señaleros, pintura vial termoplástica, 2 técnicos viales',
-      },
-      {
-        comentario: 'Señalización completada. Cruce vial habilitado con demarcación nueva.',
-        estado_nuevo: EstadoReporte.Finalizado,
-        url_imagen: 'https://picsum.photos/seed/obra3c/400/300',
-      },
-    ],
-  },
-  {
-    // 4. Radial 26 – Luminarias
-    cat: 2,
-    estado: EstadoReporte.Finalizado,
-    fecha_estimada_fin: '2026-05-25',
-    reportes: [
-      r(-17.7793, -63.1624, 2, 'Alta'),
-      r(-17.7793, -63.1624, 2, 'Media', 0.001, 0.001),
-      r(-17.7793, -63.1624, 2, 'Media', -0.001, 0.002),
-      r(-17.7793, -63.1624, 2, 'Alta', 0.002, -0.001),
-    ],
-    actualizaciones: [
-      {
-        comentario:
-          'Inspección realizada: 4 postes con luminaria defectuosa en Radial 26 y 2do anillo.',
-        estado_nuevo: EstadoReporte.ValidacionEnCampo,
-      },
-      {
-        comentario:
-          'Reparación de cableado iniciada. Se reemplazarán balastros en todos los postes afectados.',
-        estado_nuevo: EstadoReporte.EnTrabajo,
-        fecha_estimada_fin: '2026-05-25',
-        recursos_solicitados: '4 balastros, plataforma elevadora, 3 técnicos eléctricos',
-      },
-      {
-        comentario:
-          'Los 4 postes quedaron operativos. Se realizó prueba nocturna con resultado satisfactorio.',
-        estado_nuevo: EstadoReporte.Finalizado,
-        url_imagen: 'https://picsum.photos/seed/obra4c/400/300',
-      },
-    ],
-  },
-  {
-    // 5. Palmasola – Residuos
-    cat: 3,
-    estado: EstadoReporte.Finalizado,
-    fecha_estimada_fin: '2026-05-18',
-    reportes: [
-      r(-17.7254, -63.1464, 3, 'Media'),
-      r(-17.7254, -63.1464, 3, 'Alta', 0.001, 0.001),
-      r(-17.7254, -63.1464, 3, 'Media', -0.001, -0.001),
-    ],
-    actualizaciones: [
-      {
-        comentario:
-          'Verificación: acumulación de residuos sólidos en vía pública. Punto negro identificado.',
-        estado_nuevo: EstadoReporte.ValidacionEnCampo,
-      },
-      {
-        comentario: 'Camión recolector y cuadrilla de limpieza en la zona.',
-        estado_nuevo: EstadoReporte.EnTrabajo,
-        fecha_estimada_fin: '2026-05-18',
-        recursos_solicitados: 'Camión recolector de 8 ton, 4 operarios de limpieza',
-      },
-      {
-        comentario: 'Zona limpiada. Se instaló señalética de prohibición de depósito de basura.',
-        estado_nuevo: EstadoReporte.Finalizado,
-        url_imagen: 'https://picsum.photos/seed/obra5c/400/300',
-      },
-    ],
-  },
-  {
-    // 6. La Ramada – Tráfico
-    cat: 5,
-    estado: EstadoReporte.Finalizado,
-    fecha_estimada_fin: '2026-06-05',
-    reportes: [
-      r(-17.7965, -63.1842, 5, 'Alta'),
-      r(-17.7965, -63.1842, 5, 'Alta', 0.001, -0.001),
-      r(-17.7965, -63.1842, 5, 'Media', -0.001, 0.002),
-      r(-17.7965, -63.1842, 5, 'Media', 0.002, 0.001),
-    ],
-    actualizaciones: [
-      {
-        comentario:
-          'Semáforo en intersección La Ramada / 3er anillo fuera de servicio. Riesgo de accidente.',
-        estado_nuevo: EstadoReporte.ValidacionEnCampo,
-      },
-      {
-        comentario:
-          'Técnicos en reparación del controlador semafórico. Agentes de tránsito regulando el cruce.',
-        estado_nuevo: EstadoReporte.EnTrabajo,
-        fecha_estimada_fin: '2026-06-05',
-        recursos_solicitados:
-          'Controlador semafórico, 2 técnicos electricistas, 3 agentes de tránsito',
-      },
-      {
-        comentario:
-          'Semáforo restaurado y funcionando correctamente en los 4 accesos de la intersección.',
-        estado_nuevo: EstadoReporte.Finalizado,
-        url_imagen: 'https://picsum.photos/seed/obra6c/400/300',
-      },
-    ],
-  },
-  {
-    // 7. Centro Sur – Baches
-    cat: 1,
-    estado: EstadoReporte.Finalizado,
-    fecha_estimada_fin: '2026-05-30',
-    reportes: [
-      r(-17.787, -63.179, 1, 'Alta'),
-      r(-17.787, -63.179, 1, 'Emergencia', 0.001, 0.001),
-      r(-17.787, -63.179, 1, 'Alta', -0.001, 0.002),
-      r(-17.787, -63.179, 1, 'Media', 0.002, -0.001),
-      r(-17.787, -63.179, 1, 'Alta', -0.002, -0.001),
-    ],
-    actualizaciones: [
-      {
-        comentario:
-          'Revisión técnica: deterioro masivo del pavimento en Calle Bolívar entre 1ro y 2do anillo.',
-        estado_nuevo: EstadoReporte.ValidacionEnCampo,
-      },
-      {
-        comentario:
-          'Inicio de trabajos de fresado y repavimentación. Se cierra un carril al tráfico.',
-        estado_nuevo: EstadoReporte.EnTrabajo,
-        fecha_estimada_fin: '2026-05-30',
-        recursos_solicitados: 'Fresadora, 3 camiones de asfalto, rodillo compactador, 8 operarios',
-        url_imagen: 'https://picsum.photos/seed/obra7b/400/300',
-      },
-      {
-        comentario:
-          'Tramo repavimentado y señalizado. Carretera habilitada al tráfico en su totalidad.',
-        estado_nuevo: EstadoReporte.Finalizado,
-        url_imagen: 'https://picsum.photos/seed/obra7c/400/300',
-      },
-    ],
-  },
-  {
-    // 8. Centro – Alcantarillado
-    cat: 4,
-    estado: EstadoReporte.Finalizado,
-    fecha_estimada_fin: '2026-05-22',
-    reportes: [
-      r(-17.782, -63.185, 4, 'Alta'),
-      r(-17.782, -63.185, 4, 'Alta', 0.001, 0),
-      r(-17.782, -63.185, 4, 'Media', 0, 0.001),
-    ],
-    actualizaciones: [
-      {
-        comentario:
-          'Tapadera de alcantarilla rota en Av. Cañoto. Riesgo para peatones y vehículos.',
-        estado_nuevo: EstadoReporte.ValidacionEnCampo,
-      },
-      {
-        comentario: 'Equipo de saneamiento instalando tapadera nueva. Zona señalizada con vallas.',
-        estado_nuevo: EstadoReporte.EnTrabajo,
-        fecha_estimada_fin: '2026-05-22',
-        recursos_solicitados: 'Tapadera de hormigón, equipo de saneamiento, 3 operarios',
-      },
-      {
-        comentario: 'Tapadera instalada y fijada correctamente. Área limpiada y habilitada.',
-        estado_nuevo: EstadoReporte.Finalizado,
-      },
-    ],
-  },
-
-  // ──────────────── EN TRABAJO (5 grupos) ──────────────────────────────────────
-  {
-    // 9. Plan 3000 – Residuos
-    cat: 3,
-    estado: EstadoReporte.EnTrabajo,
-    fecha_estimada_fin: '2026-07-15',
-    reportes: [
-      r(-17.8492, -63.1413, 3, 'Alta'),
-      r(-17.8492, -63.1413, 3, 'Alta', 0.001, 0.001),
-      r(-17.8492, -63.1413, 3, 'Media', -0.001, 0.002),
-      r(-17.8492, -63.1413, 3, 'Media', 0.002, -0.001),
-      r(-17.8492, -63.1413, 3, 'Alta', -0.002, 0.001),
-      r(-17.8492, -63.1413, 3, 'Baja', 0.001, -0.002),
-    ],
-    actualizaciones: [
-      {
-        comentario:
-          'Se identificaron 6 microbasurales activos en la Calle Mutualista. Situación crítica.',
-        estado_nuevo: EstadoReporte.ValidacionEnCampo,
-      },
-      {
-        comentario:
-          'Campaña de limpieza iniciada con 2 camiones y 8 operarios. Trabajo estimado 3 días.',
-        estado_nuevo: EstadoReporte.EnTrabajo,
-        fecha_estimada_fin: '2026-07-15',
-        recursos_solicitados: '2 camiones recolectores, 8 operarios, contenedores temporales',
-        url_imagen: 'https://picsum.photos/seed/obra9b/400/300',
-      },
-    ],
-  },
-  {
-    // 10. Radial 10 – Baches
-    cat: 1,
-    estado: EstadoReporte.EnTrabajo,
-    fecha_estimada_fin: '2026-07-10',
-    reportes: [
-      r(-17.8145, -63.1867, 1, 'Alta'),
-      r(-17.8145, -63.1867, 1, 'Alta', 0.001, 0),
-      r(-17.8145, -63.1867, 1, 'Media', 0, 0.001),
-      r(-17.8145, -63.1867, 1, 'Media', -0.001, -0.001),
-    ],
-    actualizaciones: [
-      {
-        comentario: 'Deterioro de pavimento verificado en Radial 10 entre 4to y 5to anillo.',
-        estado_nuevo: EstadoReporte.ValidacionEnCampo,
-      },
-      {
-        comentario: 'Equipo de bacheo en sitio. Se trabaja en secciones para no cortar el tráfico.',
-        estado_nuevo: EstadoReporte.EnTrabajo,
-        fecha_estimada_fin: '2026-07-10',
-        recursos_solicitados: 'Camión de asfalto, compactadora manual, 5 operarios',
-        url_imagen: 'https://picsum.photos/seed/obra10b/400/300',
-      },
-    ],
-  },
-  {
-    // 11. Cambá Cua – Alcantarillado
-    cat: 4,
-    estado: EstadoReporte.EnTrabajo,
-    fecha_estimada_fin: '2026-07-20',
-    reportes: [
-      r(-17.8084, -63.1932, 4, 'Emergencia'),
-      r(-17.8084, -63.1932, 4, 'Alta', 0.001, 0.001),
-      r(-17.8084, -63.1932, 4, 'Alta', -0.001, 0.001),
-    ],
-    actualizaciones: [
-      {
-        comentario:
-          'Colapso parcial de colector pluvial. Agua estancada en vía pública. Emergencia sanitaria.',
-        estado_nuevo: EstadoReporte.ValidacionEnCampo,
-      },
-      {
-        comentario:
-          'Equipo de emergencias trabajando en desobstrucción del colector. Bomba de achique instalada.',
-        estado_nuevo: EstadoReporte.EnTrabajo,
-        fecha_estimada_fin: '2026-07-20',
-        recursos_solicitados: 'Bomba de achique, excavadora, equipo de saneamiento, 6 operarios',
-        url_imagen: 'https://picsum.photos/seed/obra11b/400/300',
-      },
-    ],
-  },
-  {
-    // 12. Urbari – Luminarias
-    cat: 2,
-    estado: EstadoReporte.EnTrabajo,
-    fecha_estimada_fin: '2026-07-05',
-    reportes: [
-      r(-17.7582, -63.1741, 2, 'Media'),
-      r(-17.7582, -63.1741, 2, 'Media', 0.001, -0.001),
-      r(-17.7582, -63.1741, 2, 'Alta', -0.001, 0.002),
-    ],
-    actualizaciones: [
-      {
-        comentario:
-          'Tres postes con luminaria quemada en Av. Cristóbal de Mendoza. Sector sin iluminación nocturna.',
-        estado_nuevo: EstadoReporte.ValidacionEnCampo,
-      },
-      {
-        comentario: 'Técnicos eléctricos realizando cambio de lámparas. Trabajo en progreso.',
-        estado_nuevo: EstadoReporte.EnTrabajo,
-        fecha_estimada_fin: '2026-07-05',
-        recursos_solicitados: 'Plataforma elevadora, 3 lámparas de repuesto, 2 técnicos',
-      },
-    ],
-  },
-  {
-    // 13. Av. Santos Dumont – Tráfico
-    cat: 5,
-    estado: EstadoReporte.EnTrabajo,
-    fecha_estimada_fin: '2026-07-25',
-    reportes: [
-      r(-17.7724, -63.1725, 5, 'Alta'),
-      r(-17.7724, -63.1725, 5, 'Alta', 0.001, 0.001),
-      r(-17.7724, -63.1725, 5, 'Media', -0.001, -0.001),
-      r(-17.7724, -63.1725, 5, 'Media', 0.002, 0),
-    ],
-    actualizaciones: [
-      {
-        comentario:
-          'Cruce peatonal deteriorado y señalización vial borrada en Av. Santos Dumont y 3er anillo.',
-        estado_nuevo: EstadoReporte.ValidacionEnCampo,
-      },
-      {
-        comentario: 'Demarcación vial en proceso. Pintura termoplástica aplicada en 2 de 4 cruces.',
-        estado_nuevo: EstadoReporte.EnTrabajo,
-        fecha_estimada_fin: '2026-07-25',
-        recursos_solicitados: 'Máquina de pintura vial, pintura termoplástica, 3 operarios',
-        url_imagen: 'https://picsum.photos/seed/obra13b/400/300',
-      },
-    ],
-  },
-
-  // ──────────────── VALIDACION EN CAMPO (4 grupos) ─────────────────────────────
-  {
-    // 14. Plan 3000 – Baches
-    cat: 1,
-    estado: EstadoReporte.ValidacionEnCampo,
-    reportes: [
-      r(-17.8512, -63.139, 1, 'Alta'),
-      r(-17.8512, -63.139, 1, 'Alta', 0.001, 0.001),
-      r(-17.8512, -63.139, 1, 'Media', -0.001, 0.002),
-      r(-17.8512, -63.139, 1, 'Emergencia', 0.002, -0.001),
-    ],
-    actualizaciones: [
-      {
-        comentario:
-          'Inspector asignado. Visita programada para verificar severidad de los baches reportados.',
-        estado_nuevo: EstadoReporte.ValidacionEnCampo,
-      },
-    ],
-  },
-  {
-    // 15. Hamacas – Baches
-    cat: 1,
-    estado: EstadoReporte.ValidacionEnCampo,
-    reportes: [
-      r(-17.7935, -63.1492, 1, 'Media'),
-      r(-17.7935, -63.1492, 1, 'Alta', 0.001, 0),
-      r(-17.7935, -63.1492, 1, 'Media', 0, 0.001),
-      r(-17.7935, -63.1492, 1, 'Alta', -0.001, -0.001),
-    ],
-    actualizaciones: [
-      {
-        comentario:
-          'Se realizó inspección visual. Se levantará informe técnico del estado del pavimento.',
-        estado_nuevo: EstadoReporte.ValidacionEnCampo,
-      },
-    ],
-  },
-  {
-    // 16. Periférico Sur – Residuos
-    cat: 3,
-    estado: EstadoReporte.ValidacionEnCampo,
-    reportes: [
-      r(-17.8352, -63.1685, 3, 'Alta'),
-      r(-17.8352, -63.1685, 3, 'Alta', 0.001, 0.001),
-      r(-17.8352, -63.1685, 3, 'Media', -0.001, 0.002),
-      r(-17.8352, -63.1685, 3, 'Media', 0.002, -0.001),
-      r(-17.8352, -63.1685, 3, 'Baja', -0.002, 0),
-    ],
-    actualizaciones: [
-      {
-        comentario:
-          'Equipo de campo relevando puntos de acumulación de residuos en Periférico y Doble Vía a La Guardia.',
-        estado_nuevo: EstadoReporte.ValidacionEnCampo,
-      },
-    ],
-  },
-  {
-    // 17. Las Palmas – Alcantarillado
-    cat: 4,
-    estado: EstadoReporte.ValidacionEnCampo,
-    reportes: [
-      r(-17.7694, -63.2041, 4, 'Alta'),
-      r(-17.7694, -63.2041, 4, 'Media', 0.001, 0.001),
-      r(-17.7694, -63.2041, 4, 'Alta', -0.001, -0.001),
-    ],
-    actualizaciones: [
-      {
-        comentario:
-          'Tapadera de alcantarilla faltante reportada. Inspector en camino para verificar profundidad y riesgo.',
-        estado_nuevo: EstadoReporte.ValidacionEnCampo,
-      },
-    ],
-  },
-
-  // ──────────────── ACEPTADO (8 grupos, sin actualizaciones) ───────────────────
-  {
-    // 18. Villa 1ro de Mayo – Baches (coords originales del usuario)
-    cat: 1,
-    estado: EstadoReporte.Aceptado,
-    reportes: [
-      r(-17.78119028280482, -63.1314753201512, 1, 'Alta'),
-      r(-17.78119028280482, -63.1314753201512, 1, 'Emergencia', 0.001, 0.001),
-      r(-17.78119028280482, -63.1314753201512, 1, 'Alta', -0.001, 0.002),
-      r(-17.78119028280482, -63.1314753201512, 2, 'Media', 0.002, -0.001),
-      r(-17.78119028280482, -63.1314753201512, 1, 'Alta', -0.002, -0.001),
-      r(-17.78119028280482, -63.1314753201512, 1, 'Media', 0.001, -0.002),
-      r(-17.78119028280482, -63.1314753201512, 5, 'Baja', -0.003, 0.001),
-    ],
-  },
-  {
-    // 19. Urbari – Baches/Varios (coords originales del usuario)
-    cat: 3,
-    estado: EstadoReporte.Aceptado,
-    reportes: [
-      r(-17.758194069241743, -63.17412908279559, 3, 'Media'),
-      r(-17.758194069241743, -63.17412908279559, 4, 'Alta', 0.001, 0.001),
-      r(-17.758194069241743, -63.17412908279559, 3, 'Baja', -0.001, 0.002),
-      r(-17.758194069241743, -63.17412908279559, 3, 'Media', 0.002, -0.001),
-    ],
-  },
-  {
-    // 20. Norte – Baches
-    cat: 1,
-    estado: EstadoReporte.Aceptado,
-    reportes: [
-      r(-17.7381, -63.1652, 1, 'Alta'),
-      r(-17.7381, -63.1652, 1, 'Media', 0.001, 0.001),
-      r(-17.7381, -63.1652, 1, 'Alta', -0.001, -0.001),
-    ],
-  },
-  {
-    // 21. El Trompillo – Baches
-    cat: 1,
-    estado: EstadoReporte.Aceptado,
-    reportes: [
-      r(-17.8023, -63.1698, 1, 'Media'),
-      r(-17.8023, -63.1698, 1, 'Alta', 0.001, 0.001),
-      r(-17.8023, -63.1698, 1, 'Media', -0.001, 0.002),
-    ],
-  },
-  {
-    // 22. Los Lotes – Baches
-    cat: 1,
-    estado: EstadoReporte.Aceptado,
-    reportes: [
-      r(-17.8263, -63.1553, 1, 'Alta'),
-      r(-17.8263, -63.1553, 1, 'Alta', 0.001, 0.001),
-      r(-17.8263, -63.1553, 1, 'Emergencia', -0.001, 0.002),
-      r(-17.8263, -63.1553, 1, 'Media', 0.002, -0.001),
-      r(-17.8263, -63.1553, 1, 'Alta', -0.002, 0.001),
-    ],
-  },
-  {
-    // 23. Satélite Norte – Luminarias
-    cat: 2,
-    estado: EstadoReporte.Aceptado,
-    reportes: [
-      r(-17.7436, -63.1839, 2, 'Media'),
-      r(-17.7436, -63.1839, 2, 'Alta', 0.001, 0),
-      r(-17.7436, -63.1839, 2, 'Media', 0, 0.001),
-    ],
-  },
-  {
-    // 24. 4to Anillo Norte – Baches
-    cat: 1,
-    estado: EstadoReporte.Aceptado,
-    reportes: [
-      r(-17.7551, -63.1893, 1, 'Alta'),
-      r(-17.7551, -63.1893, 1, 'Media', 0.001, 0.001),
-      r(-17.7551, -63.1893, 1, 'Alta', -0.001, -0.001),
-      r(-17.7551, -63.1893, 1, 'Emergencia', 0.002, 0),
-    ],
-  },
-  {
-    // 25. Equipetrol Sur – Residuos
-    cat: 3,
-    estado: EstadoReporte.Aceptado,
-    reportes: [
-      r(-17.768, -63.199, 3, 'Alta'),
-      r(-17.768, -63.199, 3, 'Media', 0.001, 0.001),
-      r(-17.768, -63.199, 3, 'Alta', -0.001, 0.002),
-      r(-17.768, -63.199, 6, 'Baja', 0.002, -0.001),
-      r(-17.768, -63.199, 3, 'Media', -0.002, 0.001),
-    ],
-  },
+// Distribución ponderada de gravedad
+const GRAV_POOL = [
+  'Alta',
+  'Alta',
+  'Alta',
+  'Alta',
+  'Media',
+  'Media',
+  'Media',
+  'Emergencia',
+  'Baja',
+  'Baja',
 ];
+const randGrav = () => GRAV_POOL[Math.floor(Math.random() * GRAV_POOL.length)];
+
+// Estado para grupos activos (no Finalizado)
+// monthsAgo: 1 = mes más reciente, 4 = mes más viejo de los activos
+function activeState(monthsAgo: number): string {
+  const r = Math.random();
+  if (monthsAgo >= 3) {
+    return r < 0.55 ? EstadoReporte.EnTrabajo : EstadoReporte.ValidacionEnCampo;
+  }
+  if (monthsAgo === 2) {
+    return r < 0.35
+      ? EstadoReporte.EnTrabajo
+      : r < 0.7
+        ? EstadoReporte.ValidacionEnCampo
+        : EstadoReporte.Aceptado;
+  }
+  // monthsAgo === 1: mes más reciente — mayoría recién aceptados
+  return r < 0.6
+    ? EstadoReporte.Aceptado
+    : r < 0.85
+      ? EstadoReporte.ValidacionEnCampo
+      : EstadoReporte.EnTrabajo;
+}
+
+function shuffle<T>(arr: T[]): T[] {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
 
 async function seed() {
   await ds.initialize();
@@ -617,103 +92,165 @@ async function seed() {
   const grupoRepo = ds.getRepository(GrupoReporte);
   const actualizacionRepo = ds.getRepository(ActualizacionCaso);
 
-  const categorias = ['bache', 'luminaria', 'residuos', 'alcantarillado', 'trafico', 'otro'];
-  for (const nombre of categorias) {
+  for (const nombre of ['bache', 'luminaria', 'residuos', 'alcantarillado', 'trafico', 'otro']) {
     await categoriaRepo.upsert({ nombre }, ['nombre']);
   }
   console.log('Categorías: OK\n');
 
-  const year = new Date().getFullYear();
+  const today = new Date();
+  const ACCEPT_RATE = 0.85; // 85 aceptados, 15 rechazados
+  const GROUP_RATE = 0.8; // 80% de aceptados se agrupan en obra
+  const GROUP_SIZE = 3;
+
+  // Tasas de resolución para los últimos 4 meses activos
+  // índice 0 = 4 meses atrás (90%), índice 3 = mes más reciente (25%)
+  const RESOLUTION = [0.9, 0.8, 0.5, 0.25];
+
+  let globalGroup = 1;
   let totalReportes = 0;
+  let totalGrupos = 0;
 
-  for (let gi = 0; gi < GRUPOS.length; gi++) {
-    const gDef = GRUPOS[gi];
-    const codigoObra = `OBRA-${year}-${String(gi + 1).padStart(3, '0')}`;
+  for (let monthAgo = 11; monthAgo >= 0; monthAgo--) {
+    const d = new Date(today.getFullYear(), today.getMonth() - monthAgo, 1);
+    const tYear = d.getFullYear();
+    const tMonth = d.getMonth();
+    const monthLabel = `${tYear}-${String(tMonth + 1).padStart(2, '0')}`;
+    const monthStart = new Date(tYear, tMonth, 1);
+    const monthEnd = new Date(tYear, tMonth + 1, 0, 23, 59, 59);
+    const PER_MONTH = 100 + Math.floor(Math.random() * 901); // 100–1000
 
-    const reporteIds: number[] = [];
-    for (let ri = 0; ri < gDef.reportes.length; ri++) {
-      const p = gDef.reportes[ri];
-      const reporte = await reporteRepo.save(
+    // ── PASO 1: Crear 100 reportes como Reportado ──────────────────────────────
+    const toCreate: Reporte[] = [];
+    const catByIndex: number[] = [];
+
+    for (let i = 0; i < PER_MONTH; i++) {
+      const { lat, lng } = randCoord();
+      const cat = randCat();
+      catByIndex.push(cat);
+      toCreate.push(
         reporteRepo.create({
-          device_id: 'dev-seed',
-          lat: p.lat,
-          lng: p.lng,
-          categoria_id: p.cat,
-          gravedad: p.gravedad,
-          h3_res_8: h3.latLngToCell(p.lat, p.lng, 8),
-          h3_res_11: h3.latLngToCell(p.lat, p.lng, 11),
-          h3_res_13: h3.latLngToCell(p.lat, p.lng, 13),
-          url_imagen: `https://picsum.photos/seed/oc${gi + 1}r${ri + 1}/400/300`,
-          estado: gDef.estado,
+          device_id: `seed-m${monthAgo}-r${i}`,
+          lat,
+          lng,
+          categoria_id: cat,
+          gravedad: randGrav(),
+          h3_res_8: h3.latLngToCell(lat, lng, 8),
+          h3_res_11: h3.latLngToCell(lat, lng, 11),
+          h3_res_13: h3.latLngToCell(lat, lng, 13),
+          url_imagen: `https://picsum.photos/seed/oc${monthAgo}r${i}/400/300`,
+          estado: EstadoReporte.Reportado,
         }),
       );
-      reporteIds.push(reporte.id);
-      totalReportes++;
     }
 
-    const grupo = await grupoRepo.save(
-      grupoRepo.create({
-        codigo_obra: codigoObra,
-        estado_actual: EstadoReporte.Aceptado,
-        creado_por_usuario_id: 1,
-        categoria_id: gDef.cat,
-        fecha_estimada_fin: gDef.fecha_estimada_fin ?? null,
-      }),
+    const saved = await reporteRepo.save(toCreate);
+    const reporteInfos = saved.map((r, i) => ({ id: r.id, cat: catByIndex[i] }));
+    const allIds = reporteInfos.map((r) => r.id);
+    totalReportes += saved.length;
+
+    // Backdate creado_en de todos los reportes del mes
+    await ds.query(
+      `UPDATE reportes SET creado_en = $1::timestamptz + random() * ($2::timestamptz - $1::timestamptz) WHERE id = ANY($3::int[])`,
+      [monthStart, monthEnd, allIds],
     );
 
-    await reporteRepo.update(reporteIds, { grupo_id: grupo.id });
+    // ── PASO 2: Aceptar 85 / Rechazar 15 ──────────────────────────────────────
+    const shuffled = shuffle([...reporteInfos]);
+    const acceptCount = Math.round(PER_MONTH * ACCEPT_RATE);
+    const toAcceptInfos = shuffled.slice(0, acceptCount);
+    const toRejectIds = shuffled.slice(acceptCount).map((r) => r.id);
 
-    // Actualización inicial: siempre se registra la aceptación
-    await actualizacionRepo.save(
-      actualizacionRepo.create({
-        grupo_id: grupo.id,
-        usuario_id: 1,
-        comentario: `Caso de obra registrado. ${gDef.reportes.length} reporte${gDef.reportes.length !== 1 ? 's' : ''} aceptado${gDef.reportes.length !== 1 ? 's' : ''} y agrupados.`,
-        estado_nuevo: EstadoReporte.Aceptado,
-        fecha_estimada_fin: null,
-        recursos_solicitados: null,
-        url_imagen: null,
-        lat_actualizada: null,
-        lng_actualizada: null,
-        reporte_id: null,
-      }),
-    );
-
-    if (gDef.actualizaciones?.length) {
-      for (const a of gDef.actualizaciones) {
-        await actualizacionRepo.save(
-          actualizacionRepo.create({
-            grupo_id: grupo.id,
-            usuario_id: 1,
-            comentario: a.comentario,
-            estado_nuevo: a.estado_nuevo ?? null,
-            fecha_estimada_fin: a.fecha_estimada_fin ?? null,
-            recursos_solicitados: a.recursos_solicitados ?? null,
-            url_imagen: a.url_imagen ?? null,
-            lat_actualizada: null,
-            lng_actualizada: null,
-            reporte_id: null,
-          }),
-        );
-
-        if (a.estado_nuevo) {
-          await grupoRepo.update(grupo.id, { estado_actual: a.estado_nuevo });
-          await reporteRepo.update(reporteIds, { estado: a.estado_nuevo });
-        }
-        if (a.fecha_estimada_fin) {
-          await grupoRepo.update(grupo.id, { fecha_estimada_fin: a.fecha_estimada_fin });
-        }
-      }
+    if (toRejectIds.length > 0) {
+      await reporteRepo.update(toRejectIds, { estado: 'Rechazado' as EstadoReporte });
     }
 
-    const updates = gDef.actualizaciones?.length ?? 0;
+    // ── PASO 3: De aceptados, 80% agrupar / 20% quedan Aceptado suelto ────────
+    const toGroupCount = Math.round(acceptCount * GROUP_RATE);
+    const toGroupInfos = toAcceptInfos.slice(0, toGroupCount);
+    const toSueltoIds = toAcceptInfos.slice(toGroupCount).map((r) => r.id);
+
+    if (toSueltoIds.length > 0) {
+      await reporteRepo.update(toSueltoIds, { estado: EstadoReporte.Aceptado });
+    }
+
+    // ── PASO 4: Crear grupos de 3 reportes c/u ────────────────────────────────
+    const isActivePeriod = monthAgo < 4;
+    const resolution = isActivePeriod ? RESOLUTION[3 - monthAgo] : 1.0;
+    // monthsAgo para activeState: 1=más reciente, 4=más viejo de los activos
+    const monthsAgoActive = monthAgo + 1;
+
+    const batches: { id: number; cat: number }[][] = [];
+    for (let i = 0; i < toGroupInfos.length; i += GROUP_SIZE) {
+      batches.push(toGroupInfos.slice(i, i + GROUP_SIZE));
+    }
+
+    const finCount = Math.round(batches.length * resolution);
+    const grupoIds: number[] = [];
+
+    for (let gi = 0; gi < batches.length; gi++) {
+      const batch = batches[gi];
+      const isFinalized = gi < finCount;
+      const grupoEstado = isFinalized ? EstadoReporte.Finalizado : activeState(monthsAgoActive);
+
+      const yy = String(tYear).slice(-2);
+      const codigoObra = `O-${yy}-${String(globalGroup).padStart(7, '0')}`;
+      globalGroup++;
+
+      const grupo = await grupoRepo.save(
+        grupoRepo.create({
+          codigo_obra: codigoObra,
+          estado_actual: grupoEstado,
+          creado_por_usuario_id: 1,
+          categoria_id: batch[0]?.cat ?? 1,
+          fecha_estimada_fin: null,
+        }),
+      );
+      grupoIds.push(grupo.id);
+
+      await reporteRepo.update(
+        batch.map((r) => r.id),
+        { grupo_id: grupo.id, estado: grupoEstado },
+      );
+
+      await actualizacionRepo.save(
+        actualizacionRepo.create({
+          grupo_id: grupo.id,
+          usuario_id: 1,
+          comentario: `Caso registrado. ${batch.length} reportes aceptados y agrupados.`,
+          estado_nuevo: EstadoReporte.Aceptado,
+          fecha_estimada_fin: null,
+          recursos_solicitados: null,
+          url_imagen: null,
+          lat_actualizada: null,
+          lng_actualizada: null,
+          reporte_id: null,
+        }),
+      );
+
+      totalGrupos++;
+    }
+
+    // Backdate creado_en de grupos y actualizaciones del mes
+    if (grupoIds.length > 0) {
+      await ds.query(
+        `UPDATE grupos_reportes SET creado_en = $1::timestamptz + random() * ($2::timestamptz - $1::timestamptz) WHERE id = ANY($3::int[])`,
+        [monthStart, monthEnd, grupoIds],
+      );
+      await ds.query(
+        `UPDATE actualizaciones_caso SET creado_en = $1::timestamptz + random() * ($2::timestamptz - $1::timestamptz) WHERE grupo_id = ANY($3::int[])`,
+        [monthStart, monthEnd, grupoIds],
+      );
+    }
+
     console.log(
-      `[${gi + 1}/25] ${codigoObra}  ${gDef.reportes.length} reportes  ${gDef.estado}${updates ? `  ${updates} actualizaciones` : ''}`,
+      `[${monthLabel}]  ${PER_MONTH} rep  |  ` +
+        `${acceptCount} aceptados  ${toRejectIds.length} rechazados  |  ` +
+        `${batches.length} grupos  (${finCount} Finalizado  ${batches.length - finCount} activos)`,
     );
   }
 
   await ds.destroy();
-  console.log(`\nSeed completado: ${GRUPOS.length} grupos, ${totalReportes} reportes`);
+  console.log(`\nSeed completado: ${totalReportes} reportes, ${totalGrupos} grupos`);
 }
 
 seed().catch((e) => {

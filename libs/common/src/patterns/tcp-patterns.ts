@@ -35,6 +35,7 @@ export const TCP_PATTERNS = {
     GET_GROUPS_HEATMAP: 'admin.get_groups_heatmap',
     GET_CASE_TIMELINE: 'admin.get_case_timeline',
     DASHBOARD: 'admin.dashboard',
+    DASHBOARD_KPIS: 'admin.dashboard_kpis',
     LIST_DEVICES: 'admin.list_devices',
     LIST_GROUP_REPORTS: 'admin.list_group_reports',
     LIST_NEARBY_REPORTS: 'admin.list_nearby_reports',

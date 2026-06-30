@@ -14,6 +14,7 @@ import {
   CalendarClock,
   Wrench,
   X,
+  Share2,
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import {
@@ -74,6 +75,15 @@ export default function CasoDetallePage() {
       .catch((err) => setError(friendlyError(err)))
       .finally(() => setLoading(false));
   }, [id]);
+
+  const handleShare = async () => {
+    const url = window.location.href;
+    if (navigator.share) {
+      await navigator.share({ title: `Caso ${grupo?.codigo_obra ?? ''} - Ojo Camba`, url });
+    } else {
+      await navigator.clipboard.writeText(url);
+    }
+  };
 
   const onSubmit = async (data: UpdateForm) => {
     const numId = parseInt(id ?? '', 10);
@@ -156,7 +166,16 @@ export default function CasoDetallePage() {
           <h2 className="font-bold text-xl text-catedral font-mono leading-tight">
             {grupo.codigo_obra}
           </h2>
-          <StatusBadge estado={grupo.estado_actual} />
+          <div className="flex items-center gap-2 shrink-0">
+            <StatusBadge estado={grupo.estado_actual} />
+            <button
+              onClick={handleShare}
+              aria-label="Compartir caso"
+              className="w-8 h-8 flex items-center justify-center rounded-xl text-caoba hover:text-tierra hover:bg-yeso transition-colors"
+            >
+              <Share2 className="w-4 h-4" />
+            </button>
+          </div>
         </div>
 
         <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-arena">

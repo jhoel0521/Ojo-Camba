@@ -49,7 +49,7 @@ docker/prod/volumes/
 
 # NestJS
 *.js.map
-tsconfig.build.tsbuildinfo
+*.tsbuildinfo
 
 # pnpm
 .pnpm-store/
