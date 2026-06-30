@@ -69,4 +69,17 @@ export default defineConfig({
     }),
   ],
   server: { port: 5173 },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return;
+          if (id.includes('leaflet')) return 'leaflet';
+          if (id.includes('react-dom') || id.includes('react-router') || id.includes('/react/')) {
+            return 'react-vendor';
+          }
+        },
+      },
+    },
+  },
 });
