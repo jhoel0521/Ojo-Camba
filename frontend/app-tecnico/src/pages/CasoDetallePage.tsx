@@ -10,6 +10,7 @@ import {
   Calendar,
   Package,
   Crosshair,
+  Share2,
 } from 'lucide-react';
 import {
   getGroup,
@@ -67,6 +68,15 @@ export default function CasoDetallePage() {
       .finally(() => setLoading(false));
   }, [numId]);
 
+  const handleShare = async () => {
+    const url = window.location.href;
+    if (navigator.share) {
+      await navigator.share({ title: `Caso ${grupo?.codigo_obra ?? ''} - Ojo Camba`, url });
+    } else {
+      await navigator.clipboard.writeText(url);
+    }
+  };
+
   const onSubmit = async (data: ActualizacionForm) => {
     if (isNaN(numId) || !user) return;
     setSending(true);
@@ -121,7 +131,16 @@ export default function CasoDetallePage() {
           <h2 className="font-bold text-lg text-catedral" data-testid="codigo-obra">
             {grupo.codigo_obra}
           </h2>
-          <StatusBadge estado={grupo.estado_actual} />
+          <div className="flex items-center gap-2">
+            <StatusBadge estado={grupo.estado_actual} />
+            <button
+              onClick={handleShare}
+              aria-label="Compartir caso"
+              className="w-9 h-9 flex items-center justify-center rounded-xl text-caoba hover:text-tierra hover:bg-yeso transition-colors"
+            >
+              <Share2 className="w-4 h-4" />
+            </button>
+          </div>
         </div>
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-arena">
           <span>{grupo.total_reportes ?? 0} reportes agrupados</span>

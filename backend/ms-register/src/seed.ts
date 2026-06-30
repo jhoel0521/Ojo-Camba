@@ -35,10 +35,16 @@ const randCat = () => CAT_POOL[Math.floor(Math.random() * CAT_POOL.length)];
 
 // Distribución ponderada de gravedad
 const GRAV_POOL = [
-  'Alta', 'Alta', 'Alta', 'Alta',
-  'Media', 'Media', 'Media',
+  'Alta',
+  'Alta',
+  'Alta',
+  'Alta',
+  'Media',
+  'Media',
+  'Media',
   'Emergencia',
-  'Baja', 'Baja',
+  'Baja',
+  'Baja',
 ];
 const randGrav = () => GRAV_POOL[Math.floor(Math.random() * GRAV_POOL.length)];
 
@@ -52,12 +58,12 @@ function activeState(monthsAgo: number): string {
   if (monthsAgo === 2) {
     return r < 0.35
       ? EstadoReporte.EnTrabajo
-      : r < 0.70
+      : r < 0.7
         ? EstadoReporte.ValidacionEnCampo
         : EstadoReporte.Aceptado;
   }
   // monthsAgo === 1: mes más reciente — mayoría recién aceptados
-  return r < 0.60
+  return r < 0.6
     ? EstadoReporte.Aceptado
     : r < 0.85
       ? EstadoReporte.ValidacionEnCampo
@@ -93,7 +99,7 @@ async function seed() {
 
   const today = new Date();
   const ACCEPT_RATE = 0.85; // 85 aceptados, 15 rechazados
-  const GROUP_RATE = 0.80;  // 80% de aceptados se agrupan en obra
+  const GROUP_RATE = 0.8; // 80% de aceptados se agrupan en obra
   const GROUP_SIZE = 3;
 
   // Tasas de resolución para los últimos 4 meses activos
@@ -139,7 +145,7 @@ async function seed() {
 
     const saved = await reporteRepo.save(toCreate);
     const reporteInfos = saved.map((r, i) => ({ id: r.id, cat: catByIndex[i] }));
-    const allIds = reporteInfos.map(r => r.id);
+    const allIds = reporteInfos.map((r) => r.id);
     totalReportes += saved.length;
 
     // Backdate creado_en de todos los reportes del mes
@@ -152,7 +158,7 @@ async function seed() {
     const shuffled = shuffle([...reporteInfos]);
     const acceptCount = Math.round(PER_MONTH * ACCEPT_RATE);
     const toAcceptInfos = shuffled.slice(0, acceptCount);
-    const toRejectIds = shuffled.slice(acceptCount).map(r => r.id);
+    const toRejectIds = shuffled.slice(acceptCount).map((r) => r.id);
 
     if (toRejectIds.length > 0) {
       await reporteRepo.update(toRejectIds, { estado: 'Rechazado' as EstadoReporte });
@@ -161,7 +167,7 @@ async function seed() {
     // ── PASO 3: De aceptados, 80% agrupar / 20% quedan Aceptado suelto ────────
     const toGroupCount = Math.round(acceptCount * GROUP_RATE);
     const toGroupInfos = toAcceptInfos.slice(0, toGroupCount);
-    const toSueltoIds = toAcceptInfos.slice(toGroupCount).map(r => r.id);
+    const toSueltoIds = toAcceptInfos.slice(toGroupCount).map((r) => r.id);
 
     if (toSueltoIds.length > 0) {
       await reporteRepo.update(toSueltoIds, { estado: EstadoReporte.Aceptado });
@@ -202,7 +208,7 @@ async function seed() {
       grupoIds.push(grupo.id);
 
       await reporteRepo.update(
-        batch.map(r => r.id),
+        batch.map((r) => r.id),
         { grupo_id: grupo.id, estado: grupoEstado },
       );
 
@@ -247,7 +253,7 @@ async function seed() {
   console.log(`\nSeed completado: ${totalReportes} reportes, ${totalGrupos} grupos`);
 }
 
-seed().catch(e => {
+seed().catch((e) => {
   console.error(e);
   process.exit(1);
 });
