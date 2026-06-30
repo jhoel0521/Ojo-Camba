@@ -77,17 +77,18 @@ async function test() {
     if (!r.id || !r.codigo_obra) throw new Error(JSON.stringify(r));
     grupoId = r.id; codigoObra = r.codigo_obra;
   });
-  await assert('codigo_obra tiene formato OBRA-YYYY-NNN', async () => {
-    if (!/^OBRA-\d{4}-\d{3}$/.test(codigoObra)) throw new Error(codigoObra);
+  await assert('codigo_obra tiene formato O-YY-NNNNNNN', async () => {
+    if (!/^O-\d{2}-\d{7}$/.test(codigoObra)) throw new Error(codigoObra);
   });
-  await assert('create_group con H3 distintos lanza error', async () => {
-    const otroId = (await firstValueFrom(register.send('register.create_report', {
-      device_id: 'test-otro-h3', lat: -17.80, lng: -63.20, categoria_id: 1, imagen_base64: IMG,
+  await assert('create_group con H3 distintos SI permite agrupar (decision de producto: sugerencia por proximidad, no restriccion estricta por celda)', async () => {
+    const idA = (await firstValueFrom(register.send('register.create_report', {
+      device_id: 'test-h3-a', lat: -17.7833, lng: -63.1822, categoria_id: 1, imagen_base64: IMG,
     }).pipe(timeout(5000)))).id;
-    try {
-      await firstValueFrom(admin.send('admin.create_group', { report_ids: [sameH3Ids[0], otroId], creado_por_usuario_id: 1 }).pipe(timeout(5000)));
-      throw new Error('no fallo');
-    } catch { /* esperado */ }
+    const idB = (await firstValueFrom(register.send('register.create_report', {
+      device_id: 'test-h3-b', lat: -17.80, lng: -63.20, categoria_id: 1, imagen_base64: IMG,
+    }).pipe(timeout(5000)))).id;
+    const r = await firstValueFrom(admin.send('admin.create_group', { report_ids: [idA, idB], creado_por_usuario_id: 1 }).pipe(timeout(5000)));
+    if (!r.id || !r.codigo_obra) throw new Error(JSON.stringify(r));
   });
 
   console.log('\n=== FASE 12.5: CU-12 Bitacora diaria sin cambiar estado ===');
@@ -147,6 +148,26 @@ async function test() {
   await assert('get_group no existente lanza error', async () => {
     try { await firstValueFrom(admin.send('admin.get_group', { grupo_id: 99999 }).pipe(timeout(5000))); throw new Error('no fallo'); }
     catch { /* esperado */ }
+  });
+
+  console.log('\n=== FASE 12.9: ACID — concurrencia en accept_report (ISSUE-18) ===');
+  await assert('accept_report disparado 2 veces en paralelo solo transiciona una vez (atomicidad/aislamiento)', async () => {
+    const concurrenteId = (await firstValueFrom(register.send('register.create_report', {
+      device_id: 'test-concurrencia', lat: -17.79, lng: -63.19, categoria_id: 1, imagen_base64: IMG,
+    }).pipe(timeout(5000)))).id;
+
+    const intentos = await Promise.allSettled([
+      firstValueFrom(admin.send('admin.accept_report', { report_id: concurrenteId, moderador_id: 1 }).pipe(timeout(5000))),
+      firstValueFrom(admin.send('admin.accept_report', { report_id: concurrenteId, moderador_id: 2 }).pipe(timeout(5000))),
+    ]);
+
+    const exitosos = intentos.filter((r) => r.status === 'fulfilled');
+    if (exitosos.length !== 1) {
+      throw new Error(`se esperaba exactamente 1 transicion exitosa, hubo ${exitosos.length}`);
+    }
+
+    const grupoIds = new Set(exitosos.map((r) => r.value.grupo_id));
+    if (grupoIds.size !== 1) throw new Error('se creo mas de un Caso de Obra para el mismo reporte');
   });
 
   console.log(`\n=== RESULTADO: ${passed} OK / ${failed} FAIL ===`);

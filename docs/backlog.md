@@ -93,26 +93,26 @@ Característica: Monitoreo público de microservicios
 
 * **Como** técnico en campo o moderador, **quiero** seleccionar varios reportes que apuntan al mismo problema y agruparlos, **para** crear un único "Caso de Obra" que consolide la atención.
 * **Criterios de Aceptación:**
-* La aplicación permite seleccionar múltiples IDs de reportes del mismo H3 (res 11 o 13).
+* La aplicación sugiere reportes cercanos por proximidad física (no por igualdad estricta de celda H3, ya que un mismo problema real puede caer en celdas distintas si está cerca de un borde de hexágono); el backoffice/moderador decide cuáles incluir.
 * El sistema genera un registro en la tabla grupos_reportes con un código único.
 * Todos los reportes seleccionados adquieren el grupo_id y heredan su estado.
 
 ```gherkin
 Característica: Creación de Caso de Obra
 
-  Escenario: Moderador agrupa reportes del mismo hexágono H3
-    Dado que existen 3 reportes en el mismo hexágono H3 resolución 11
+  Escenario: Moderador agrupa reportes cercanos sugeridos por el sistema
+    Dado que existen 3 reportes cercanos entre sí (mismo hexágono H3 resolución 11 o sus vecinos)
     Y el moderador los selecciona en el backoffice
     Cuando ejecuta la acción "Crear Caso de Obra"
-    Entonces se genera un registro en grupos_reportes con código único (Ej: OBRA-2026-001)
+    Entonces se genera un registro en grupos_reportes con código único (Ej: O-26-0000001)
     Y los 3 reportes adquieren el grupo_id del nuevo caso
     Y heredan el estado "Aceptado" del grupo
 
-  Escenario: Intento de agrupar reportes de hexágonos distintos
-    Dado que el moderador selecciona reportes de hexágonos H3 diferentes
-    Cuando intenta crear un Caso de Obra
-    Entonces el sistema muestra una advertencia de hexágonos no coincidentes
-    Y no se crea el grupo
+  Escenario: Moderador agrupa reportes de hexágonos H3 distintos
+    Dado que el moderador selecciona reportes de hexágonos H3 diferentes pero del mismo problema real
+    Cuando ejecuta la acción "Crear Caso de Obra"
+    Entonces el sistema permite la agrupación sin restricción estricta por celda
+    Y el moderador es responsable de validar que correspondan al mismo problema
 ```
 
 
