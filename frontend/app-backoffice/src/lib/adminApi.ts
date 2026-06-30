@@ -49,6 +49,13 @@ export interface DashboardStats {
   dispositivos_baneados: number;
 }
 
+export interface DashboardKpis extends DashboardStats {
+  reportes_por_mes: { mes: string; total: number }[];
+  por_categoria: { categoria_id: number; nombre: string; total: number }[];
+  casos_por_estado: { estado: string; total: number }[];
+  tasa_resolucion: number;
+}
+
 export interface Usuario {
   id: number;
   nombre: string;
@@ -75,6 +82,10 @@ export interface PaginatedResponse<T> {
 
 export async function getDashboard(): Promise<DashboardStats> {
   return fetchAPI<DashboardStats>('/admin/dashboard');
+}
+
+export async function getDashboardKpis(): Promise<DashboardKpis> {
+  return fetchAPI<DashboardKpis>('/admin/dashboard/kpis');
 }
 
 export async function listPending(page = 1, limit = 20): Promise<PaginatedResponse<PendingReport>> {
