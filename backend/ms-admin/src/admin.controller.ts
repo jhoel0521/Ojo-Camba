@@ -102,9 +102,7 @@ export class AdminController {
 
   @MessagePattern(TCP_PATTERNS.ADMIN.GET_UPDATE_IMAGEN)
   async getUpdateImagen(@Payload() actualizacionId: number) {
-    const { buffer, contentType } = await this.adminService.getActualizacionImagen(
-      actualizacionId,
-    );
+    const { buffer, contentType } = await this.adminService.getActualizacionImagen(actualizacionId);
     return { data: buffer.toString('base64'), contentType };
   }
 

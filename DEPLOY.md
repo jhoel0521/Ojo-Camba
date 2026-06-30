@@ -62,10 +62,10 @@ pnpm ping
 | `DATABASE_URL` | — | — | ✅ | ✅ | ✅ | ✅ |
 | `JWT_SECRET` | — | — | ✅ | — | — | — |
 | `JWT_EXPIRES_IN` | — | — | ✅ | — | — | — |
-| `S3_ENDPOINT` | — | — | — | ✅ | — | — |
-| `S3_ACCESS_KEY` | — | — | — | ✅ | — | — |
-| `S3_SECRET_KEY` | — | — | — | ✅ | — | — |
-| `S3_BUCKET` | — | — | — | ✅ | — | — |
+| `S3_ENDPOINT` | — | — | — | ✅ | ✅ | — |
+| `S3_ACCESS_KEY` | — | — | — | ✅ | ✅ | — |
+| `S3_SECRET_KEY` | — | — | — | ✅ | ✅ | — |
+| `S3_BUCKET` | — | — | — | ✅ | ✅ | — |
 | `PUNTOS_POR_REPORTE_ACEPTADO` | — | — | — | — | — | ✅ (def. 10) |
 
 ### Variables de entorno — Frontend (build args)
@@ -162,6 +162,10 @@ Env vars:
   DATABASE_URL=postgresql://user:pass@host:5432/ojocamba
   MS_GAMIFY_HOST=<host-interno-coolify>
   MS_GAMIFY_PORT=3004
+  S3_ENDPOINT=<s3-host>
+  S3_ACCESS_KEY=<access-key>
+  S3_SECRET_KEY=<secret-key>
+  S3_BUCKET=reportes
 Watch Paths:
   backend/ms-admin/**  libs/common/**  tsconfig.base.json  pnpm-workspace.yaml  docker/prod/Dockerfile.ms-admin
 ```
