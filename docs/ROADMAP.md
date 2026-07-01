@@ -57,7 +57,7 @@
 |-------|------|--------|--------|
 | ISSUE-18 | QA | Validar cumplimiento de propiedades transaccionales ACID en la base de datos. | ✅ Unit test + test e2e de concurrencia en `accept_report` (bloqueo pesimista) |
 | ISSUE-19 | QA | Ejecutar Testing de precisión del índice espacial (coincidencia de coordenadas en polígonos H3). | ✅ Unit tests en ms-register verifican que el punto cae dentro del polígono H3 |
-| ISSUE-20 | QA | Validar métricas de *uptime* y disponibilidad para el Gateway de Status. | ✅ Unit test de agregación de ping cubre la lógica Operativo/Interrupción. Pendiente como mejora futura: métricas históricas de uptime (%) — no implementadas. |
+| ISSUE-20 | QA | Validar métricas de *uptime* y disponibilidad para el Gateway de Status. | ✅ Unit test de agregación de ping cubre la lógica Operativo/Interrupción. Histórico de uptime implementado (2026-07-01): cada ping (cada 60s) se persiste en la tabla `ping_log`; `GET /status/history?days=` agrega % de disponibilidad por día y servicio; `app-status` muestra barras de uptime de los últimos 30 días por microservicio. |
 | ISSUE-21 | QA | Realizar Testing E2E (End-to-End) de la creación y agrupamiento de un "Caso de Obra". | ✅ `e2e/tests/reporte-y-aceptar.spec.ts` cubre creación, agrupamiento por cercanía y fusión a obra existente |
 
 Adicionalmente: cobertura de unit tests (Jest) en los 5 microservicios con lógica de negocio (`ms-register`, `ms-admin`, `ms-gamify`, `ms-auth`, `gateway-status`), corriendo en CI y en un hook real de pre-commit (Husky).
