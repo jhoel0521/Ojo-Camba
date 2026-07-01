@@ -13,7 +13,7 @@
 | ISSUE-01 | Docs | Redactar Historias de Usuario en formato Gherkin (HU-01 a HU-06) con criterios de aceptación. | ✅ |
 | ISSUE-02 | Docs | Diseñar Diagrama Entidad-Relación (ERD) de la base de datos. | ✅ |
 | ISSUE-03 | Docs | Crear diagramas UML 2.5 obligatorios (Clases, Casos de Uso, Actividades con *swimlanes*, Secuencia y Despliegue). | ✅ |
-| ISSUE-04 | Docs | Elaborar y aplicar la guía de entrevista municipal (Paso 3 y 4). | ⏳ Fuera de alcance de código — requiere trabajo de campo con el municipio. |
+| ISSUE-04 | Docs | Elaborar y aplicar la guía de entrevista municipal (Paso 3 y 4). | ✅ Cerrado (2026-07-01) — Paso 3 completado en `docs/guia_entrevista.md`. Paso 4 (aplicación de campo) descoped del ciclo académico: requiere trabajo de campo institucional con la alcaldía, fuera del alcance técnico del MVP. Movido a backlog post-entrega. |
 
 ---
 
@@ -61,6 +61,16 @@
 | ISSUE-21 | QA | Realizar Testing E2E (End-to-End) de la creación y agrupamiento de un "Caso de Obra". | ✅ `e2e/tests/reporte-y-aceptar.spec.ts` cubre creación, agrupamiento por cercanía y fusión a obra existente |
 
 Adicionalmente: cobertura de unit tests (Jest) en los 5 microservicios con lógica de negocio (`ms-register`, `ms-admin`, `ms-gamify`, `ms-auth`, `gateway-status`), corriendo en CI y en un hook real de pre-commit (Husky).
+
+---
+
+## Fase 5: Backlog cerrado
+
+| Issue | Área | Título | Estado |
+|-------|------|--------|--------|
+| ISSUE-25 | Frontend | Implementar CU-05 — Compartir estado del reporte (share link + sticker dinámico). | ✅ Cerrado (2026-07-01) — Criterios mínimos implementados: botón "Compartir" con `navigator.share()` (título, texto y URL) en `ReporteDetailPage` y `GroupReportePage`, con fallback a `navigator.clipboard` cuando Web Share no está disponible. Ambas rutas son públicas (sin autenticación). El criterio "completo" (endpoint `og-image` dinámico + meta tags OG) queda descoped a backlog post-MVP por ser mejora visual, no bloqueante. |
+
+Con este cierre no quedan issues abiertos en el repositorio.
 
 ---
 

@@ -108,4 +108,4 @@ IMPACTO EN EL SISTEMA
 | Paso | Estado |
 |------|--------|
 | Paso 3: Diseño de la guía | ✅ Completado |
-| Paso 4: Aplicación y registro | ⏳ Pendiente de fieldwork |
+| Paso 4: Aplicación y registro | ⏳ Descoped del MVP académico (2026-07-01) — requiere trabajo de campo institucional con la alcaldía, fuera del alcance técnico de este ciclo. Ver ISSUE-04 en `docs/ROADMAP.md`. Queda como backlog para una fase posterior si el proyecto continúa más allá del MVP académico. |
