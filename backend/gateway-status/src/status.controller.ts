@@ -1,6 +1,6 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, Query } from '@nestjs/common';
 import { StatusService } from './status.service';
-import type { StatusResult } from './status.service';
+import type { StatusResult, ServiceHistory } from './status.service';
 
 @Controller()
 export class StatusController {
@@ -18,5 +18,10 @@ export class StatusController {
   @Get('status')
   getStatus(): StatusResult {
     return this.statusService.getStatus();
+  }
+
+  @Get('status/history')
+  getHistory(@Query('days') days?: string): Promise<ServiceHistory[]> {
+    return this.statusService.getHistory(days ? parseInt(days, 10) : undefined);
   }
 }

@@ -46,7 +46,7 @@ pnpm docker:down
 |----------|:---:|:---:|:---:|:---:|:---:|:---:|
 | `PORT` | 3000 | 3005 | — | — | — | — |
 | `TCP_PORT` | — | — | 3001 | 3002 | 3003 | 3004 |
-| `DATABASE_URL` | — | — | ✅ | ✅ | ✅ | ✅ |
+| `DATABASE_URL` | — | ✅ | ✅ | ✅ | ✅ | ✅ |
 | `JWT_SECRET` | — | — | ✅ | — | — | — |
 | `JWT_EXPIRES_IN` | — | — | ✅ | — | — | — |
 | `MS_AUTH_HOST` | ✅ | ✅ | — | — | — | — |
@@ -200,6 +200,7 @@ Health:      GET / → 200
 Dominio:     status-api.ojocamba.com
 Env vars:
   PORT=3005
+  DATABASE_URL=postgresql://<user>:<pass>@<host-db>:5432/ojocamba
   MS_AUTH_HOST=<ip-o-host-ms-auth>
   MS_AUTH_PORT=3001
   MS_REGISTER_HOST=<ip-o-host-ms-register>
@@ -211,6 +212,8 @@ Env vars:
 Watch Paths:
   backend/gateway-status/**  libs/**  package.json  pnpm-lock.yaml  tsconfig.base.json  docker/prod/Dockerfile.gateway-status
 ```
+
+> Antes del primer despliegue con esta version, correr una vez `pnpm --filter @ojo-camba/gateway-status sync` (con `DATABASE_URL` de produccion) para crear la tabla `ping_log` que guarda el historico de uptime (ISSUE-20).
 
 #### `app-reporte`
 

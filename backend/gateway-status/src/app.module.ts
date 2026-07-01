@@ -1,11 +1,29 @@
 import { Module } from '@nestjs/common';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import { ScheduleModule } from '@nestjs/schedule';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { PingLog } from '@ojo-camba/common';
 import { StatusController } from './status.controller';
 import { StatusService } from './status.service';
 
 @Module({
   imports: [
+    ConfigModule.forRoot({ isGlobal: true }),
+    TypeOrmModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        type: 'postgres',
+        url: configService.get<string>('DATABASE_URL'),
+        autoLoadEntities: true,
+        synchronize: false,
+        logging: ['error'],
+        retryAttempts: 5,
+        retryDelay: 3000,
+      }),
+    }),
+    TypeOrmModule.forFeature([PingLog]),
     ScheduleModule.forRoot(),
     ClientsModule.register([
       {

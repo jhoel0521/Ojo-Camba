@@ -162,6 +162,7 @@ services:
       - "3005:3005"
     environment:
       PORT: 3005
+      DATABASE_URL: postgresql://ojocamba:ojocamba_secret@postgres:5432/ojocamba
       MS_AUTH_HOST: ms-auth
       MS_AUTH_PORT: 3001
       MS_REGISTER_HOST: ms-register
@@ -173,10 +174,16 @@ services:
     networks:
       - ojo-camba-net
     depends_on:
-      - ms-auth
-      - ms-register
-      - ms-admin
-      - ms-gamify
+      postgres:
+        condition: service_healthy
+      ms-auth:
+        condition: service_started
+      ms-register:
+        condition: service_started
+      ms-admin:
+        condition: service_started
+      ms-gamify:
+        condition: service_started
 
   # ── Frontend Vite dev servers ────────────────────────────────
   app-reporte:
