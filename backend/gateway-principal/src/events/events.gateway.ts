@@ -14,12 +14,6 @@ import { Server, Socket } from 'socket.io';
 /** TTL de un claim: si no llega heartbeat en 60s, se libera. */
 export const CLAIM_TTL_MS = 60_000;
 const SWEEP_INTERVAL_MS = 10_000;
-/**
- * socket.io corre en un puerto propio (3010) en lugar de adjuntarse al
- * servidor HTTP de Fastify (:3000), porque el IoAdapter por defecto choca
- * con Fastify y secuestra el ruteo HTTP. Configurable con WS_PORT.
- */
-export const WS_PORT = parseInt(process.env.WS_PORT ?? '3010', 10);
 
 interface Claim {
   reportId: number;
@@ -44,7 +38,14 @@ export interface ClaimInfo {
  *   bloqueado. El claim se libera al soltar, al resolver, por desconexión
  *   o por expiración de TTL (60s sin heartbeat).
  */
-@WebSocketGateway(WS_PORT, { cors: { origin: '*' } })
+// Comparte el mismo puerto HTTP de Fastify (:PORT) y el mismo CORS_ORIGIN que
+// app.enableCors() en main.ts. El cliente ya fuerza transports: ['websocket']
+// (ver frontend/app-backoffice/src/lib/socket.ts), asi que nunca hace el
+// handshake por polling que chocaba con el router de Fastify.
+@WebSocketGateway({
+  cors: { origin: (process.env.CORS_ORIGIN ?? '*').split(',') },
+  transports: ['websocket'],
+})
 export class EventsGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer() server: Server;
   private readonly logger = new Logger(EventsGateway.name);

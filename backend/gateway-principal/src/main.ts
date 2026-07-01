@@ -9,9 +9,7 @@ async function bootstrap() {
     new FastifyAdapter({ logger: true, bodyLimit: 10485760 }),
   );
 
-  app.enableCors();
-  // socket.io corre en su propio puerto (EventsGateway usa WS_PORT=3010),
-  // por eso esto no interfiere con el HTTP de Fastify (:3000).
+  app.enableCors({ origin: (process.env.CORS_ORIGIN ?? '*').split(',') });
   app.useWebSocketAdapter(new IoAdapter(app));
 
   const port = parseInt(process.env.PORT ?? '3000', 10);
