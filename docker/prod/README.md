@@ -213,7 +213,7 @@ Watch Paths:
   backend/gateway-status/**  libs/**  package.json  pnpm-lock.yaml  tsconfig.base.json  docker/prod/Dockerfile.gateway-status
 ```
 
-> Antes del primer despliegue con esta version, correr una vez `pnpm --filter @ojo-camba/gateway-status sync` (con `DATABASE_URL` de produccion) para crear la tabla `ping_log` que guarda el historico de uptime (ISSUE-20).
+> La tabla `ping_log` (historico de uptime, ISSUE-20) se crea sola en el arranque: el contenedor corre `node scripts/db-migrate.mjs` (migraciones TypeORM) antes de levantar la app, igual que en `ms-auth`/`ms-register`/`ms-admin`/`ms-gamify`. No requiere ningun paso manual.
 
 #### `app-reporte`
 

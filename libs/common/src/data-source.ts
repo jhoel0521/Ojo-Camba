@@ -13,6 +13,7 @@ import { UsuarioRol } from './entities/usuario-rol.entity';
 import { RefreshToken } from './entities/refresh-token.entity';
 import { Nivel } from './entities/nivel.entity';
 import { HistorialPuntos } from './entities/historial-puntos.entity';
+import { PingLog } from './entities/ping-log.entity';
 
 config({ path: './backend/ms-auth/.env' });
 
@@ -39,6 +40,7 @@ export const AppDataSource = new DataSource({
     RefreshToken,
     Nivel,
     HistorialPuntos,
+    PingLog,
   ],
   migrations,
 });

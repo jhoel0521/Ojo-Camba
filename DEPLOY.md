@@ -233,7 +233,7 @@ Watch Paths:
   backend/gateway-status/**  libs/common/**  tsconfig.base.json  pnpm-workspace.yaml  docker/prod/Dockerfile.gateway-status
 ```
 
-> `gateway-status` ahora persiste cada ping en la tabla `ping_log` (historico de uptime, ISSUE-20). Antes de desplegar por primera vez con esta version, correr una vez `pnpm --filter @ojo-camba/gateway-status sync` con `DATABASE_URL` apuntando a la BD de produccion para crear la tabla (mismo mecanismo que `ms-register sync`).
+> `gateway-status` ahora persiste cada ping en la tabla `ping_log` (historico de uptime, ISSUE-20). La tabla se crea sola: igual que `ms-auth`/`ms-register`/`ms-admin`/`ms-gamify`, el contenedor corre `node scripts/db-migrate.mjs` (migraciones TypeORM de `libs/common/src/migrations`) antes de arrancar la app — no requiere ningun paso manual.
 
 #### `app-reporte`
 

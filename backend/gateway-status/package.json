@@ -7,8 +7,7 @@
     "build": "nest build",
     "start": "node dist/main",
     "lint": "eslint \"{src,test}/**/*.ts\" --ext .ts",
-    "test": "jest",
-    "sync": "ts-node src/sync.ts"
+    "test": "jest"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.0",
