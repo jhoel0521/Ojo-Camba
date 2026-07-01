@@ -1,4 +1,4 @@
-import { defineConfig } from '@playwright/test';
+import { defineConfig, devices } from '@playwright/test';
 import { resolve } from 'path';
 
 const ROOT = resolve(__dirname, '..');
@@ -11,6 +11,9 @@ export default defineConfig({
   use: {
     headless: false,
     viewport: { width: 390, height: 844 },
+    // app-reporte exige un user-agent movil real (react-device-detect isMobile) —
+    // sin esto, el viewport angosto no basta y la app muestra "Solo disponible en movil".
+    userAgent: devices['iPhone 13'].userAgent,
     locale: 'es-BO',
     timezoneId: 'America/La_Paz',
   },

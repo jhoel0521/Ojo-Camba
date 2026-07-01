@@ -198,7 +198,7 @@ Característica: Cambio de estado del Caso de Obra
 
 ## Módulo 4: Gamificación y Cultura Local
 
-> **⏳ Pendiente de implementación** — `ms-gamify` existe como stub. La entidad `Nivel` y los endpoints `/gamify/*` no están implementados.
+> **✅ Implementado** — `ms-gamify` calcula puntos, niveles (Bronce/Plata/Oro) y progreso; los endpoints `/gamify/*` funcionan y tienen cobertura de tests unitarios y e2e. Pendiente solo como mejora visual: las URLs de los stickers desbloqueables (`url_sticker`) aún no están asignadas.
 
 **HU-06: Recompensas por Reportes Aceptados**
 
