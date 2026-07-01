@@ -188,7 +188,7 @@ Table categorias {
 
 Table grupos_reportes {
   id int [pk, increment, note: 'Entidad que agrupa múltiples reportes iguales']
-  codigo_obra varchar [unique, note: 'Ej: OBRA-2026-001']
+  codigo_obra varchar [unique, note: 'Ej: O-26-0000001 (formato O-YY-NNNNNNN)']
   estado_actual EstadoReporte [default: 'Aceptado']
   categoria_id int [ref: > categorias.id, null, note: 'Confirmada o corregida por el moderador al aceptar']
   fecha_estimada_fin date [note: 'ETA general de la obra']

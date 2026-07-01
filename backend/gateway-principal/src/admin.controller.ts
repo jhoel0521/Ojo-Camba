@@ -1,8 +1,10 @@
-import { Controller, Post, Get, Body, Param, Inject, Query } from '@nestjs/common';
+import { Controller, Post, Get, Body, Param, Inject, Query, Res } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
+import { firstValueFrom } from 'rxjs';
 import { TCP_PATTERNS } from '@ojo-camba/common';
 import { sendRpc } from './rpc.helper';
 import { EventsGateway } from './events/events.gateway';
+import type { FastifyReply } from 'fastify';
 
 @Controller('admin')
 export class AdminController {
@@ -24,6 +26,33 @@ export class AdminController {
         radius: radius ? parseInt(radius, 10) : undefined,
       }),
     );
+  }
+
+  @Get('groups/nearby')
+  listNearbyGroups(
+    @Query('lat') lat: string,
+    @Query('lng') lng: string,
+    @Query('radius') radius?: string,
+  ) {
+    return sendRpc(
+      this.client.send(TCP_PATTERNS.ADMIN.LIST_GROUPS_NEARBY, {
+        lat: parseFloat(lat),
+        lng: parseFloat(lng),
+        radius: radius ? parseInt(radius, 10) : undefined,
+      }),
+    );
+  }
+
+  @Get('updates/:id/imagen')
+  async getUpdateImagen(@Param('id') id: string, @Res() res: FastifyReply) {
+    const { data, contentType } = await firstValueFrom(
+      this.client.send(TCP_PATTERNS.ADMIN.GET_UPDATE_IMAGEN, parseInt(id, 10)),
+    );
+    const buffer = Buffer.from(data, 'base64');
+    res
+      .header('Content-Type', contentType)
+      .header('Cache-Control', 'public, max-age=31536000, immutable')
+      .send(buffer);
   }
 
   @Get('reports/pending')
@@ -169,8 +198,8 @@ export class AdminController {
   }
 
   @Get('dashboard/kpis')
-  getDashboardKpis() {
-    return sendRpc(this.client.send(TCP_PATTERNS.ADMIN.DASHBOARD_KPIS, {}));
+  getDashboardKpis(@Query('desde') desde?: string, @Query('hasta') hasta?: string) {
+    return sendRpc(this.client.send(TCP_PATTERNS.ADMIN.DASHBOARD_KPIS, { desde, hasta }));
   }
 
   @Get('devices')

@@ -58,8 +58,10 @@ export default function ReporteDetailPage() {
 
   const handleShare = async () => {
     const url = window.location.href;
+    const title = `Reporte #${id} - Ojo Camba`;
+    const text = `Seguí el estado de este reporte (${reporte?.estado ?? 'en curso'}) en Ojo Camba.`;
     if (navigator.share) {
-      await navigator.share({ title: `Reporte #${id} - Ojo Camba`, url });
+      await navigator.share({ title, text, url });
     } else {
       await navigator.clipboard.writeText(url);
     }

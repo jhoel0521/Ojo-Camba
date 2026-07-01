@@ -47,8 +47,11 @@ async function test() {
     if (r.estado !== 'Rechazado') throw new Error(r.estado);
   });
   await assert('aceptar ya aceptado lanza error', async () => {
-    try { await firstValueFrom(admin.send('admin.accept_report', { report_id: ids[0], moderador_id: 1 }).pipe(timeout(5000))); throw new Error('no fallo'); }
-    catch { /* esperado */ }
+    // El RpcExceptionFilter de ms-admin convierte excepciones en payloads
+    // { status: 'error', ... } en vez de rechazar la promesa: hay que inspeccionar
+    // el contenido de la respuesta, no asumir que el throw siempre se dispara.
+    const r = await firstValueFrom(admin.send('admin.accept_report', { report_id: ids[0], moderador_id: 1 }).pipe(timeout(5000)));
+    if (r.status !== 'error') throw new Error(`se esperaba error, se obtuvo: ${JSON.stringify(r)}`);
   });
 
   console.log('\n=== FASE 12.3: CU-09 Banear DeviceID ===');
@@ -57,8 +60,8 @@ async function test() {
     if (!r.ok || !r.is_banned) throw new Error(JSON.stringify(r));
   });
   await assert('ban_device inexistente lanza error', async () => {
-    try { await firstValueFrom(admin.send('admin.ban_device', { device_id: 'no-existe-xyz' }).pipe(timeout(5000))); throw new Error('no fallo'); }
-    catch { /* esperado */ }
+    const r = await firstValueFrom(admin.send('admin.ban_device', { device_id: 'no-existe-xyz' }).pipe(timeout(5000)));
+    if (r.status !== 'error') throw new Error(`se esperaba error, se obtuvo: ${JSON.stringify(r)}`);
   });
 
   console.log('\n=== FASE 12.4: CU-08/CU-11 Crear Caso de Obra ===');
@@ -77,17 +80,18 @@ async function test() {
     if (!r.id || !r.codigo_obra) throw new Error(JSON.stringify(r));
     grupoId = r.id; codigoObra = r.codigo_obra;
   });
-  await assert('codigo_obra tiene formato OBRA-YYYY-NNN', async () => {
-    if (!/^OBRA-\d{4}-\d{3}$/.test(codigoObra)) throw new Error(codigoObra);
+  await assert('codigo_obra tiene formato O-YY-NNNNNNN', async () => {
+    if (!/^O-\d{2}-\d{7}$/.test(codigoObra)) throw new Error(codigoObra);
   });
-  await assert('create_group con H3 distintos lanza error', async () => {
-    const otroId = (await firstValueFrom(register.send('register.create_report', {
-      device_id: 'test-otro-h3', lat: -17.80, lng: -63.20, categoria_id: 1, imagen_base64: IMG,
+  await assert('create_group con H3 distintos SI permite agrupar (decision de producto: sugerencia por proximidad, no restriccion estricta por celda)', async () => {
+    const idA = (await firstValueFrom(register.send('register.create_report', {
+      device_id: 'test-h3-a', lat: -17.7833, lng: -63.1822, categoria_id: 1, imagen_base64: IMG,
     }).pipe(timeout(5000)))).id;
-    try {
-      await firstValueFrom(admin.send('admin.create_group', { report_ids: [sameH3Ids[0], otroId], creado_por_usuario_id: 1 }).pipe(timeout(5000)));
-      throw new Error('no fallo');
-    } catch { /* esperado */ }
+    const idB = (await firstValueFrom(register.send('register.create_report', {
+      device_id: 'test-h3-b', lat: -17.80, lng: -63.20, categoria_id: 1, imagen_base64: IMG,
+    }).pipe(timeout(5000)))).id;
+    const r = await firstValueFrom(admin.send('admin.create_group', { report_ids: [idA, idB], creado_por_usuario_id: 1 }).pipe(timeout(5000)));
+    if (!r.id || !r.codigo_obra) throw new Error(JSON.stringify(r));
   });
 
   console.log('\n=== FASE 12.5: CU-12 Bitacora diaria sin cambiar estado ===');
@@ -98,6 +102,24 @@ async function test() {
     }).pipe(timeout(5000)));
     if (!r.id || r.estado_nuevo !== null) throw new Error(JSON.stringify(r));
     actId = r.id;
+  });
+
+  let actConFotoId;
+  await assert('update_case con foto sube a S3 y devuelve path servible', async () => {
+    const r = await firstValueFrom(admin.send('admin.update_case', {
+      grupo_id: grupoId, usuario_id: 2, comentario: 'Dia 2 - Foto de avance', url_imagen: IMG,
+    }).pipe(timeout(5000)));
+    if (!r.url_imagen || !r.url_imagen.startsWith('/admin/updates/')) throw new Error(JSON.stringify(r));
+    actConFotoId = r.id;
+  });
+  await assert('get_update_imagen devuelve la imagen subida', async () => {
+    const r = await firstValueFrom(admin.send('admin.get_update_imagen', actConFotoId).pipe(timeout(5000)));
+    if (!r.data || !r.contentType) throw new Error(JSON.stringify(r));
+  });
+  await assert('get_case_timeline expone url_imagen como path servible (no la key cruda de S3)', async () => {
+    const r = await firstValueFrom(admin.send('admin.get_case_timeline', { grupo_id: grupoId }).pipe(timeout(5000)));
+    const conFoto = r.find((a) => a.id === actConFotoId);
+    if (!conFoto || conFoto.url_imagen !== `/admin/updates/${actConFotoId}/imagen`) throw new Error(JSON.stringify(conFoto));
   });
 
   console.log('\n=== FASE 12.6: CU-13 Corregir coordenadas GPS ===');
@@ -123,12 +145,10 @@ async function test() {
     if (r.estado_nuevo !== 'Finalizado') throw new Error(r.estado_nuevo);
   });
   await assert('update_case estado invalido lanza error', async () => {
-    try {
-      await firstValueFrom(admin.send('admin.update_case', {
-        grupo_id: grupoId, usuario_id: 2, estado_nuevo: 'Inexistente', comentario: 'test',
-      }).pipe(timeout(5000)));
-      throw new Error('no fallo');
-    } catch { /* esperado */ }
+    const r = await firstValueFrom(admin.send('admin.update_case', {
+      grupo_id: grupoId, usuario_id: 2, estado_nuevo: 'Inexistente', comentario: 'test',
+    }).pipe(timeout(5000)));
+    if (r.status !== 'error') throw new Error(`se esperaba error, se obtuvo: ${JSON.stringify(r)}`);
   });
 
   console.log('\n=== FASE 12.8: CU-04 Bitacora publica / Timeline ===');
@@ -145,8 +165,67 @@ async function test() {
     if (r.length < 4) throw new Error(`solo ${r.length} actualizaciones`);
   });
   await assert('get_group no existente lanza error', async () => {
-    try { await firstValueFrom(admin.send('admin.get_group', { grupo_id: 99999 }).pipe(timeout(5000))); throw new Error('no fallo'); }
-    catch { /* esperado */ }
+    const r = await firstValueFrom(admin.send('admin.get_group', { grupo_id: 99999 }).pipe(timeout(5000)));
+    if (r.status !== 'error') throw new Error(`se esperaba error, se obtuvo: ${JSON.stringify(r)}`);
+  });
+
+  console.log('\n=== FASE 12.9: ACID — concurrencia en accept_report (ISSUE-18) ===');
+  await assert('accept_report disparado 2 veces en paralelo solo transiciona una vez (atomicidad/aislamiento)', async () => {
+    const concurrenteId = (await firstValueFrom(register.send('register.create_report', {
+      device_id: 'test-concurrencia', lat: -17.79, lng: -63.19, categoria_id: 1, imagen_base64: IMG,
+    }).pipe(timeout(5000)))).id;
+
+    // El RpcExceptionFilter de ms-admin devuelve { status: 'error' } en vez de
+    // rechazar la promesa, asi que ambas llamadas "fulfillean": hay que revisar
+    // el contenido de cada respuesta para saber cual transiciono de verdad.
+    const respuestas = await Promise.all([
+      firstValueFrom(admin.send('admin.accept_report', { report_id: concurrenteId, moderador_id: 1 }).pipe(timeout(5000))),
+      firstValueFrom(admin.send('admin.accept_report', { report_id: concurrenteId, moderador_id: 2 }).pipe(timeout(5000))),
+    ]);
+
+    const exitosos = respuestas.filter((r) => r.status !== 'error');
+    if (exitosos.length !== 1) {
+      throw new Error(`se esperaba exactamente 1 transicion exitosa, hubo ${exitosos.length}: ${JSON.stringify(respuestas)}`);
+    }
+
+    const grupoIds = new Set(exitosos.map((r) => r.grupo_id));
+    if (grupoIds.size !== 1) throw new Error('se creo mas de un Caso de Obra para el mismo reporte');
+  });
+
+  console.log('\n=== FASE 12.10: HU-07 Casos de Obra cercanos (tecnico en campo) ===');
+  // grupoId ya quedo en estado "Finalizado" en la FASE 12.7 (excluido a proposito
+  // de "cercanos"), asi que se crea un Caso de Obra activo nuevo para este chequeo.
+  let grupoCercanoId;
+  await assert('setup: crear Caso de Obra activo para prueba de cercania', async () => {
+    const idC = (await firstValueFrom(register.send('register.create_report', {
+      device_id: 'test-cercania-1', lat: -17.7833, lng: -63.1822, categoria_id: 1, imagen_base64: IMG,
+    }).pipe(timeout(5000)))).id;
+    const idD = (await firstValueFrom(register.send('register.create_report', {
+      device_id: 'test-cercania-2', lat: -17.7834, lng: -63.1823, categoria_id: 1, imagen_base64: IMG,
+    }).pipe(timeout(5000)))).id;
+    const r = await firstValueFrom(admin.send('admin.create_group', { report_ids: [idC, idD], creado_por_usuario_id: 1 }).pipe(timeout(5000)));
+    if (!r.id) throw new Error(JSON.stringify(r));
+    grupoCercanoId = r.id;
+  });
+  await assert('list_groups_nearby devuelve el Caso de Obra activo cercano a las coordenadas', async () => {
+    const r = await firstValueFrom(admin.send('admin.list_groups_nearby', {
+      lat: -17.7833, lng: -63.1822, radius: 500,
+    }).pipe(timeout(5000)));
+    if (!Array.isArray(r) || !r.some((g) => g.id === grupoCercanoId)) {
+      throw new Error(`grupo ${grupoCercanoId} no aparece entre los cercanos: ${JSON.stringify(r)}`);
+    }
+  });
+  await assert('list_groups_nearby no devuelve casos lejanos', async () => {
+    const r = await firstValueFrom(admin.send('admin.list_groups_nearby', {
+      lat: 10, lng: 10, radius: 500,
+    }).pipe(timeout(5000)));
+    if (r.some((g) => g.id === grupoCercanoId)) throw new Error('aparecio un grupo que esta lejos');
+  });
+  await assert('list_groups_nearby excluye casos Finalizados', async () => {
+    const r = await firstValueFrom(admin.send('admin.list_groups_nearby', {
+      lat: -17.7833, lng: -63.1822, radius: 500,
+    }).pipe(timeout(5000)));
+    if (r.some((g) => g.id === grupoId)) throw new Error('aparecio un grupo ya Finalizado');
   });
 
   console.log(`\n=== RESULTADO: ${passed} OK / ${failed} FAIL ===`);

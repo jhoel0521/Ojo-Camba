@@ -6,7 +6,9 @@
     "act4":        "node src/act4.js",
     "act4:slides": "node src/act4-slides.js",
     "act5":        "node src/act5.js",
-    "act5:slides": "node src/act5-slides.js"
+    "act5:slides": "node src/act5-slides.js",
+    "act6-7":      "node src/act6-7.js",
+    "act6-7:slides": "node src/act6-7-slides.js"
   },
   "dependencies": {
     "docx": "^9.7.1",

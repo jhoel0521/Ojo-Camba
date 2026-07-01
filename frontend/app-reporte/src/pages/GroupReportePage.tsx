@@ -60,8 +60,10 @@ export default function GroupReportePage() {
 
   const handleShare = async () => {
     const url = window.location.href;
+    const title = `Caso ${grupo?.codigo_obra ?? ''} - Ojo Camba`;
+    const text = `Seguí el avance de este Caso de Obra (${grupo?.estado_actual ?? 'en curso'}) en Ojo Camba.`;
     if (navigator.share) {
-      await navigator.share({ title: `Caso ${grupo?.codigo_obra ?? ''} - Ojo Camba`, url });
+      await navigator.share({ title, text, url });
     } else {
       await navigator.clipboard.writeText(url);
     }

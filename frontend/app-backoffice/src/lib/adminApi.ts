@@ -54,6 +54,7 @@ export interface DashboardKpis extends DashboardStats {
   por_categoria: { categoria_id: number; nombre: string; total: number }[];
   casos_por_estado: { estado: string; total: number }[];
   tasa_resolucion: number;
+  rango_aplicado: { desde?: string; hasta?: string } | null;
 }
 
 export interface Usuario {
@@ -84,8 +85,12 @@ export async function getDashboard(): Promise<DashboardStats> {
   return fetchAPI<DashboardStats>('/admin/dashboard');
 }
 
-export async function getDashboardKpis(): Promise<DashboardKpis> {
-  return fetchAPI<DashboardKpis>('/admin/dashboard/kpis');
+export async function getDashboardKpis(desde?: string, hasta?: string): Promise<DashboardKpis> {
+  const params = new URLSearchParams();
+  if (desde) params.set('desde', desde);
+  if (hasta) params.set('hasta', hasta);
+  const qs = params.toString();
+  return fetchAPI<DashboardKpis>(`/admin/dashboard/kpis${qs ? `?${qs}` : ''}`);
 }
 
 export async function listPending(page = 1, limit = 20): Promise<PaginatedResponse<PendingReport>> {

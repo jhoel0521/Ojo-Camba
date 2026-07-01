@@ -2,6 +2,8 @@ import { Injectable, BadRequestException, NotFoundException, Logger, Inject } fr
 import { InjectRepository } from '@nestjs/typeorm';
 import { ClientProxy } from '@nestjs/microservices';
 import { In, Repository } from 'typeorm';
+import * as crypto from 'crypto';
+import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
 import {
   Reporte,
   Dispositivo,
@@ -13,9 +15,24 @@ import {
 } from '@ojo-camba/common';
 import { CreateGroupDto, UpdateCaseDto, AcceptReportDto, BanDeviceDto } from './dto';
 
+interface ImagenResult {
+  buffer: Buffer;
+  contentType: string;
+}
+
+const isExternalUrl = (url: string | null): boolean => url?.startsWith('http') === true;
+
+function actualizacionImagePath(a: { id: number; url_imagen: string | null }): string | null {
+  if (!a.url_imagen) return null;
+  if (isExternalUrl(a.url_imagen)) return a.url_imagen;
+  return `/admin/updates/${a.id}/imagen`;
+}
+
 @Injectable()
 export class AdminService {
   private readonly logger = new Logger(AdminService.name);
+  private readonly s3: S3Client;
+  private readonly bucket: string;
 
   constructor(
     @InjectRepository(Reporte)
@@ -30,7 +47,18 @@ export class AdminService {
     private readonly categoriaRepo: Repository<Categoria>,
     @Inject('MS_GAMIFY')
     private readonly gamifyClient: ClientProxy,
-  ) {}
+  ) {
+    this.bucket = process.env.S3_BUCKET ?? 'reportes';
+    this.s3 = new S3Client({
+      endpoint: process.env.S3_ENDPOINT ?? 'http://localhost:9000',
+      region: 'us-east-1',
+      credentials: {
+        accessKeyId: process.env.S3_ACCESS_KEY ?? 'ojocamba',
+        secretAccessKey: process.env.S3_SECRET_KEY ?? 'ojocamba_secret',
+      },
+      forcePathStyle: true,
+    });
+  }
 
   // ── CU-06: Bandeja de pendientes ──────────────────────────
 
@@ -57,59 +85,73 @@ export class AdminService {
   // ── CU-07: Aceptar / Rechazar ─────────────────────────────
 
   async acceptReport(dto: AcceptReportDto) {
-    const reporte = await this.reporteRepo.findOne({ where: { id: dto.report_id } });
-    if (!reporte) throw new NotFoundException('Reporte no encontrado');
-    if (reporte.estado !== EstadoReporte.Reportado) {
-      throw new BadRequestException('Solo se pueden aceptar reportes en estado Reportado');
-    }
+    // Transaccion con bloqueo pesimista sobre el reporte: evita que dos accept_report
+    // concurrentes sobre el mismo reporte pasen ambos la verificacion de estado
+    // (atomicidad/aislamiento — ISSUE-18).
+    const result = await this.reporteRepo.manager.transaction(async (manager) => {
+      const reporte = await manager.findOne(Reporte, {
+        where: { id: dto.report_id },
+        lock: { mode: 'pessimistic_write' },
+      });
+      if (!reporte) throw new NotFoundException('Reporte no encontrado');
+      if (reporte.estado !== EstadoReporte.Reportado) {
+        throw new BadRequestException('Solo se pueden aceptar reportes en estado Reportado');
+      }
 
-    reporte.estado = EstadoReporte.Aceptado;
+      reporte.estado = EstadoReporte.Aceptado;
 
-    if (dto.grupo_id) {
-      const grupo = await this.grupoRepo.findOne({ where: { id: dto.grupo_id } });
-      if (!grupo) throw new NotFoundException('Caso de Obra no encontrado');
+      if (dto.grupo_id) {
+        const grupo = await manager.findOne(GrupoReporte, { where: { id: dto.grupo_id } });
+        if (!grupo) throw new NotFoundException('Caso de Obra no encontrado');
+        reporte.grupo_id = grupo.id;
+        await manager.save(reporte);
+        return {
+          reporte,
+          grupo_id: grupo.id,
+          codigo_obra: grupo.codigo_obra,
+        };
+      }
+
+      const year = new Date().getFullYear();
+      const count = (await manager.count(GrupoReporte)) + 1;
+      const codigoObra = `O-${String(year).slice(-2)}-${String(count).padStart(7, '0')}`;
+
+      const grupo = await manager.save(
+        manager.create(GrupoReporte, {
+          codigo_obra: codigoObra,
+          estado_actual: EstadoReporte.Aceptado,
+          creado_por_usuario_id: dto.moderador_id,
+          categoria_id: dto.categoria_id ?? reporte.categoria_id,
+        }),
+      );
       reporte.grupo_id = grupo.id;
-      await this.reporteRepo.save(reporte);
-      return {
-        id: reporte.id,
-        estado: reporte.estado,
-        grupo_id: grupo.id,
-        codigo_obra: grupo.codigo_obra,
-      };
-    }
+      await manager.save(reporte);
 
-    const year = new Date().getFullYear();
-    const count = (await this.grupoRepo.count()) + 1;
-    const codigoObra = `O-${String(year).slice(-2)}-${String(count).padStart(7, '0')}`;
-
-    const grupo = await this.grupoRepo.save(
-      this.grupoRepo.create({
-        codigo_obra: codigoObra,
-        estado_actual: EstadoReporte.Aceptado,
-        creado_por_usuario_id: dto.moderador_id,
-        categoria_id: dto.categoria_id ?? reporte.categoria_id,
-      }),
-    );
-    reporte.grupo_id = grupo.id;
-    await this.reporteRepo.save(reporte);
+      return { reporte, grupo_id: grupo.id, codigo_obra: codigoObra };
+    });
 
     // HU-06: al aceptar, se otorgan puntos al dueño del reporte (si es un usuario registrado).
     // Fire-and-forget: la aceptación no falla si ms-gamify esta caido; el error solo se loguea.
-    if (reporte.usuario_id != null) {
+    if (result.reporte.usuario_id != null) {
       this.gamifyClient
         .emit(TCP_PATTERNS.GAMIFY.AWARD_POINTS, {
-          user_id: reporte.usuario_id,
-          report_id: reporte.id,
+          user_id: result.reporte.usuario_id,
+          report_id: result.reporte.id,
         })
         .subscribe({
           error: (err) =>
             this.logger.error(
-              `No se pudieron otorgar puntos (reporte ${reporte.id}, usuario ${reporte.usuario_id}): ${err?.message ?? err}`,
+              `No se pudieron otorgar puntos (reporte ${result.reporte.id}, usuario ${result.reporte.usuario_id}): ${err?.message ?? err}`,
             ),
         });
     }
 
-    return { id: reporte.id, estado: reporte.estado, grupo_id: grupo.id, codigo_obra: codigoObra };
+    return {
+      id: result.reporte.id,
+      estado: result.reporte.estado,
+      grupo_id: result.grupo_id,
+      codigo_obra: result.codigo_obra,
+    };
   }
 
   async rejectReport(reportId: number) {
@@ -188,6 +230,36 @@ export class AdminService {
     const grupo = await this.grupoRepo.findOne({ where: { id: dto.grupo_id } });
     if (!grupo) throw new NotFoundException('Caso de Obra no encontrado');
 
+    // Validar el estado ANTES de persistir la bitacora: evita dejar una
+    // actualizacion huerfana cuando estado_nuevo es invalido.
+    if (dto.estado_nuevo) {
+      const validos = Object.values(EstadoReporte);
+      if (!validos.includes(dto.estado_nuevo as EstadoReporte)) {
+        throw new BadRequestException(`Estado invalido. Validos: ${validos.join(', ')}`);
+      }
+    }
+
+    // Si viene una foto nueva en base64 (bitacora del tecnico), subirla a S3
+    // y persistir solo la key — igual que ms-register con las fotos de reportes.
+    let urlImagen = dto.url_imagen ?? null;
+    if (urlImagen) {
+      const match = urlImagen.match(/^data:image\/(\w+);base64,(.+)$/);
+      if (match) {
+        const ext = match[1] === 'jpeg' ? 'jpg' : match[1];
+        const buffer = Buffer.from(match[2], 'base64');
+        const filename = `actualizaciones/${crypto.randomUUID()}.${ext}`;
+        await this.s3.send(
+          new PutObjectCommand({
+            Bucket: this.bucket,
+            Key: filename,
+            Body: buffer,
+            ContentType: `image/${ext}`,
+          }),
+        );
+        urlImagen = filename;
+      }
+    }
+
     const actualizacion = this.actualizacionRepo.create({
       grupo_id: dto.grupo_id,
       usuario_id: dto.usuario_id,
@@ -197,16 +269,11 @@ export class AdminService {
       fecha_estimada_fin: dto.fecha_estimada_fin ?? null,
       lat_actualizada: dto.lat_actualizada ?? null,
       lng_actualizada: dto.lng_actualizada ?? null,
-      url_imagen: dto.url_imagen ?? null,
+      url_imagen: urlImagen,
     });
     await this.actualizacionRepo.save(actualizacion);
 
     if (dto.estado_nuevo) {
-      const validos = Object.values(EstadoReporte);
-      if (!validos.includes(dto.estado_nuevo as EstadoReporte)) {
-        throw new BadRequestException(`Estado invalido. Validos: ${validos.join(', ')}`);
-      }
-
       grupo.estado_actual = dto.estado_nuevo;
       if (dto.fecha_estimada_fin) {
         grupo.fecha_estimada_fin = dto.fecha_estimada_fin;
@@ -221,8 +288,34 @@ export class AdminService {
       grupo_id: dto.grupo_id,
       estado_nuevo: actualizacion.estado_nuevo,
       comentario: actualizacion.comentario,
+      url_imagen: actualizacionImagePath(actualizacion),
       creado_en: actualizacion.creado_en,
     };
+  }
+
+  async getActualizacionImagen(actualizacionId: number): Promise<ImagenResult> {
+    const actualizacion = await this.actualizacionRepo.findOne({
+      where: { id: actualizacionId },
+    });
+    if (!actualizacion?.url_imagen) {
+      throw new NotFoundException('Imagen no encontrada');
+    }
+    if (isExternalUrl(actualizacion.url_imagen)) {
+      throw new NotFoundException('Imagen no gestionada por el sistema');
+    }
+
+    const response = await this.s3.send(
+      new GetObjectCommand({ Bucket: this.bucket, Key: actualizacion.url_imagen }),
+    );
+
+    const chunks: Buffer[] = [];
+    if (response.Body) {
+      for await (const chunk of response.Body as AsyncIterable<Uint8Array>) {
+        chunks.push(Buffer.from(chunk));
+      }
+    }
+
+    return { buffer: Buffer.concat(chunks), contentType: response.ContentType ?? 'image/jpeg' };
   }
 
   // ── CU-04: Bitácora pública ───────────────────────────────
@@ -312,10 +405,12 @@ export class AdminService {
     const grupo = await this.grupoRepo.findOne({ where: { id: grupoId } });
     if (!grupo) throw new NotFoundException('Caso de Obra no encontrado');
 
-    return this.actualizacionRepo.find({
+    const data = await this.actualizacionRepo.find({
       where: { grupo_id: grupoId },
       order: { creado_en: 'ASC' },
     });
+
+    return data.map((a) => ({ ...a, url_imagen: actualizacionImagePath(a) }));
   }
 
   async getDashboard() {
@@ -384,6 +479,49 @@ export class AdminService {
     }));
   }
 
+  // ── HU-07: Casos de Obra cercanos (tecnico en campo) ───────
+  // Igual criterio que listNearbyReports: distancia fisica por bounding box,
+  // no igualdad estricta de celda H3 (un caso real puede tener reportes en
+  // celdas vecinas distintas cerca del borde del hexagono).
+
+  async listNearbyGroups(lat: number, lng: number, radiusM = 300) {
+    const delta = radiusM / 111000;
+    const data = await this.grupoRepo
+      .createQueryBuilder('g')
+      .innerJoin(Reporte, 'r', 'r.grupo_id = g.id')
+      .select('g.id', 'id')
+      .addSelect('g.codigo_obra', 'codigo_obra')
+      .addSelect('g.estado_actual', 'estado_actual')
+      .addSelect('g.categoria_id', 'categoria_id')
+      .addSelect('g.fecha_estimada_fin', 'fecha_estimada_fin')
+      .addSelect('g.creado_en', 'creado_en')
+      .addSelect('COUNT(DISTINCT r.id)', 'total_reportes')
+      .addSelect('MIN(r.url_imagen)', 'preview_imagen')
+      .addSelect('AVG(CAST(r.lat AS FLOAT))', 'lat')
+      .addSelect('AVG(CAST(r.lng AS FLOAT))', 'lng')
+      .where('CAST(r.lat AS FLOAT) BETWEEN :minLat AND :maxLat', {
+        minLat: lat - delta,
+        maxLat: lat + delta,
+      })
+      .andWhere('CAST(r.lng AS FLOAT) BETWEEN :minLng AND :maxLng', {
+        minLng: lng - delta,
+        maxLng: lng + delta,
+      })
+      .andWhere('g.estado_actual NOT IN (:...estados)', {
+        estados: [EstadoReporte.Rechazado, EstadoReporte.Finalizado],
+      })
+      .groupBy('g.id')
+      .orderBy('g.creado_en', 'DESC')
+      .getRawMany();
+
+    return data.map((g) => ({
+      ...g,
+      total_reportes: parseInt(g.total_reportes, 10),
+      lat: Number(g.lat),
+      lng: Number(g.lng),
+    }));
+  }
+
   async unbanDevice(device_id: string) {
     const dispositivo = await this.dispositivoRepo.findOne({ where: { device_id } });
     if (!dispositivo) throw new NotFoundException('Dispositivo no encontrado');
@@ -408,24 +546,40 @@ export class AdminService {
 
   // ── Sprint 3: Dashboard KPIs con datos históricos ─────────
 
-  async getDashboardKpis() {
-    // KPI base (reutiliza getDashboard)
+  // Resuelve el rango desde/hasta pedido por el filtro del Dashboard.
+  // Sin rango, conserva el comportamiento historico: ultimos 6 meses para la
+  // serie temporal, historico completo para el resto de agregaciones.
+  private resolveRango(desde?: string, hasta?: string) {
+    if (!desde && !hasta) return null;
+    const d = desde ? new Date(`${desde}T00:00:00.000`) : new Date('2000-01-01T00:00:00.000');
+    const h = hasta ? new Date(`${hasta}T23:59:59.999`) : new Date();
+    return { desde: d.toISOString(), hasta: h.toISOString() };
+  }
+
+  async getDashboardKpis(desde?: string, hasta?: string) {
+    // KPI base (reutiliza getDashboard) — siempre en tiempo real, no filtra por rango.
     const base = await this.getDashboard();
+    const rango = this.resolveRango(desde, hasta);
 
-    // KPI 2: Reportes creados por mes — últimos 6 meses
-    const seisMesesAtras = new Date();
-    seisMesesAtras.setMonth(seisMesesAtras.getMonth() - 5);
-    seisMesesAtras.setDate(1);
-    seisMesesAtras.setHours(0, 0, 0, 0);
-
-    const reportesPorMesRaw: { mes: string; total: string }[] = await this.reporteRepo
+    // KPI 2: Reportes creados por mes — ultimos 6 meses, o el rango pedido
+    const reportesPorMesQb = this.reporteRepo
       .createQueryBuilder('r')
       .select("TO_CHAR(DATE_TRUNC('month', r.creado_en), 'YYYY-MM')", 'mes')
       .addSelect('COUNT(r.id)', 'total')
-      .where('r.creado_en >= :desde', { desde: seisMesesAtras.toISOString() })
       .groupBy("DATE_TRUNC('month', r.creado_en)")
-      .orderBy("DATE_TRUNC('month', r.creado_en)", 'ASC')
-      .getRawMany();
+      .orderBy("DATE_TRUNC('month', r.creado_en)", 'ASC');
+
+    if (rango) {
+      reportesPorMesQb.where('r.creado_en BETWEEN :desde AND :hasta', rango);
+    } else {
+      const seisMesesAtras = new Date();
+      seisMesesAtras.setMonth(seisMesesAtras.getMonth() - 5);
+      seisMesesAtras.setDate(1);
+      seisMesesAtras.setHours(0, 0, 0, 0);
+      reportesPorMesQb.where('r.creado_en >= :desde', { desde: seisMesesAtras.toISOString() });
+    }
+
+    const reportesPorMesRaw: { mes: string; total: string }[] = await reportesPorMesQb.getRawMany();
 
     const reportesPorMes = reportesPorMesRaw.map((r) => ({
       mes: r.mes,
@@ -433,18 +587,23 @@ export class AdminService {
     }));
 
     // KPI 3: Distribución por categoría (solo reportes con categoría asignada)
+    const porCategoriaQb = this.reporteRepo
+      .createQueryBuilder('r')
+      .innerJoin(Categoria, 'c', 'c.id = r.categoria_id')
+      .select('r.categoria_id', 'categoria_id')
+      .addSelect('c.nombre', 'nombre')
+      .addSelect('COUNT(r.id)', 'total')
+      .where('r.categoria_id IS NOT NULL')
+      .groupBy('r.categoria_id')
+      .addGroupBy('c.nombre')
+      .orderBy('total', 'DESC');
+
+    if (rango) {
+      porCategoriaQb.andWhere('r.creado_en BETWEEN :desde AND :hasta', rango);
+    }
+
     const porCategoriaRaw: { categoria_id: string; nombre: string; total: string }[] =
-      await this.reporteRepo
-        .createQueryBuilder('r')
-        .innerJoin(Categoria, 'c', 'c.id = r.categoria_id')
-        .select('r.categoria_id', 'categoria_id')
-        .addSelect('c.nombre', 'nombre')
-        .addSelect('COUNT(r.id)', 'total')
-        .where('r.categoria_id IS NOT NULL')
-        .groupBy('r.categoria_id')
-        .addGroupBy('c.nombre')
-        .orderBy('total', 'DESC')
-        .getRawMany();
+      await porCategoriaQb.getRawMany();
 
     const porCategoria = porCategoriaRaw.map((r) => ({
       categoria_id: parseInt(r.categoria_id, 10),
@@ -452,13 +611,19 @@ export class AdminService {
       total: parseInt(r.total, 10),
     }));
 
-    // KPI 4: Casos por estado actual
-    const casosPorEstadoRaw: { estado: string; total: string }[] = await this.grupoRepo
+    // KPI 4: Casos por estado actual (filtra por fecha de creacion del Caso de Obra)
+    const casosPorEstadoQb = this.grupoRepo
       .createQueryBuilder('g')
       .select('g.estado_actual', 'estado')
       .addSelect('COUNT(g.id)', 'total')
-      .groupBy('g.estado_actual')
-      .getRawMany();
+      .groupBy('g.estado_actual');
+
+    if (rango) {
+      casosPorEstadoQb.where('g.creado_en BETWEEN :desde AND :hasta', rango);
+    }
+
+    const casosPorEstadoRaw: { estado: string; total: string }[] =
+      await casosPorEstadoQb.getRawMany();
 
     const casosPorEstado = casosPorEstadoRaw.map((r) => ({
       estado: r.estado,
@@ -477,6 +642,7 @@ export class AdminService {
       por_categoria: porCategoria,
       casos_por_estado: casosPorEstado,
       tasa_resolucion: tasaResolucion,
+      rango_aplicado: rango ? { desde, hasta } : null,
     };
   }
 }

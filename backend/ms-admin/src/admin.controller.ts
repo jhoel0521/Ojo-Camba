@@ -76,8 +76,8 @@ export class AdminController {
   }
 
   @MessagePattern(TCP_PATTERNS.ADMIN.DASHBOARD_KPIS)
-  dashboardKpis() {
-    return this.adminService.getDashboardKpis();
+  dashboardKpis(@Payload() dto: { desde?: string; hasta?: string }) {
+    return this.adminService.getDashboardKpis(dto?.desde, dto?.hasta);
   }
 
   @MessagePattern(TCP_PATTERNS.ADMIN.LIST_DEVICES)
@@ -98,5 +98,16 @@ export class AdminController {
   @MessagePattern(TCP_PATTERNS.ADMIN.UNBAN_DEVICE)
   unbanDevice(@Payload() dto: { device_id: string }) {
     return this.adminService.unbanDevice(dto.device_id);
+  }
+
+  @MessagePattern(TCP_PATTERNS.ADMIN.GET_UPDATE_IMAGEN)
+  async getUpdateImagen(@Payload() actualizacionId: number) {
+    const { buffer, contentType } = await this.adminService.getActualizacionImagen(actualizacionId);
+    return { data: buffer.toString('base64'), contentType };
+  }
+
+  @MessagePattern(TCP_PATTERNS.ADMIN.LIST_GROUPS_NEARBY)
+  listNearbyGroups(@Payload() dto: { lat: number; lng: number; radius?: number }) {
+    return this.adminService.listNearbyGroups(dto.lat, dto.lng, dto.radius);
   }
 }

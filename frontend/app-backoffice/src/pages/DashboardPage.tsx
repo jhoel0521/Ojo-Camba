@@ -36,17 +36,25 @@ export default function DashboardPage() {
   const [kpis, setKpis] = useState<DashboardKpis | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [desde, setDesde] = useState('');
+  const [hasta, setHasta] = useState('');
 
   const load = useCallback(() => {
-    getDashboardKpis()
+    setLoading(true);
+    getDashboardKpis(desde || undefined, hasta || undefined)
       .then(setKpis)
       .catch((err) => setError(friendlyError(err)))
       .finally(() => setLoading(false));
-  }, []);
+  }, [desde, hasta]);
 
   useEffect(() => {
     load();
   }, [load]);
+
+  const limpiarFiltro = () => {
+    setDesde('');
+    setHasta('');
+  };
 
   useModeration({
     user: user ? { id: user.id, nombre: user.nombre } : null,
@@ -136,9 +144,46 @@ export default function DashboardPage() {
   }));
 
   const tasaResolucion = kpis?.tasa_resolucion ?? 0;
+  const rangoActivo = !!(desde || hasta);
   return (
     <div>
       <h2 className="font-semibold text-xl text-tierra mb-6">Dashboard</h2>
+
+      {/* Filtro dinámico de fecha — afecta las 3 agregaciones históricas y la tasa de resolución */}
+      <div className="bg-perla rounded-3xl-3 p-4 mb-6 flex flex-wrap items-end gap-3">
+        <div>
+          <label htmlFor="desde" className="block text-xs text-arena uppercase tracking-wide mb-1">
+            Desde
+          </label>
+          <input
+            id="desde"
+            type="date"
+            value={desde}
+            onChange={(e) => setDesde(e.target.value)}
+            className="bg-lienzo border border-arcilla rounded-2xl px-3 py-2 text-sm text-tierra"
+          />
+        </div>
+        <div>
+          <label htmlFor="hasta" className="block text-xs text-arena uppercase tracking-wide mb-1">
+            Hasta
+          </label>
+          <input
+            id="hasta"
+            type="date"
+            value={hasta}
+            onChange={(e) => setHasta(e.target.value)}
+            className="bg-lienzo border border-arcilla rounded-2xl px-3 py-2 text-sm text-tierra"
+          />
+        </div>
+        {rangoActivo && (
+          <button
+            onClick={limpiarFiltro}
+            className="text-xs font-medium text-selva hover:brightness-90 px-3 py-2"
+          >
+            Limpiar filtro
+          </button>
+        )}
+      </div>
 
       {/* KPI 1 — Tarjetas de contadores */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
@@ -164,7 +209,7 @@ export default function DashboardPage() {
         {/* KPI 2 — Reportes por mes (barras) */}
         <div className="bg-perla rounded-3xl-3 p-6">
           <p className="text-xs text-arena uppercase tracking-wide mb-4">
-            Reportes — últimos 6 meses
+            {rangoActivo ? 'Reportes — rango filtrado' : 'Reportes — últimos 6 meses'}
           </p>
           {barData.length === 0 ? (
             <div className="h-48 flex items-center justify-center text-sm text-caoba">
