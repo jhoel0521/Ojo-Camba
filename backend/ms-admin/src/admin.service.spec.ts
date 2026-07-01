@@ -16,7 +16,7 @@ function makeRepoMock() {
     findOne: jest.fn(),
     find: jest.fn(),
     findAndCount: jest.fn(),
-    count: jest.fn(),
+    count: jest.fn().mockResolvedValue(0),
     create: jest.fn((x) => x),
     save: jest.fn((x) => Promise.resolve(Array.isArray(x) ? x : { id: 1, ...x })),
     update: jest.fn().mockResolvedValue({ affected: 1 }),
@@ -24,17 +24,45 @@ function makeRepoMock() {
   };
 }
 
+// QueryBuilder falso encadenable: cada metodo de encadenado se devuelve a si
+// mismo; los metodos terminales (getRawMany/getCount) resuelven el valor dado.
+function makeQb(rawMany: unknown[] = [], count = 0) {
+  const qb: Record<string, jest.Mock> = {};
+  const chain = [
+    'select',
+    'addSelect',
+    'innerJoin',
+    'leftJoin',
+    'where',
+    'andWhere',
+    'groupBy',
+    'addGroupBy',
+    'orderBy',
+    'skip',
+    'take',
+  ];
+  for (const m of chain) qb[m] = jest.fn(() => qb);
+  qb.getRawMany = jest.fn().mockResolvedValue(rawMany);
+  qb.getCount = jest.fn().mockResolvedValue(count);
+  qb.getRawAndEntities = jest.fn().mockResolvedValue({ entities: [], raw: [] });
+  qb.getMany = jest.fn().mockResolvedValue([]);
+  qb.getManyAndCount = jest.fn().mockResolvedValue([[], 0]);
+  return qb;
+}
+
 describe('AdminService', () => {
   let service: AdminService;
   let reporteRepo: ReturnType<typeof makeRepoMock>;
   let grupoRepo: ReturnType<typeof makeRepoMock>;
   let actualizacionRepo: ReturnType<typeof makeRepoMock>;
+  let dispositivoRepo: ReturnType<typeof makeRepoMock>;
   let gamifyClient: { emit: jest.Mock };
 
   beforeEach(async () => {
     reporteRepo = makeRepoMock();
     grupoRepo = makeRepoMock();
     actualizacionRepo = makeRepoMock();
+    dispositivoRepo = makeRepoMock();
     gamifyClient = { emit: jest.fn().mockReturnValue({ subscribe: jest.fn() }) };
 
     // acceptReport corre dentro de reporteRepo.manager.transaction(); el manager
@@ -62,7 +90,7 @@ describe('AdminService', () => {
       providers: [
         AdminService,
         { provide: getRepositoryToken(Reporte), useValue: reporteRepo },
-        { provide: getRepositoryToken(Dispositivo), useValue: makeRepoMock() },
+        { provide: getRepositoryToken(Dispositivo), useValue: dispositivoRepo },
         { provide: getRepositoryToken(GrupoReporte), useValue: grupoRepo },
         { provide: getRepositoryToken(ActualizacionCaso), useValue: actualizacionRepo },
         { provide: getRepositoryToken(Categoria), useValue: makeRepoMock() },
@@ -206,6 +234,98 @@ describe('AdminService', () => {
       await expect(service.acceptReport({ report_id: 1, moderador_id: 1 })).rejects.toThrow(
         BadRequestException,
       );
+    });
+  });
+
+  describe('resolveRango (filtro de fechas del Dashboard, Sprint 3)', () => {
+    it('sin desde ni hasta devuelve null (sin filtro, comportamiento historico)', () => {
+      const rango = (
+        service as unknown as { resolveRango: (d?: string, h?: string) => unknown }
+      ).resolveRango(undefined, undefined);
+      expect(rango).toBeNull();
+    });
+
+    it('con desde y hasta arma el rango en ISO con horas de inicio/fin de dia', () => {
+      const rango = (
+        service as unknown as {
+          resolveRango: (d?: string, h?: string) => { desde: string; hasta: string };
+        }
+      ).resolveRango('2026-06-01', '2026-06-30');
+      expect(rango.desde).toBe(new Date('2026-06-01T00:00:00.000').toISOString());
+      expect(rango.hasta).toBe(new Date('2026-06-30T23:59:59.999').toISOString());
+    });
+
+    it('con solo "hasta" usa 2000-01-01 como limite inferior', () => {
+      const rango = (
+        service as unknown as { resolveRango: (d?: string, h?: string) => { desde: string } }
+      ).resolveRango(undefined, '2026-06-30');
+      expect(rango.desde).toBe(new Date('2000-01-01T00:00:00.000').toISOString());
+    });
+  });
+
+  describe('getDashboardKpis', () => {
+    it('sin rango, no aplica filtro de fecha en las agregaciones (comportamiento historico)', async () => {
+      const reportesPorMesQb = makeQb([{ mes: '2026-06', total: '5' }]);
+      const porCategoriaQb = makeQb([{ categoria_id: '1', nombre: 'bache', total: '3' }]);
+      const casosPorEstadoQb = makeQb([{ estado: 'Finalizado', total: '2' }]);
+
+      reporteRepo.createQueryBuilder = jest
+        .fn()
+        .mockImplementationOnce(() => makeQb([], 0)) // aceptadosHoy (getDashboard)
+        .mockImplementationOnce(() => reportesPorMesQb)
+        .mockImplementationOnce(() => porCategoriaQb);
+      grupoRepo.createQueryBuilder = jest
+        .fn()
+        .mockImplementationOnce(() => makeQb([], 0)) // casosActivos (getDashboard)
+        .mockImplementationOnce(() => casosPorEstadoQb);
+
+      const result = await service.getDashboardKpis();
+
+      expect(reportesPorMesQb.andWhere).not.toHaveBeenCalled();
+      expect(reportesPorMesQb.where).toHaveBeenCalledWith(
+        'r.creado_en >= :desde',
+        expect.any(Object),
+      );
+      expect(porCategoriaQb.andWhere).not.toHaveBeenCalled();
+      expect(casosPorEstadoQb.where).not.toHaveBeenCalled();
+      expect(result.rango_aplicado).toBeNull();
+      expect(result.tasa_resolucion).toBe(100);
+    });
+
+    it('con desde/hasta, aplica BETWEEN en las 3 agregaciones filtrables y devuelve rango_aplicado', async () => {
+      const reportesPorMesQb = makeQb([{ mes: '2026-06', total: '5' }]);
+      const porCategoriaQb = makeQb([{ categoria_id: '1', nombre: 'bache', total: '3' }]);
+      const casosPorEstadoQb = makeQb([
+        { estado: 'Finalizado', total: '1' },
+        { estado: 'Aceptado', total: '1' },
+      ]);
+
+      reporteRepo.createQueryBuilder = jest
+        .fn()
+        .mockImplementationOnce(() => makeQb([], 0))
+        .mockImplementationOnce(() => reportesPorMesQb)
+        .mockImplementationOnce(() => porCategoriaQb);
+      grupoRepo.createQueryBuilder = jest
+        .fn()
+        .mockImplementationOnce(() => makeQb([], 0))
+        .mockImplementationOnce(() => casosPorEstadoQb);
+
+      const result = await service.getDashboardKpis('2026-06-01', '2026-06-30');
+
+      expect(reportesPorMesQb.where).toHaveBeenCalledWith(
+        'r.creado_en BETWEEN :desde AND :hasta',
+        expect.any(Object),
+      );
+      expect(porCategoriaQb.andWhere).toHaveBeenCalledWith(
+        'r.creado_en BETWEEN :desde AND :hasta',
+        expect.any(Object),
+      );
+      expect(casosPorEstadoQb.where).toHaveBeenCalledWith(
+        'g.creado_en BETWEEN :desde AND :hasta',
+        expect.any(Object),
+      );
+      expect(result.rango_aplicado).toEqual({ desde: '2026-06-01', hasta: '2026-06-30' });
+      expect(result.tasa_resolucion).toBe(50);
     });
   });
 });

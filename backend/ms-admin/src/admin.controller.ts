@@ -76,8 +76,8 @@ export class AdminController {
   }
 
   @MessagePattern(TCP_PATTERNS.ADMIN.DASHBOARD_KPIS)
-  dashboardKpis() {
-    return this.adminService.getDashboardKpis();
+  dashboardKpis(@Payload() dto: { desde?: string; hasta?: string }) {
+    return this.adminService.getDashboardKpis(dto?.desde, dto?.hasta);
   }
 
   @MessagePattern(TCP_PATTERNS.ADMIN.LIST_DEVICES)

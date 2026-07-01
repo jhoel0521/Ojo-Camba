@@ -546,24 +546,40 @@ export class AdminService {
 
   // ── Sprint 3: Dashboard KPIs con datos históricos ─────────
 
-  async getDashboardKpis() {
-    // KPI base (reutiliza getDashboard)
+  // Resuelve el rango desde/hasta pedido por el filtro del Dashboard.
+  // Sin rango, conserva el comportamiento historico: ultimos 6 meses para la
+  // serie temporal, historico completo para el resto de agregaciones.
+  private resolveRango(desde?: string, hasta?: string) {
+    if (!desde && !hasta) return null;
+    const d = desde ? new Date(`${desde}T00:00:00.000`) : new Date('2000-01-01T00:00:00.000');
+    const h = hasta ? new Date(`${hasta}T23:59:59.999`) : new Date();
+    return { desde: d.toISOString(), hasta: h.toISOString() };
+  }
+
+  async getDashboardKpis(desde?: string, hasta?: string) {
+    // KPI base (reutiliza getDashboard) — siempre en tiempo real, no filtra por rango.
     const base = await this.getDashboard();
+    const rango = this.resolveRango(desde, hasta);
 
-    // KPI 2: Reportes creados por mes — últimos 6 meses
-    const seisMesesAtras = new Date();
-    seisMesesAtras.setMonth(seisMesesAtras.getMonth() - 5);
-    seisMesesAtras.setDate(1);
-    seisMesesAtras.setHours(0, 0, 0, 0);
-
-    const reportesPorMesRaw: { mes: string; total: string }[] = await this.reporteRepo
+    // KPI 2: Reportes creados por mes — ultimos 6 meses, o el rango pedido
+    const reportesPorMesQb = this.reporteRepo
       .createQueryBuilder('r')
       .select("TO_CHAR(DATE_TRUNC('month', r.creado_en), 'YYYY-MM')", 'mes')
       .addSelect('COUNT(r.id)', 'total')
-      .where('r.creado_en >= :desde', { desde: seisMesesAtras.toISOString() })
       .groupBy("DATE_TRUNC('month', r.creado_en)")
-      .orderBy("DATE_TRUNC('month', r.creado_en)", 'ASC')
-      .getRawMany();
+      .orderBy("DATE_TRUNC('month', r.creado_en)", 'ASC');
+
+    if (rango) {
+      reportesPorMesQb.where('r.creado_en BETWEEN :desde AND :hasta', rango);
+    } else {
+      const seisMesesAtras = new Date();
+      seisMesesAtras.setMonth(seisMesesAtras.getMonth() - 5);
+      seisMesesAtras.setDate(1);
+      seisMesesAtras.setHours(0, 0, 0, 0);
+      reportesPorMesQb.where('r.creado_en >= :desde', { desde: seisMesesAtras.toISOString() });
+    }
+
+    const reportesPorMesRaw: { mes: string; total: string }[] = await reportesPorMesQb.getRawMany();
 
     const reportesPorMes = reportesPorMesRaw.map((r) => ({
       mes: r.mes,
@@ -571,18 +587,23 @@ export class AdminService {
     }));
 
     // KPI 3: Distribución por categoría (solo reportes con categoría asignada)
+    const porCategoriaQb = this.reporteRepo
+      .createQueryBuilder('r')
+      .innerJoin(Categoria, 'c', 'c.id = r.categoria_id')
+      .select('r.categoria_id', 'categoria_id')
+      .addSelect('c.nombre', 'nombre')
+      .addSelect('COUNT(r.id)', 'total')
+      .where('r.categoria_id IS NOT NULL')
+      .groupBy('r.categoria_id')
+      .addGroupBy('c.nombre')
+      .orderBy('total', 'DESC');
+
+    if (rango) {
+      porCategoriaQb.andWhere('r.creado_en BETWEEN :desde AND :hasta', rango);
+    }
+
     const porCategoriaRaw: { categoria_id: string; nombre: string; total: string }[] =
-      await this.reporteRepo
-        .createQueryBuilder('r')
-        .innerJoin(Categoria, 'c', 'c.id = r.categoria_id')
-        .select('r.categoria_id', 'categoria_id')
-        .addSelect('c.nombre', 'nombre')
-        .addSelect('COUNT(r.id)', 'total')
-        .where('r.categoria_id IS NOT NULL')
-        .groupBy('r.categoria_id')
-        .addGroupBy('c.nombre')
-        .orderBy('total', 'DESC')
-        .getRawMany();
+      await porCategoriaQb.getRawMany();
 
     const porCategoria = porCategoriaRaw.map((r) => ({
       categoria_id: parseInt(r.categoria_id, 10),
@@ -590,13 +611,19 @@ export class AdminService {
       total: parseInt(r.total, 10),
     }));
 
-    // KPI 4: Casos por estado actual
-    const casosPorEstadoRaw: { estado: string; total: string }[] = await this.grupoRepo
+    // KPI 4: Casos por estado actual (filtra por fecha de creacion del Caso de Obra)
+    const casosPorEstadoQb = this.grupoRepo
       .createQueryBuilder('g')
       .select('g.estado_actual', 'estado')
       .addSelect('COUNT(g.id)', 'total')
-      .groupBy('g.estado_actual')
-      .getRawMany();
+      .groupBy('g.estado_actual');
+
+    if (rango) {
+      casosPorEstadoQb.where('g.creado_en BETWEEN :desde AND :hasta', rango);
+    }
+
+    const casosPorEstadoRaw: { estado: string; total: string }[] =
+      await casosPorEstadoQb.getRawMany();
 
     const casosPorEstado = casosPorEstadoRaw.map((r) => ({
       estado: r.estado,
@@ -615,6 +642,7 @@ export class AdminService {
       por_categoria: porCategoria,
       casos_por_estado: casosPorEstado,
       tasa_resolucion: tasaResolucion,
+      rango_aplicado: rango ? { desde, hasta } : null,
     };
   }
 }

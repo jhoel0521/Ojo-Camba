@@ -198,8 +198,8 @@ export class AdminController {
   }
 
   @Get('dashboard/kpis')
-  getDashboardKpis() {
-    return sendRpc(this.client.send(TCP_PATTERNS.ADMIN.DASHBOARD_KPIS, {}));
+  getDashboardKpis(@Query('desde') desde?: string, @Query('hasta') hasta?: string) {
+    return sendRpc(this.client.send(TCP_PATTERNS.ADMIN.DASHBOARD_KPIS, { desde, hasta }));
   }
 
   @Get('devices')
