@@ -11,6 +11,14 @@ const LIMIT = 20;
 
 type TabMode = 'all' | 'nearby';
 
+const ESTADOS = [
+  { label: 'Todos', value: '' },
+  { label: 'Aceptado', value: 'Aceptado' },
+  { label: 'En campo', value: 'ValidacionEnCampo' },
+  { label: 'En trabajo', value: 'EnTrabajo' },
+  { label: 'Finalizado', value: 'Finalizado' },
+];
+
 export default function CasosPage() {
   const [mode, setMode] = useState<TabMode>('all');
   const [grupos, setGrupos] = useState<GrupoReporte[]>([]);
@@ -19,6 +27,7 @@ export default function CasosPage() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
+  const [estadoFiltro, setEstadoFiltro] = useState('');
 
   const gps = useGeolocation();
 
@@ -28,7 +37,7 @@ export default function CasosPage() {
       else setLoading(true);
       setError('');
       try {
-        const res = await listGroups(page, LIMIT);
+        const res = await listGroups(page, LIMIT, estadoFiltro || undefined);
         setGrupos(res.data ?? []);
         setTotal(res.total);
       } catch (err) {
@@ -38,8 +47,13 @@ export default function CasosPage() {
         setRefreshing(false);
       }
     },
-    [page],
+    [page, estadoFiltro],
   );
+
+  function handleFiltro(valor: string) {
+    setEstadoFiltro(valor);
+    setPage(1);
+  }
 
   const fetchNearby = useCallback(async () => {
     setLoading(true);
@@ -133,6 +147,40 @@ export default function CasosPage() {
         </button>
       </div>
 
+      {/* Filtro por estado (solo aplica al modo Todos): radios reales, en grilla que se envuelve — sin scroll horizontal */}
+      {mode === 'all' && (
+        <div
+          role="radiogroup"
+          aria-label="Filtrar por estado"
+          className="flex flex-wrap gap-2 mb-5"
+        >
+          {ESTADOS.map(({ label, value }) => {
+            const checked = estadoFiltro === value;
+            return (
+              <label key={value} className="cursor-pointer">
+                <input
+                  type="radio"
+                  name="estado-filtro"
+                  value={value}
+                  checked={checked}
+                  onChange={() => handleFiltro(value)}
+                  className="sr-only"
+                />
+                <span
+                  className={`flex items-center justify-center h-11 px-4 rounded-pill text-xs font-semibold whitespace-nowrap transition-colors ${
+                    checked
+                      ? 'bg-tierra text-perla shadow-sm'
+                      : 'bg-yeso text-catedral hover:bg-arcilla hover:text-tierra'
+                  }`}
+                >
+                  {label}
+                </span>
+              </label>
+            );
+          })}
+        </div>
+      )}
+
       {loading && grupos.length === 0 && (
         <div className="space-y-3" aria-busy="true">
           {[1, 2, 3].map((i) => (
@@ -151,10 +199,22 @@ export default function CasosPage() {
       )}
 
       {!loading && !error && grupos.length === 0 && (
-        <div className="text-center text-sm text-arena py-16">
-          {mode === 'nearby'
-            ? 'No hay Casos de Obra cercanos a tu ubicacion.'
-            : 'No hay Casos de Obra asignados todavia.'}
+        <div className="text-center text-sm text-arena py-16 space-y-2">
+          <p>
+            {mode === 'nearby'
+              ? 'No hay Casos de Obra cercanos a tu ubicacion.'
+              : estadoFiltro
+                ? `No hay casos con estado "${estadoFiltro}".`
+                : 'No hay Casos de Obra asignados todavia.'}
+          </p>
+          {mode === 'all' && estadoFiltro && (
+            <button
+              onClick={() => handleFiltro('')}
+              className="text-xs text-caoba underline underline-offset-2"
+            >
+              Ver todos
+            </button>
+          )}
         </div>
       )}
 
