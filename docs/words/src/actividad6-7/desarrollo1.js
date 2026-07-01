@@ -1,0 +1,163 @@
+const { P, H1, H2, H3, Bullet, PageBreakP, Blank, TablaTitulo, hc, bc, rowT, Tbl } = require('./helpers');
+
+const desarrollo1 = [
+    H1("Desarrollo — Parte I: Sprint 2 (Módulos de Negocio y Procesamiento de Datos)"),
+    P('Sprint Goal: "Que un técnico de campo pueda ver y cerrar Casos de Obra cercanos con bitácora fotográfica, y que un administrador gestione usuarios y dispositivos desde el back-office, completando el ciclo operativo del sistema más allá de la moderación inicial construida en el Sprint 1." Período de ejecución: 8 al 29 de junio de 2026.'),
+
+    H2("Paso 1: Arquitectura en Capas"),
+    P("Los microservicios ms-register y ms-admin mantienen la separación Controller–Service–Repository iniciada en el Sprint 1. Los controladores reciben el mensaje (HTTP en el Gateway, TCP en el microservicio) y delegan de inmediato al servicio; los servicios concentran las reglas de negocio, las transacciones y las consultas con QueryBuilder; los repositorios —instancias de Repository<Entity> inyectadas por TypeORM— encapsulan el acceso a las tablas. La Tabla 1 enumera la estructura de carpetas verificada en el repositorio."),
+    ...TablaTitulo(1, "Estructura de carpetas en capas — ms-register y ms-admin"),
+    Tbl([2200, 3400, 3760], [
+        rowT([hc("Capa", 2200), hc("Responsabilidad", 3400), hc("Archivo(s)", 3760)]),
+        rowT([bc("Controllers", 2200, { bold: true }), bc("Traducen HTTP/TCP a llamadas de método; no contienen lógica de negocio", 3400), bc("gateway-principal/src/{reportes,admin}.controller.ts, ms-register/src/register.controller.ts, ms-admin/src/admin.controller.ts", 3760)]),
+        rowT([bc("Services", 2200, { bold: true }), bc("Reglas de negocio, transacciones, QueryBuilder, orquestación entre repositorios", 3400), bc("ms-register/src/register.service.ts, ms-admin/src/admin.service.ts", 3760)]),
+        rowT([bc("Repositories / Entities", 2200, { bold: true }), bc("Mapeo objeto-relacional; cada entidad TypeORM expone su Repository<T> inyectable", 3400), bc("libs/common/src/entities/{reporte,grupo-reporte,dispositivo,categoria,actualizacion-caso}.entity.ts", 3760)]),
+        rowT([bc("DTOs", 2200, { bold: true }), bc("Contratos de entrada validados con class-validator; cruzan la capa Controller → Service", 3400), bc("ms-register/src/dto/*.dto.ts, ms-admin/src/dto/index.ts", 3760)]),
+    ]),
+    Blank(),
+    P("Las entidades compartidas (Reporte, GrupoReporte, Dispositivo, Categoria, ActualizacionCaso) residen en la librería libs/common para que ms-register y ms-admin operen sobre el mismo esquema sin duplicar definiciones, evitando el desfase de tipos entre microservicios que comparten tablas de PostgreSQL."),
+
+    H2("Paso 2: CRUD de las Entidades de Negocio"),
+    P("Se implementaron CRUD funcionales para las cuatro entidades de negocio principales: Reportes, Casos de Obra (GrupoReporte), Dispositivos y Usuarios. Todas las operaciones de listado son paginadas (parámetros page/limit traducidos a skip/take de TypeORM) y todas las operaciones de escritura están validadas mediante DTOs. La Tabla 2 mapea cada operación CRUD a su endpoint real."),
+    ...TablaTitulo(2, "CRUD de entidades de negocio — mapeo a endpoints reales"),
+    Tbl([1600, 2000, 1900, 1600, 2260], [
+        rowT([hc("Entidad", 1600), hc("Create (POST)", 2000), hc("Read (list)", 1900), hc("Read (:id)", 1600), hc("Update / Delete lógico", 2260)]),
+        rowT([bc("Reportes", 1600, { bold: true }), bc("POST /reportes", 2000), bc("GET /reportes?page=&limit=", 1900), bc("GET /reportes/:id", 1600), bc("POST /admin/reports/:id/accept, /reject", 2260)]),
+        rowT([bc("Casos de Obra", 1600, { bold: true }), bc("POST /admin/groups", 2000), bc("GET /admin/groups?page=&estado=", 1900), bc("GET /admin/groups/:id", 1600), bc("POST /admin/groups/:id/updates (bitácora, GPS, cierre)", 2260)]),
+        rowT([bc("Dispositivos", 1600, { bold: true }), bc("(alta automática al primer reporte)", 2000), bc("GET /admin/devices?page=&banned_only=", 1900), bc("— (agregado en heatmap)", 1600), bc("POST /admin/devices/ban, /unban", 2260)]),
+        rowT([bc("Usuarios", 1600, { bold: true }), bc("POST /auth/register", 2000), bc("GET /auth/users?page=&limit=", 1900), bc("GET /auth/profile/:id", 1600), bc("POST /auth/logout (revoca refresh_tokens)", 2260)]),
+    ]),
+    Blank(),
+
+    H3("Borrado Lógico: por qué el sistema usa una Máquina de Estados en lugar de un campo \"activo\""),
+    P("La guía de la actividad sugiere el patrón genérico de borrado lógico (campo activo = false). Ojo Camba evalúa deliberadamente este patrón frente a la naturaleza del dominio y opta por una alternativa más estricta: ningún registro de negocio se oculta nunca, porque la transparencia pública verificable es el principio fundacional de la plataforma, formalizado desde el Acta de Constitución (Actividad 4). En su lugar, cada entidad transicional implementa una máquina de estados explícita —el enum EstadoReporte (Reportado → Aceptado/Rechazado → ValidacionEnCampo → EnTrabajo → Finalizado)— y las vistas \"activas\" filtran por estado en lugar de por un indicador booleano: getGroupsHeatmap() y listGroupsByCell() excluyen explícitamente los Casos de Obra en estado Rechazado o Finalizado (admin.service.ts, condición g.estado_actual NOT IN (:...estados)), que es funcionalmente equivalente a un activo = false pero conserva la fila completa, su historial de bitácora y el motivo de la transición. Para Dispositivos, el campo is_banned cumple el mismo rol: banear (POST /admin/devices/ban) retira al dispositivo del flujo operativo sin borrar sus reportes históricos, y unban lo reincorpora. Fowler (2002) respalda esta elección: cuando el dominio exige preservar el historial completo de transiciones, una máquina de estados auditable es el patrón correcto, no un colapso binario activo/inactivo."),
+
+    H3("Nota sobre el verbo PUT"),
+    P("El sistema no expone un PUT /entidad/:id genérico de reemplazo total de campos. En su lugar, cada transición de negocio tiene un endpoint con nombre explícito (POST .../accept, .../reject, .../updates, .../ban): esta decisión sigue el nivel 2-3 del modelo de madurez de Richardson, donde los recursos se manipulan mediante acciones semánticamente nombradas en lugar de un reemplazo ciego del objeto completo, evitando que un cliente sobrescriba accidentalmente campos gestionados por el servidor (codigo_obra, h3_res_8/11/13, creado_en)."),
+
+    H2("Paso 3: Consultas SQL para Reportes Gerenciales"),
+    P("Se documentan siete consultas de agregación: cinco operan hoy detrás de endpoints reales (con referencia exacta a archivo y línea) y dos se incorporan como consultas analíticas complementarias —ejecutables directamente en psql/pgAdmin— que cierran la cobertura de HAVING y subconsultas exigida por la rúbrica. Las siete usan JOIN y GROUP BY; las dos últimas añaden HAVING y subconsulta."),
+
+    H3("1. Mapa de calor de Casos de Obra por celda H3 y categoría (JOIN + GROUP BY + ORDER BY)"),
+    P("Fuente: backend/ms-admin/src/admin.service.ts, método getGroupsHeatmap(). Alimenta el endpoint GET /admin/groups/heatmap."),
+    require('./helpers').CodeBlock("SELECT r.h3_res_8 AS h3_cell, g.categoria_id, COUNT(DISTINCT g.id) AS count\nFROM grupos_reportes g\nINNER JOIN reportes r ON r.grupo_id = g.id\nWHERE g.categoria_id IS NOT NULL\n  AND g.estado_actual NOT IN ('Rechazado', 'Finalizado')\nGROUP BY r.h3_res_8, g.categoria_id\nORDER BY count DESC;"),
+    Blank(),
+
+    H3("2. Reportes creados por mes, rango filtrable (GROUP BY + WHERE de rango)"),
+    P("Fuente: admin.service.ts, método getDashboardKpis() — ampliado en el Sprint 3 con el filtro desde/hasta real (ver Paso 4 de la Parte II y el Anexo A). Alimenta GET /admin/dashboard/kpis."),
+    require('./helpers').CodeBlock("SELECT TO_CHAR(DATE_TRUNC('month', r.creado_en), 'YYYY-MM') AS mes,\n       COUNT(r.id) AS total\nFROM reportes r\nWHERE r.creado_en BETWEEN :desde AND :hasta\nGROUP BY DATE_TRUNC('month', r.creado_en)\nORDER BY DATE_TRUNC('month', r.creado_en) ASC;"),
+    Blank(),
+
+    H3("3. Distribución de reportes por categoría (INNER JOIN + GROUP BY)"),
+    P("Fuente: admin.service.ts, método getDashboardKpis()."),
+    require('./helpers').CodeBlock("SELECT r.categoria_id, c.nombre, COUNT(r.id) AS total\nFROM reportes r\nINNER JOIN categorias c ON c.id = r.categoria_id\nWHERE r.categoria_id IS NOT NULL\nGROUP BY r.categoria_id, c.nombre\nORDER BY total DESC;"),
+    Blank(),
+
+    H3("4. Casos de Obra por estado actual (GROUP BY)"),
+    P("Fuente: admin.service.ts, método getDashboardKpis()."),
+    require('./helpers').CodeBlock("SELECT g.estado_actual AS estado, COUNT(g.id) AS total\nFROM grupos_reportes g\nGROUP BY g.estado_actual;"),
+    Blank(),
+
+    H3("5. Listado paginado de Casos de Obra con total de reportes agregados (LEFT JOIN + GROUP BY + paginación)"),
+    P("Fuente: admin.service.ts, método listGroups(). Alimenta GET /admin/groups."),
+    require('./helpers').CodeBlock("SELECT g.*, COUNT(r.id) AS total_reportes\nFROM grupos_reportes g\nLEFT JOIN reportes r ON r.grupo_id = g.id\nGROUP BY g.id\nORDER BY g.creado_en DESC\nOFFSET :skip LIMIT :limit;"),
+    Blank(),
+
+    H3("6. [Análisis complementario] Dispositivos con alta tasa de rechazo (JOIN + GROUP BY + HAVING)"),
+    P("Consulta nueva de soporte a moderación, ejecutable directamente en psql. Identifica dispositivos con 3 o más reportes rechazados, candidatos a revisión para baneo preventivo (HU-09)."),
+    require('./helpers').CodeBlock("SELECT d.device_id,\n       COUNT(r.id) AS total_reportes,\n       COUNT(r.id) FILTER (WHERE r.estado = 'Rechazado') AS rechazados,\n       ROUND(100.0 * COUNT(r.id)\n             FILTER (WHERE r.estado = 'Rechazado') / COUNT(r.id), 1) AS tasa_rechazo_pct\nFROM dispositivos d\nJOIN reportes r ON r.device_id = d.device_id\nGROUP BY d.device_id\nHAVING COUNT(r.id) FILTER (WHERE r.estado = 'Rechazado') >= 3\nORDER BY tasa_rechazo_pct DESC;"),
+    Blank(),
+
+    H3("7. [Análisis complementario] Categorías con Casos de Obra activos por encima del promedio general (GROUP BY + HAVING + subconsulta)"),
+    P("Consulta de priorización para el Dashboard: compara cada categoría contra el promedio general de casos activos por categoría, calculado en una subconsulta derivada."),
+    require('./helpers').CodeBlock("SELECT c.nombre AS categoria, COUNT(g.id) AS casos_activos\nFROM categorias c\nJOIN grupos_reportes g ON g.categoria_id = c.id\nWHERE g.estado_actual NOT IN ('Rechazado', 'Finalizado')\nGROUP BY c.nombre\nHAVING COUNT(g.id) > (\n  SELECT AVG(t.total) FROM (\n    SELECT COUNT(id) AS total FROM grupos_reportes\n    WHERE categoria_id IS NOT NULL\n      AND estado_actual NOT IN ('Rechazado', 'Finalizado')\n    GROUP BY categoria_id\n  ) AS t\n)\nORDER BY casos_activos DESC;"),
+    P("Nota. Las consultas 1 a 5 se verifican con datos reales en el Anexo A (código completo de los métodos de servicio); las consultas 6 y 7 se incluyen como SQL puro, listas para ejecutarse contra el esquema productivo y candidatas a convertirse en nuevos endpoints del Dashboard en una futura iteración."),
+
+    H2("Paso 4: Documentación de la API con Postman"),
+    P("La colección docs/words/postman/OjoCamba_API.postman_collection.json se amplió de 27 a 34 endpoints documentados, organizados en cuatro carpetas. Por cada endpoint se documenta nombre descriptivo, método HTTP, URL con variables de colección, cuerpo de ejemplo (cuando aplica) y, en los flujos de autenticación y creación, un script de test que captura automáticamente el valor de respuesta (access_token, report_id, group_id) en una variable de colección para encadenar la siguiente solicitud sin copiar valores manualmente."),
+    ...TablaTitulo(3, "Endpoints documentados en la colección Postman, por carpeta"),
+    Tbl([2800, 1800, 4760], [
+        rowT([hc("Carpeta", 2800), hc("Endpoints", 1800), hc("Incorporados en Sprint 2/3", 4760)]),
+        rowT([bc("Auth", 2800, { bold: true }), bc("7", 1800, { center: true }), bc("Sin cambios respecto al Sprint 1", 4760)]),
+        rowT([bc("Reportes", 2800, { bold: true }), bc("7", 1800, { center: true }), bc("Sin cambios respecto al Sprint 1", 4760)]),
+        rowT([bc("Admin (Moderación)", 2800, { bold: true }), bc("17", 1800, { center: true }), bc("+4: reports/nearby, devices/unban, groups/:id/reports, dashboard/kpis (con filtro desde/hasta)", 4760)]),
+        rowT([bc("Gamificación", 2800, { bold: true }), bc("3", 1800, { center: true }), bc("Carpeta nueva: award, stats/:id, levels", 4760)]),
+        rowT([bc("Total", 2800, { bold: true, fill: "efebe4" }), bc("34", 1800, { center: true, bold: true, fill: "efebe4" }), bc("", 4760, { fill: "efebe4" })]),
+    ]),
+    Blank(),
+    P("La colección se exportó en formato Postman Collection v2.1.0 y se versiona junto al código fuente en el repositorio GitHub, dentro de docs/words/postman/."),
+
+    H2("Paso 5: Validaciones"),
+    P("Cada operación de escritura define su contrato de entrada mediante un DTO decorado con class-validator (paquete oficial recomendado para NestJS, equivalente a express-validator en Express puro). Los DTOs documentan explícitamente qué campos son obligatorios, qué tipo de dato esperan y qué rango es válido. La Tabla 4 resume los DTOs de escritura del Sprint 2; el código completo de los cuatro DTOs de ms-admin se reproduce en el Anexo C."),
+    ...TablaTitulo(4, "DTOs de validación de entrada — class-validator"),
+    Tbl([2000, 5560, 1800], [
+        rowT([hc("DTO", 2000), hc("Reglas declaradas", 5560), hc("Archivo", 1800)]),
+        rowT([bc("CreateReporteDto", 2000, { bold: true }), bc("device_id requerido (string); lat ∈ [-90,90]; lng ∈ [-180,180]; categoria_id numérico; gravedad opcional limitada al enum Gravedad", 5560), bc("ms-register/src/dto/create-reporte.dto.ts", 1800)]),
+        rowT([bc("CreateGroupDto", 2000, { bold: true }), bc("report_ids: arreglo de enteros, mínimo 2 elementos (ArrayMinSize); creado_por_usuario_id entero requerido", 5560), bc("ms-admin/src/dto/index.ts", 1800)]),
+        rowT([bc("UpdateCaseDto", 2000, { bold: true }), bc("grupo_id y usuario_id enteros requeridos; comentario no vacío; url_imagen/estado_nuevo/recursos_solicitados/fecha_estimada_fin/lat_actualizada/lng_actualizada explícitamente opcionales", 5560), bc("ms-admin/src/dto/index.ts", 1800)]),
+        rowT([bc("BanDeviceDto", 2000, { bold: true }), bc("device_id requerido; motivo opcional (texto libre)", 5560), bc("ms-admin/src/dto/index.ts", 1800)]),
+        rowT([bc("LoginDto / RegisterDto", 2000, { bold: true }), bc("email con formato válido (@IsEmail); password string requerido", 5560), bc("ms-auth/src/dto/*.dto.ts", 1800)]),
+    ]),
+    Blank(),
+    P("Las reglas de negocio que no se expresan como restricción de tipo se validan explícitamente en la capa de servicio mediante guard clauses que lanzan la excepción semánticamente correcta: unicidad de email en el registro (auth.service.ts, ConflictException si el correo ya existe), cantidad mínima de reportes para agrupar (admin.service.ts createGroup(), BadRequestException si report_ids.length < 2), existencia de los reportes referenciados (BadRequestException si alguno no existe), transición de estado válida contra el enum EstadoReporte (updateCase(), BadRequestException con el listado de estados válidos) y control de concurrencia en la doble aceptación de un mismo reporte mediante bloqueo pesimista de fila (acceptReport(), transacción con lock: pessimistic_write)."),
+    P("El formato de error estandarizado se resuelve en dos niveles. A nivel de microservicio, cada excepción de negocio se propaga como { status: 'error', message }. El API Gateway (gateway-principal/src/rpc.helper.ts, función sendRpc) intercepta ese mensaje y lo traduce a la excepción HTTP semánticamente correcta —ConflictException (409), UnauthorizedException (401), NotFoundException (404) o BadRequestException (400)— según el contenido del mensaje. El filtro de excepciones nativo de NestJS serializa cualquiera de ellas en un envoltorio JSON consistente {statusCode, message, error} para todos los endpoints del sistema, cumpliendo el mismo objetivo que el formato {success: false, errors: [...]} sugerido por la guía de la actividad: el cliente nunca necesita interpretar dos formas distintas de fallo. Como área de mejora identificada en la Retrospectiva, el despacho en sendRpc() compara subcadenas de texto del mensaje en lugar de códigos de error tipados; se documenta como deuda técnica (TD-04) para una futura iteración."),
+
+    H2("Paso 6: Burndown Chart — Sprint 2"),
+    P("Al inicio del Sprint 2 se registraron 27 story points comprometidos en 8 historias. La Tabla 5 detalla el Sprint Backlog inicial."),
+    ...TablaTitulo(5, "Sprint Backlog del Sprint 2 — estado inicial (27 SP)"),
+    Tbl([1400, 4360, 1000, 2600], [
+        rowT([hc("HU", 1400), hc("Historia de Usuario", 4360), hc("SP", 1000), hc("Responsable", 2600)]),
+        rowT([bc("HU-10", 1400, { bold: true }), bc("Ver Casos de Obra cercanos (técnico)", 4360), bc("5", 1000, { center: true }), bc("Jonathan Arrieta", 2600)]),
+        rowT([bc("HU-11", 1400, { bold: true }), bc("Agrupar reportes en terreno (técnico)", 4360), bc("5", 1000, { center: true }), bc("Jonathan Arrieta", 2600)]),
+        rowT([bc("HU-12", 1400, { bold: true }), bc("Registrar bitácora de obra", 4360), bc("5", 1000, { center: true }), bc("Alexis Santiváñez", 2600)]),
+        rowT([bc("HU-13", 1400, { bold: true }), bc("Corregir coordenadas GPS de un reporte", 4360), bc("2", 1000, { center: true }), bc("Alexis Santiváñez", 2600)]),
+        rowT([bc("HU-14", 1400, { bold: true }), bc("Cerrar Caso de Obra como Finalizado", 4360), bc("3", 1000, { center: true }), bc("Alexis Santiváñez", 2600)]),
+        rowT([bc("HU-19", 1400, { bold: true }), bc("Gestionar usuarios registrados (admin)", 4360), bc("3", 1000, { center: true }), bc("Gerson Alvarado", 2600)]),
+        rowT([bc("HU-20", 1400, { bold: true }), bc("Vincular dispositivo a cuenta", 4360), bc("2", 1000, { center: true }), bc("Jhoel Cruz", 2600)]),
+        rowT([bc("HU-21", 1400, { bold: true }), bc("Consultar mis reportes", 4360), bc("2", 1000, { center: true }), bc("Jhoel Cruz", 2600)]),
+        rowT([bc("TOTAL", 1400, { bold: true, fill: "efebe4" }), bc("", 4360, { fill: "efebe4" }), bc("27", 1000, { center: true, bold: true, fill: "efebe4" }), bc("", 2600, { fill: "efebe4" })]),
+    ]),
+    Blank(),
+    P("La Tabla 6 registra los story points restantes al cierre de cada día hábil del Sprint, línea ideal (descenso lineal de 2,7 SP/día) frente a línea real. Estos datos alimentan el gráfico de Burndown elaborado en Google Sheets, externo al repositorio de código."),
+    ...TablaTitulo(6, "Burndown Chart Sprint 2 — SP restantes, ideal vs. real (8–24 de junio de 2026)"),
+    Tbl([1800, 1500, 1500, 4560], [
+        rowT([hc("Día", 1800), hc("Ideal (SP rest.)", 1500), hc("Real (SP rest.)", 1500), hc("Nota", 4560)]),
+        rowT([bc("Día 0 (8 jun)", 1800), bc("27", 1500, { center: true }), bc("27", 1500, { center: true }), bc("Sprint Planning; backlog comprometido", 4560)]),
+        rowT([bc("Día 1 (9 jun)", 1800), bc("24", 1500, { center: true }), bc("27", 1500, { center: true }), bc("Levantamiento de entidades compartidas (libs/common), sin HU cerrada aún", 4560)]),
+        rowT([bc("Día 2 (10 jun)", 1800), bc("22", 1500, { center: true }), bc("25", 1500, { center: true }), bc("HU-20 (vincular dispositivo) completada", 4560)]),
+        rowT([bc("Día 3 (11 jun)", 1800), bc("19", 1500, { center: true }), bc("22", 1500, { center: true }), bc("HU-13 (corregir GPS) y HU-21 (mis reportes) completadas", 4560)]),
+        rowT([bc("Día 4 (12 jun)", 1800), bc("16", 1500, { center: true }), bc("22", 1500, { center: true }), bc("Bloqueo: HU-11 dependía de reutilizar la generación de codigo_obra de HU-08; resuelto con pair programming Jonathan–Gerson", 4560)]),
+        rowT([bc("Día 5 (15 jun)", 1800), bc("14", 1500, { center: true }), bc("20", 1500, { center: true }), bc("HU-19 (gestión de usuarios) completada tras resolver el bloqueo", 4560)]),
+        rowT([bc("Día 6 (16 jun)", 1800), bc("11", 1500, { center: true }), bc("15", 1500, { center: true }), bc("HU-10 y HU-11 (técnico: cercanos y agrupar en terreno) completadas", 4560)]),
+        rowT([bc("Día 7 (17 jun)", 1800), bc("8", 1500, { center: true }), bc("11", 1500, { center: true }), bc("HU-12 (bitácora de obra) completada", 4560)]),
+        rowT([bc("Día 8 (18 jun)", 1800), bc("5", 1500, { center: true }), bc("7", 1500, { center: true }), bc("Code review cruzado y ajustes de paginación en /admin/devices", 4560)]),
+        rowT([bc("Día 9 (19 jun)", 1800), bc("3", 1500, { center: true }), bc("3", 1500, { center: true }), bc("HU-14 (cerrar Caso de Obra) completada", 4560)]),
+        rowT([bc("Día 10 (22 jun)", 1800), bc("0", 1500, { center: true }), bc("0", 1500, { center: true }), bc("Cierre técnico del Sprint Backlog; estabilización para Sprint Review", 4560)]),
+    ]),
+    Blank(),
+
+    H2("Sprint Review y Retrospectiva del Sprint 2 (26 y 29 de junio de 2026)"),
+    P("La Sprint Review se realizó el 26 de junio de 2026 con demostración en vivo de las 8 historias comprometidas al Product Owner. Velocidad real del Sprint 2: 27 SP sobre 27 SP comprometidos (100%), superando la meta de velocidad ≥ 26 SP fijada en el Sprint 1 (Acta de Constitución, Tabla 8)."),
+    ...TablaTitulo(7, "Evidencia demostrada en la Sprint Review del Sprint 2"),
+    Tbl([1600, 2600, 5160], [
+        rowT([hc("HU", 1600), hc("Historia", 2600), hc("Evidencia demostrada", 5160)]),
+        rowT([bc("HU-10/11", 1600, { bold: true }), bc("Casos cercanos y agrupar en terreno", 2600), bc("GET /admin/groups/by-cell devuelve grupos del hexágono H3 actual; POST /admin/groups crea Caso de Obra desde la app de Técnicos", 5160)]),
+        rowT([bc("HU-12/13", 1600, { bold: true }), bc("Bitácora y corrección de GPS", 2600), bc("POST /admin/groups/:id/updates registra comentario, recurso solicitado y coordenadas corregidas; visible en GET /admin/groups/:id/timeline", 5160)]),
+        rowT([bc("HU-14", 1600, { bold: true }), bc("Cerrar Caso de Obra", 2600), bc("updateCase() con estado_nuevo=Finalizado propaga el estado a todos los reportes del grupo", 5160)]),
+        rowT([bc("HU-19", 1600, { bold: true }), bc("Gestionar usuarios", 2600), bc("GET /auth/users?page=&limit= lista usuarios paginados con sus roles", 5160)]),
+        rowT([bc("HU-20/21", 1600, { bold: true }), bc("Vincular dispositivo y mis reportes", 2600), bc("POST /reportes/vincular asocia device_id a usuario_id; historial anónimo recuperado en sesión", 5160)]),
+    ]),
+    Blank(),
+
+    H3("Retrospectiva del Sprint 2"),
+    ...TablaTitulo(8, "Retrospectiva del Sprint 2 — Qué funcionó / Qué mejorar / Acciones"),
+    Tbl([3120, 3120, 3120], [
+        rowT([hc("Qué funcionó", 3120), hc("Qué mejorar", 3120), hc("Acción concreta", 3120)]),
+        rowT([bc("Reutilizar la generación de codigo_obra entre acceptReport() y createGroup() evitó lógica duplicada", 3120), bc("El bloqueo del día 4 reveló que esa reutilización no estaba documentada como dependencia explícita", 3120), bc("Extraer la generación de codigo_obra a un método compartido del servicio antes de Sprint 3 (TD-01 cerrado)", 3120)]),
+        rowT([bc("La paginación uniforme (page/limit) en los cuatro CRUD redujo tiempo de revisión de código", 3120), bc("sendRpc() despacha errores por coincidencia de subcadena de texto, frágil ante cambios de redacción", 3120), bc("Documentar como deuda técnica TD-04: migrar a códigos de error tipados en una iteración futura", 3120)]),
+        rowT([bc("La decisión de máquina de estados en vez de borrado físico se validó como coherente con la transparencia pública del proyecto", 3120), bc("Cobertura de pruebas automatizadas aún limitada a unit tests de admin.service.spec.ts", 3120), bc("Priorizar en Sprint 3 una tabla de pruebas de integración manual como puente hacia E2E automatizado", 3120)]),
+    ]),
+    PageBreakP(),
+];
+
+module.exports = { desarrollo1 };
