@@ -45,8 +45,14 @@ export interface ActualizacionPayload {
   url_imagen?: string;
 }
 
-export async function listGroups(page = 1, limit = 20): Promise<PaginatedResponse<GrupoReporte>> {
-  return fetchAPI<PaginatedResponse<GrupoReporte>>(`/admin/groups?page=${page}&limit=${limit}`);
+export async function listGroups(
+  page = 1,
+  limit = 20,
+  estado?: string,
+): Promise<PaginatedResponse<GrupoReporte>> {
+  const q = new URLSearchParams({ page: String(page), limit: String(limit) });
+  if (estado) q.set('estado', estado);
+  return fetchAPI<PaginatedResponse<GrupoReporte>>(`/admin/groups?${q.toString()}`);
 }
 
 export async function listGroupsNearby(
