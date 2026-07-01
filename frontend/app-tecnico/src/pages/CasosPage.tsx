@@ -1,14 +1,18 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronRight, FolderOpen, Calendar, RefreshCw } from 'lucide-react';
-import { listGroups, type GrupoReporte } from '../lib/tecnicoApi';
+import { ChevronRight, FolderOpen, Calendar, RefreshCw, Compass } from 'lucide-react';
+import { listGroups, listGroupsNearby, type GrupoReporte } from '../lib/tecnicoApi';
+import { useGeolocation } from '../hooks/useGeolocation';
 import { friendlyError } from '../lib/errors';
 import StatusBadge from '../components/StatusBadge';
 import Pagination from '../components/Pagination';
 
 const LIMIT = 20;
 
+type TabMode = 'all' | 'nearby';
+
 export default function CasosPage() {
+  const [mode, setMode] = useState<TabMode>('all');
   const [grupos, setGrupos] = useState<GrupoReporte[]>([]);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
@@ -16,7 +20,9 @@ export default function CasosPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
 
-  const fetchData = useCallback(
+  const gps = useGeolocation();
+
+  const fetchAll = useCallback(
     async (silent = false) => {
       if (silent) setRefreshing(true);
       else setLoading(true);
@@ -35,9 +41,46 @@ export default function CasosPage() {
     [page],
   );
 
+  const fetchNearby = useCallback(async () => {
+    setLoading(true);
+    setError('');
+    try {
+      await gps.capture();
+    } catch {
+      setError('No se pudo obtener tu ubicacion.');
+      setLoading(false);
+    }
+  }, [gps]);
+
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    if (mode === 'all') {
+      fetchAll();
+    }
+  }, [mode, fetchAll]);
+
+  useEffect(() => {
+    if (mode === 'nearby' && gps.status === 'success' && gps.fix) {
+      listGroupsNearby(gps.fix.lat, gps.fix.lng)
+        .then((data) => {
+          setGrupos(data);
+          setTotal(data.length);
+        })
+        .catch((err) => setError(friendlyError(err)))
+        .finally(() => setLoading(false));
+    }
+  }, [mode, gps.status, gps.fix]);
+
+  useEffect(() => {
+    if (mode === 'nearby' && gps.status === 'error') {
+      setError(gps.error ?? 'No se pudo obtener tu ubicacion.');
+      setLoading(false);
+    }
+  }, [mode, gps.status, gps.error]);
+
+  const handleRefresh = () => {
+    if (mode === 'all') fetchAll(true);
+    else fetchNearby();
+  };
 
   return (
     <div>
@@ -47,12 +90,46 @@ export default function CasosPage() {
           <h2 className="font-semibold text-lg text-tierra">Casos de Obra</h2>
         </div>
         <button
-          onClick={() => fetchData(true)}
+          onClick={handleRefresh}
           disabled={loading || refreshing}
           aria-label="Actualizar"
           className="w-10 h-10 flex items-center justify-center rounded-2xl text-caoba hover:text-tierra hover:bg-yeso disabled:opacity-40 transition-colors"
         >
-          <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+          <RefreshCw
+            className={`w-4 h-4 ${refreshing || (mode === 'nearby' && gps.status === 'loading') ? 'animate-spin' : ''}`}
+          />
+        </button>
+      </div>
+
+      {/* Toggle Todos / Cercanos */}
+      <div className="flex gap-2 mb-5">
+        <button
+          onClick={() => {
+            setMode('all');
+            setPage(1);
+          }}
+          className={`flex-1 flex items-center justify-center gap-2 text-xs font-medium py-2.5 rounded-3xl-3 transition-colors ${
+            mode === 'all'
+              ? 'bg-selva text-perla'
+              : 'bg-perla text-arena border border-arcilla hover:border-selva'
+          }`}
+        >
+          <FolderOpen className="w-3.5 h-3.5" />
+          Todos
+        </button>
+        <button
+          onClick={() => {
+            setMode('nearby');
+            setGrupos([]);
+          }}
+          className={`flex-1 flex items-center justify-center gap-2 text-xs font-medium py-2.5 rounded-3xl-3 transition-colors ${
+            mode === 'nearby'
+              ? 'bg-selva text-perla'
+              : 'bg-perla text-arena border border-arcilla hover:border-selva'
+          }`}
+        >
+          <Compass className="w-3.5 h-3.5" />
+          Cercanos
         </button>
       </div>
 
@@ -75,7 +152,9 @@ export default function CasosPage() {
 
       {!loading && !error && grupos.length === 0 && (
         <div className="text-center text-sm text-arena py-16">
-          No hay Casos de Obra asignados todavia.
+          {mode === 'nearby'
+            ? 'No hay Casos de Obra cercanos a tu ubicacion.'
+            : 'No hay Casos de Obra asignados todavia.'}
         </div>
       )}
 
@@ -111,7 +190,7 @@ export default function CasosPage() {
         </ul>
       )}
 
-      {!loading && !error && (
+      {mode === 'all' && !loading && !error && (
         <Pagination page={page} total={total} limit={LIMIT} onPageChange={setPage} />
       )}
     </div>

@@ -49,6 +49,14 @@ export async function listGroups(page = 1, limit = 20): Promise<PaginatedRespons
   return fetchAPI<PaginatedResponse<GrupoReporte>>(`/admin/groups?page=${page}&limit=${limit}`);
 }
 
+export async function listGroupsNearby(
+  lat: number,
+  lng: number,
+  radiusM = 300,
+): Promise<GrupoReporte[]> {
+  return fetchAPI<GrupoReporte[]>(`/admin/groups/nearby?lat=${lat}&lng=${lng}&radius=${radiusM}`);
+}
+
 export async function getGroup(id: number): Promise<GrupoReporte> {
   return fetchAPI<GrupoReporte>(`/admin/groups/${id}`);
 }

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -11,6 +11,9 @@ import {
   Package,
   Crosshair,
   Share2,
+  Camera,
+  X,
+  ChevronDown,
 } from 'lucide-react';
 import {
   getGroup,
@@ -22,6 +25,7 @@ import {
 import {
   actualizacionSchema,
   buildActualizacionPayload,
+  ESTADOS_TECNICO,
   type ActualizacionForm,
   type GpsFix,
 } from '../lib/actualizacion';
@@ -42,6 +46,8 @@ export default function CasoDetallePage() {
   const [error, setError] = useState('');
   const [sending, setSending] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
+  const [imagen, setImagen] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const gps = useGeolocation();
 
@@ -77,6 +83,14 @@ export default function CasoDetallePage() {
     }
   };
 
+  const handleImageCapture = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onloadend = () => setImagen(reader.result as string);
+    reader.readAsDataURL(file);
+  };
+
   const onSubmit = async (data: ActualizacionForm) => {
     if (isNaN(numId) || !user) return;
     setSending(true);
@@ -84,12 +98,13 @@ export default function CasoDetallePage() {
     setError('');
     try {
       const fix: GpsFix | null = gps.status === 'success' ? gps.fix : null;
-      const payload = buildActualizacionPayload(user.id, data, fix);
+      const payload = buildActualizacionPayload(user.id, data, fix, imagen);
       await addActualizacion(numId, payload);
 
       const freshTimeline = await getCaseTimeline(numId);
       setTimeline(freshTimeline);
-      reset({ comentario: '', recursos_solicitados: '', fecha_estimada_fin: '' });
+      reset({ comentario: '', recursos_solicitados: '', fecha_estimada_fin: '', estado_nuevo: '' });
+      setImagen(null);
       gps.reset();
       setSuccessMsg('Actualizacion registrada exitosamente.');
       setTimeout(() => setSuccessMsg(''), 3000);
@@ -153,7 +168,7 @@ export default function CasoDetallePage() {
         </div>
       </div>
 
-      {/* Formulario de bitacora diaria (sin cambio de estado) */}
+      {/* Formulario de bitacora diaria */}
       <form
         onSubmit={handleSubmit(onSubmit)}
         data-testid="form-actualizacion"
@@ -195,6 +210,30 @@ export default function CasoDetallePage() {
           {errors.comentario && (
             <p className="text-xs text-red-600 mt-1">{errors.comentario.message}</p>
           )}
+        </div>
+
+        <div>
+          <label
+            htmlFor="estado_nuevo"
+            className="block text-xs font-semibold text-ladrillo uppercase tracking-wide mb-1.5"
+          >
+            Transicion de estado (opcional)
+          </label>
+          <div className="relative">
+            <select
+              id="estado_nuevo"
+              {...register('estado_nuevo')}
+              className="bg-lienzo border border-arcilla rounded-3xl-3 px-4 py-3 text-sm text-tierra w-full appearance-none focus:outline-none focus:border-selva transition-colors"
+            >
+              <option value="">Sin cambio de estado</option>
+              {ESTADOS_TECNICO.filter((e) => e !== grupo.estado_actual).map((e) => (
+                <option key={e} value={e}>
+                  {e === 'EnTrabajo' ? 'En Trabajo' : 'Finalizado'}
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-arena pointer-events-none" />
+          </div>
         </div>
 
         <div>
@@ -267,6 +306,47 @@ export default function CasoDetallePage() {
           {gps.status === 'error' && gps.error && (
             <p className="text-xs text-red-600 mt-2">{gps.error}</p>
           )}
+        </div>
+
+        {/* Foto de avance */}
+        <div>
+          <p className="text-xs font-semibold text-ladrillo uppercase tracking-wide mb-1.5">
+            <Camera className="inline w-3.5 h-3.5 mr-1 -mt-0.5" />
+            Foto de avance (opcional)
+          </p>
+          {imagen ? (
+            <div className="relative">
+              <img
+                src={imagen}
+                alt="Preview"
+                className="w-full rounded-3xl-3 object-cover max-h-60"
+              />
+              <button
+                type="button"
+                onClick={() => setImagen(null)}
+                data-testid="btn-remove-image"
+                className="absolute top-2 right-2 w-7 h-7 flex items-center justify-center rounded-full bg-catedral/70 text-perla hover:bg-catedral transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          ) : (
+            <div
+              onClick={() => fileInputRef.current?.click()}
+              className="border-2 border-dashed border-arcilla rounded-3xl-3 p-6 flex flex-col items-center gap-2 cursor-pointer hover:border-selva transition-colors"
+            >
+              <Camera className="w-8 h-8 text-caoba" />
+              <span className="text-xs text-arena">Tomar foto o elegir de galeria</span>
+            </div>
+          )}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            onChange={handleImageCapture}
+            className="hidden"
+          />
         </div>
 
         <button
