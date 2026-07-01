@@ -220,6 +220,7 @@ Port:         3005
 Health check: GET /health → 200
 Env vars:
   PORT=3005
+  DATABASE_URL=postgresql://<user>:<pass>@<host-interno-coolify>:5432/ojocamba
   MS_AUTH_HOST=<host-interno-coolify>
   MS_AUTH_PORT=3001
   MS_REGISTER_HOST=<host-interno-coolify>
@@ -231,6 +232,8 @@ Env vars:
 Watch Paths:
   backend/gateway-status/**  libs/common/**  tsconfig.base.json  pnpm-workspace.yaml  docker/prod/Dockerfile.gateway-status
 ```
+
+> `gateway-status` ahora persiste cada ping en la tabla `ping_log` (historico de uptime, ISSUE-20). Antes de desplegar por primera vez con esta version, correr una vez `pnpm --filter @ojo-camba/gateway-status sync` con `DATABASE_URL` apuntando a la BD de produccion para crear la tabla (mismo mecanismo que `ms-register sync`).
 
 #### `app-reporte`
 
