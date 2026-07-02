@@ -726,11 +726,7 @@ describe('AdminService', () => {
       ]);
     });
 
-    it('excluye "Finalizado" de casos_por_estado_historico (es un balde terminal que crece para siempre, no una poblacion activa comparable) y lo expone aparte como flujo en finalizados_por_periodo', async () => {
-      // Bug real reportado: Finalizado mezclado en el mismo arreglo que los
-      // estados activos mostraba un acumulado de TODA la simulacion (miles)
-      // al lado de reportes_por_periodo (cientos) — comparacion sin sentido
-      // aunque cada numero fuera correcto por separado.
+    it('incluye "Finalizado" en casos_por_estado_historico para permitir graficar la evolucion acumulada del pipeline completo', async () => {
       reporteRepo.createQueryBuilder = jest
         .fn()
         .mockImplementationOnce(() => makeQb([], 0)) // pendientes
@@ -756,6 +752,7 @@ describe('AdminService', () => {
 
       expect(result.casos_por_estado_historico).toEqual([
         { dia: '2026-07-01', estado: 'Aceptado', total: 5 },
+        { dia: '2026-07-01', estado: 'Finalizado', total: 1732 },
         { dia: '2026-07-01', estado: 'EnTrabajo', total: 10 },
       ]);
       expect(result.finalizados_por_periodo).toEqual([{ periodo: '2026-07', total: 327 }]);
