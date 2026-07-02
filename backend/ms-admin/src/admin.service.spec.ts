@@ -440,37 +440,75 @@ describe('AdminService', () => {
   });
 
   describe('getDashboardKpis', () => {
-    it('sin rango, no aplica filtro de fecha en las agregaciones (comportamiento historico)', async () => {
-      const reportesPorMesQb = makeQb([{ mes: '2026-06', total: '5' }]);
+    it('sin rango, aplica fallback de "ultimos 6 meses" en las 3 agregaciones filtrables', async () => {
+      const reportesPorPeriodoQb = makeQb([{ periodo: '2026-06', total: '5' }]);
       const porCategoriaQb = makeQb([{ categoria_id: '1', nombre: 'bache', total: '3' }]);
       const casosPorEstadoQb = makeQb([{ estado: 'Finalizado', total: '2' }]);
 
       reporteRepo.createQueryBuilder = jest
         .fn()
+        .mockImplementationOnce(() => makeQb([], 0)) // pendientes (getDashboard)
         .mockImplementationOnce(() => makeQb([], 0)) // aceptadosHoy (getDashboard)
-        .mockImplementationOnce(() => reportesPorMesQb)
+        .mockImplementationOnce(() => makeQb([], 0)) // reportesActivos (getDashboard)
+        .mockImplementationOnce(() => reportesPorPeriodoQb)
         .mockImplementationOnce(() => porCategoriaQb);
       grupoRepo.createQueryBuilder = jest
         .fn()
         .mockImplementationOnce(() => makeQb([], 0)) // casosActivos (getDashboard)
         .mockImplementationOnce(() => casosPorEstadoQb);
+      actualizacionRepo.createQueryBuilder = jest.fn().mockImplementationOnce(() => makeQb([], 0)); // finalizadosPorPeriodo
 
       const result = await service.getDashboardKpis();
 
-      expect(reportesPorMesQb.andWhere).not.toHaveBeenCalled();
-      expect(reportesPorMesQb.where).toHaveBeenCalledWith(
+      // Sin rango explicito, reportes/categoria caen al fallback de 6 meses
+      // (nunca all-time — esa inconsistencia inflaba tasa_resolucion). Casos
+      // por estado es distinto: es poblacion "a hoy", no una cohorte, asi que
+      // solo aplica un limite superior (<=hasta), nunca uno inferior.
+      expect(reportesPorPeriodoQb.where).toHaveBeenCalledWith(
         'r.creado_en >= :desde',
         expect.any(Object),
       );
-      expect(porCategoriaQb.andWhere).not.toHaveBeenCalled();
-      expect(casosPorEstadoQb.where).not.toHaveBeenCalled();
+      expect(porCategoriaQb.andWhere).toHaveBeenCalledWith(
+        'r.creado_en >= :desde',
+        expect.any(Object),
+      );
+      expect(casosPorEstadoQb.where).toHaveBeenCalledWith(
+        'g.creado_en <= :hasta',
+        expect.any(Object),
+      );
       expect(result.rango_aplicado).toBeNull();
       expect(result.tasa_resolucion).toBe(100);
       expect(result.insights.length).toBeGreaterThan(0);
     });
 
+    it('incluye reportes_activos (metrica a nivel Reporte, distinta y complementaria a casos_activos/obras)', async () => {
+      const reportesActivosQb = makeQb([], 42);
+      reporteRepo.createQueryBuilder = jest
+        .fn()
+        .mockImplementationOnce(() => makeQb([], 0)) // pendientes
+        .mockImplementationOnce(() => makeQb([], 0)) // aceptadosHoy
+        .mockImplementationOnce(() => reportesActivosQb)
+        .mockImplementationOnce(() => makeQb([], 0)) // reportesPorPeriodo
+        .mockImplementationOnce(() => makeQb([], 0)); // porCategoria
+      grupoRepo.createQueryBuilder = jest
+        .fn()
+        .mockImplementationOnce(() => makeQb([], 0)) // casosActivos
+        .mockImplementationOnce(() => makeQb([], 0)); // casosPorEstado
+      actualizacionRepo.createQueryBuilder = jest.fn().mockImplementationOnce(() => makeQb([], 0)); // finalizadosPorPeriodo
+
+      const result = await service.getDashboardKpis();
+
+      expect(result.reportes_activos).toBe(42);
+      expect(reportesActivosQb.where).toHaveBeenCalledWith(
+        'r.estado NOT IN (:...estadosFinalesR)',
+        {
+          estadosFinalesR: [EstadoReporte.Rechazado, EstadoReporte.Finalizado],
+        },
+      );
+    });
+
     it('con desde/hasta, aplica BETWEEN en las 3 agregaciones filtrables y devuelve rango_aplicado', async () => {
-      const reportesPorMesQb = makeQb([{ mes: '2026-06', total: '5' }]);
+      const reportesPorPeriodoQb = makeQb([{ periodo: '2026-06', total: '5' }]);
       const porCategoriaQb = makeQb([{ categoria_id: '1', nombre: 'bache', total: '3' }]);
       const casosPorEstadoQb = makeQb([
         { estado: 'Finalizado', total: '1' },
@@ -479,17 +517,20 @@ describe('AdminService', () => {
 
       reporteRepo.createQueryBuilder = jest
         .fn()
-        .mockImplementationOnce(() => makeQb([], 0))
-        .mockImplementationOnce(() => reportesPorMesQb)
+        .mockImplementationOnce(() => makeQb([], 0)) // pendientes
+        .mockImplementationOnce(() => makeQb([], 0)) // aceptadosHoy
+        .mockImplementationOnce(() => makeQb([], 0)) // reportesActivos
+        .mockImplementationOnce(() => reportesPorPeriodoQb)
         .mockImplementationOnce(() => porCategoriaQb);
       grupoRepo.createQueryBuilder = jest
         .fn()
-        .mockImplementationOnce(() => makeQb([], 0))
+        .mockImplementationOnce(() => makeQb([], 0)) // casosActivos
         .mockImplementationOnce(() => casosPorEstadoQb);
+      actualizacionRepo.createQueryBuilder = jest.fn().mockImplementationOnce(() => makeQb([], 0)); // finalizadosPorPeriodo
 
       const result = await service.getDashboardKpis('2026-06-01', '2026-06-30');
 
-      expect(reportesPorMesQb.where).toHaveBeenCalledWith(
+      expect(reportesPorPeriodoQb.where).toHaveBeenCalledWith(
         'r.creado_en BETWEEN :desde AND :hasta',
         expect.any(Object),
       );
@@ -498,11 +539,45 @@ describe('AdminService', () => {
         expect.any(Object),
       );
       expect(casosPorEstadoQb.where).toHaveBeenCalledWith(
-        'g.creado_en BETWEEN :desde AND :hasta',
+        'g.creado_en <= :hasta',
         expect.any(Object),
       );
       expect(result.rango_aplicado).toEqual({ desde: '2026-06-01', hasta: '2026-06-30' });
       expect(result.tasa_resolucion).toBe(50);
+    });
+
+    it('casos_por_estado usa poblacion "a hoy" (<=hasta), no cohorte por fecha de creacion: coincide con el ultimo punto del historico', async () => {
+      // Bug real reportado: con un rango explicito, casos_por_estado (cohorte
+      // BETWEEN) daba un total distinto al ultimo punto de
+      // casos_por_estado_historico (poblacion completa <=hasta) — 301 vs 637
+      // en datos reales, mismo "estado actual" con dos numeros distintos.
+      // Ambas consultas deben usar el mismo criterio: creado antes de un
+      // limite superior, sin piso por fecha de creacion.
+      reporteRepo.createQueryBuilder = jest
+        .fn()
+        .mockImplementationOnce(() => makeQb([], 0))
+        .mockImplementationOnce(() => makeQb([], 0))
+        .mockImplementationOnce(() => makeQb([], 0))
+        .mockImplementationOnce(() => makeQb([], 0))
+        .mockImplementationOnce(() => makeQb([], 0));
+      const casosPorEstadoQb = makeQb([{ estado: 'Finalizado', total: '5' }]);
+      grupoRepo.createQueryBuilder = jest
+        .fn()
+        .mockImplementationOnce(() => makeQb([], 0))
+        .mockImplementationOnce(() => casosPorEstadoQb);
+      actualizacionRepo.createQueryBuilder = jest.fn().mockImplementationOnce(() => makeQb([], 0)); // finalizadosPorPeriodo
+
+      await service.getDashboardKpis('2026-02-01', '2026-07-02');
+
+      expect(casosPorEstadoQb.where).toHaveBeenCalledWith('g.creado_en <= :hasta', {
+        hasta: expect.any(String),
+      });
+      // Nunca debe agregarse un piso por fecha de creacion (BETWEEN o >=) —
+      // esa cohorte es justamente lo que causaba la incoherencia.
+      expect(casosPorEstadoQb.andWhere).not.toHaveBeenCalledWith(
+        expect.stringContaining('BETWEEN'),
+        expect.anything(),
+      );
     });
   });
 
@@ -530,7 +605,7 @@ describe('AdminService', () => {
       ]);
     });
 
-    it('pasa el rango desde/hasta como parametros de la consulta SQL', async () => {
+    it('pasa el rango desde/hasta y la granularidad como parametros de la consulta SQL cruda', async () => {
       await (
         service as unknown as {
           getCasosPorEstadoHistorico: (d?: string, h?: string) => Promise<unknown>;
@@ -540,6 +615,12 @@ describe('AdminService', () => {
       expect(grupoRepo.query).toHaveBeenCalledWith(expect.any(String), [
         '2026-06-01',
         '2026-06-05',
+        '1 day',
+        'YYYY-MM-DD',
+        null,
+        null,
+        null,
+        null,
       ]);
     });
 
@@ -550,7 +631,7 @@ describe('AdminService', () => {
         }
       ).getCasosPorEstadoHistorico();
 
-      const [, params] = grupoRepo.query.mock.calls[0] as [string, [string, string]];
+      const [, params] = grupoRepo.query.mock.calls[0] as [string, [string, string, ...unknown[]]];
       const [desde, hasta] = params;
       const dias = Math.round(
         (new Date(hasta).getTime() - new Date(desde).getTime()) / (1000 * 60 * 60 * 24),
@@ -558,16 +639,84 @@ describe('AdminService', () => {
       expect(dias).toBe(29);
     });
 
+    it('la consulta reconstruye poblacion (stock), no eventos de transicion (flujo): usa generate_series + LATERAL JOIN sobre grupos_reportes, no GROUP BY sobre actualizaciones_caso.creado_en', async () => {
+      await (
+        service as unknown as {
+          getCasosPorEstadoHistorico: (d?: string, h?: string) => Promise<unknown>;
+        }
+      ).getCasosPorEstadoHistorico('2026-06-01', '2026-06-05');
+
+      const [sql] = grupoRepo.query.mock.calls[0] as [string, unknown[]];
+      expect(sql).toContain('generate_series');
+      expect(sql).toContain('LEFT JOIN LATERAL');
+      expect(sql).toContain('CROSS JOIN grupos_reportes g');
+    });
+
+    it('desempata por id cuando dos actualizaciones del mismo grupo comparten exactamente el mismo creado_en', async () => {
+      // Bug real: el seed puede backdatear varias etapas de una misma bitacora
+      // al mismo instante (todas clampeadas contra "hoy"). "ORDER BY creado_en
+      // DESC" solo no alcanza para elegir la ultima etapa real cuando hay
+      // empate — sin un desempate estable, Postgres puede devolver cualquiera
+      // de las filas empatadas (ej. "ValidacionEnCampo" en vez de
+      // "Finalizado"), aunque los ids reflejan el orden real de insercion.
+      await (
+        service as unknown as {
+          getCasosPorEstadoHistorico: (d?: string, h?: string) => Promise<unknown>;
+        }
+      ).getCasosPorEstadoHistorico('2026-06-01', '2026-06-05');
+
+      const [sql] = grupoRepo.query.mock.calls[0] as [string, unknown[]];
+      expect(sql).toContain('ORDER BY a.creado_en DESC, a.id DESC');
+    });
+
+    it('propaga filtros include/exclude de categoria y estado como arrays (o null si no hay filtro)', async () => {
+      await (
+        service as unknown as {
+          getCasosPorEstadoHistorico: (
+            d?: string,
+            h?: string,
+            g?: 'mes' | 'semana' | 'dia',
+            catIn?: string[],
+            catOut?: string[],
+            estIn?: string[],
+            estOut?: string[],
+          ) => Promise<unknown>;
+        }
+      ).getCasosPorEstadoHistorico(
+        '2026-06-01',
+        '2026-06-05',
+        'dia',
+        ['bache'],
+        [],
+        ['EnTrabajo', 'ValidacionEnCampo'],
+        [],
+      );
+
+      expect(grupoRepo.query).toHaveBeenCalledWith(expect.any(String), [
+        '2026-06-01',
+        '2026-06-05',
+        '1 day',
+        'YYYY-MM-DD',
+        ['bache'],
+        null,
+        ['EnTrabajo', 'ValidacionEnCampo'],
+        null,
+      ]);
+    });
+
     it('getDashboardKpis incluye casos_por_estado_historico en la respuesta', async () => {
       reporteRepo.createQueryBuilder = jest
         .fn()
+        .mockImplementationOnce(() => makeQb([], 0)) // pendientes (getDashboard)
         .mockImplementationOnce(() => makeQb([], 0)) // aceptadosHoy (getDashboard)
-        .mockImplementationOnce(() => makeQb([], 0)) // reportesPorMes
+        .mockImplementationOnce(() => makeQb([], 0)) // reportesActivos (getDashboard)
+        .mockImplementationOnce(() => makeQb([], 0)) // reportesPorPeriodo
         .mockImplementationOnce(() => makeQb([], 0)); // porCategoria
       grupoRepo.createQueryBuilder = jest
         .fn()
         .mockImplementationOnce(() => makeQb([], 0)) // casosActivos (getDashboard)
         .mockImplementationOnce(() => makeQb([], 0)); // casosPorEstado
+      actualizacionRepo.createQueryBuilder = jest.fn().mockImplementationOnce(() => makeQb([], 0)); // finalizadosPorPeriodo
       grupoRepo.query.mockResolvedValue([{ dia: '2026-07-01', estado: 'Aceptado', total: '1' }]);
 
       const result = await service.getDashboardKpis();
@@ -575,6 +724,44 @@ describe('AdminService', () => {
       expect(result.casos_por_estado_historico).toEqual([
         { dia: '2026-07-01', estado: 'Aceptado', total: 1 },
       ]);
+    });
+
+    it('excluye "Finalizado" de casos_por_estado_historico (es un balde terminal que crece para siempre, no una poblacion activa comparable) y lo expone aparte como flujo en finalizados_por_periodo', async () => {
+      // Bug real reportado: Finalizado mezclado en el mismo arreglo que los
+      // estados activos mostraba un acumulado de TODA la simulacion (miles)
+      // al lado de reportes_por_periodo (cientos) — comparacion sin sentido
+      // aunque cada numero fuera correcto por separado.
+      reporteRepo.createQueryBuilder = jest
+        .fn()
+        .mockImplementationOnce(() => makeQb([], 0)) // pendientes
+        .mockImplementationOnce(() => makeQb([], 0)) // aceptadosHoy
+        .mockImplementationOnce(() => makeQb([], 0)) // reportesActivos
+        .mockImplementationOnce(() => makeQb([], 0)) // reportesPorPeriodo
+        .mockImplementationOnce(() => makeQb([], 0)); // porCategoria
+      grupoRepo.createQueryBuilder = jest
+        .fn()
+        .mockImplementationOnce(() => makeQb([], 0)) // casosActivos
+        .mockImplementationOnce(() => makeQb([], 0)); // casosPorEstado
+      const finalizadosPorPeriodoQb = makeQb([{ periodo: '2026-07', total: '327' }]);
+      actualizacionRepo.createQueryBuilder = jest
+        .fn()
+        .mockImplementationOnce(() => finalizadosPorPeriodoQb);
+      grupoRepo.query.mockResolvedValue([
+        { dia: '2026-07-01', estado: 'Aceptado', total: '5' },
+        { dia: '2026-07-01', estado: 'Finalizado', total: '1732' },
+        { dia: '2026-07-01', estado: 'EnTrabajo', total: '10' },
+      ]);
+
+      const result = await service.getDashboardKpis();
+
+      expect(result.casos_por_estado_historico).toEqual([
+        { dia: '2026-07-01', estado: 'Aceptado', total: 5 },
+        { dia: '2026-07-01', estado: 'EnTrabajo', total: 10 },
+      ]);
+      expect(result.finalizados_por_periodo).toEqual([{ periodo: '2026-07', total: 327 }]);
+      expect(finalizadosPorPeriodoQb.where).toHaveBeenCalledWith('a.estado_nuevo = :finalizado', {
+        finalizado: EstadoReporte.Finalizado,
+      });
     });
   });
 });

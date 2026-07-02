@@ -454,30 +454,91 @@ export class AdminService {
     return data.map((a) => ({ ...a, url_imagen: actualizacionImagePath(a) }));
   }
 
-  async getDashboard() {
-    const pendientes = await this.reporteRepo.count({ where: { estado: EstadoReporte.Reportado } });
+  async getDashboard(
+    catIn: string[] = [],
+    catOut: string[] = [],
+    estIn: string[] = [],
+    estOut: string[] = [],
+  ) {
+    let pendientes = 0;
+    const reportadoIncluded =
+      (estIn.length === 0 || estIn.includes(EstadoReporte.Reportado)) &&
+      !estOut.includes(EstadoReporte.Reportado);
 
-    const hoy = new Date();
-    hoy.setHours(0, 0, 0, 0);
-    const aceptadosHoy = await this.reporteRepo
-      .createQueryBuilder('r')
-      .where('r.estado = :estado', { estado: EstadoReporte.Aceptado })
-      .andWhere('r.creado_en >= :hoy', { hoy: hoy.toISOString() })
-      .getCount();
+    if (reportadoIncluded) {
+      const qb = this.reporteRepo
+        .createQueryBuilder('r')
+        .leftJoin(Categoria, 'c', 'c.id = r.categoria_id')
+        .where('r.estado = :estado', { estado: EstadoReporte.Reportado });
 
-    const casosActivos = await this.grupoRepo
+      if (catIn.length > 0) qb.andWhere('LOWER(c.nombre) IN (:...catIn)', { catIn });
+      if (catOut.length > 0)
+        qb.andWhere('(LOWER(c.nombre) NOT IN (:...catOut) OR c.nombre IS NULL)', { catOut });
+      pendientes = await qb.getCount();
+    }
+
+    let aceptadosHoy = 0;
+    const aceptadoIncluded =
+      (estIn.length === 0 || estIn.includes(EstadoReporte.Aceptado)) &&
+      !estOut.includes(EstadoReporte.Aceptado);
+
+    if (aceptadoIncluded) {
+      const hoy = new Date();
+      hoy.setHours(0, 0, 0, 0);
+      const qb = this.reporteRepo
+        .createQueryBuilder('r')
+        .leftJoin(Categoria, 'c', 'c.id = r.categoria_id')
+        .where('r.estado = :estado', { estado: EstadoReporte.Aceptado })
+        .andWhere('r.creado_en >= :hoy', { hoy: hoy.toISOString() });
+
+      if (catIn.length > 0) qb.andWhere('LOWER(c.nombre) IN (:...catIn)', { catIn });
+      if (catOut.length > 0)
+        qb.andWhere('(LOWER(c.nombre) NOT IN (:...catOut) OR c.nombre IS NULL)', { catOut });
+      aceptadosHoy = await qb.getCount();
+    }
+
+    const qbCasos = this.grupoRepo
       .createQueryBuilder('g')
-      .where('g.estado_actual NOT IN (:...estados)', {
-        estados: [EstadoReporte.Rechazado, EstadoReporte.Finalizado],
-      })
-      .getCount();
+      .leftJoin(Categoria, 'c', 'c.id = g.categoria_id')
+      .where('g.estado_actual NOT IN (:...estadosDefault)', {
+        estadosDefault: [EstadoReporte.Rechazado, EstadoReporte.Finalizado],
+      });
 
+    if (catIn.length > 0) qbCasos.andWhere('LOWER(c.nombre) IN (:...catIn)', { catIn });
+    if (catOut.length > 0)
+      qbCasos.andWhere('(LOWER(c.nombre) NOT IN (:...catOut) OR c.nombre IS NULL)', { catOut });
+    if (estIn.length > 0) qbCasos.andWhere('g.estado_actual IN (:...estIn)', { estIn });
+    if (estOut.length > 0) qbCasos.andWhere('g.estado_actual NOT IN (:...estOut)', { estOut });
+
+    const casosActivos = await qbCasos.getCount();
+
+    // "Obras activas" (arriba) cuenta Casos de Obra (grupos_reportes) — "Reportes
+    // activos" es la metrica complementaria a nivel de Reporte individual, se haya
+    // agrupado en una obra o no. Mismo patron de filtros que qbCasos para que las
+    // dos metricas "activas" respondan igual ante los mismos filtros de categoria/estado.
+    const qbReportesActivos = this.reporteRepo
+      .createQueryBuilder('r')
+      .leftJoin(Categoria, 'c', 'c.id = r.categoria_id')
+      .where('r.estado NOT IN (:...estadosFinalesR)', {
+        estadosFinalesR: [EstadoReporte.Rechazado, EstadoReporte.Finalizado],
+      });
+
+    if (catIn.length > 0) qbReportesActivos.andWhere('LOWER(c.nombre) IN (:...catIn)', { catIn });
+    if (catOut.length > 0)
+      qbReportesActivos.andWhere('(LOWER(c.nombre) NOT IN (:...catOut) OR c.nombre IS NULL)', {
+        catOut,
+      });
+    if (estIn.length > 0) qbReportesActivos.andWhere('r.estado IN (:...estIn)', { estIn });
+    if (estOut.length > 0) qbReportesActivos.andWhere('r.estado NOT IN (:...estOut)', { estOut });
+
+    const reportesActivos = await qbReportesActivos.getCount();
     const baneados = await this.dispositivoRepo.count({ where: { is_banned: true } });
 
     return {
       pendientes,
       aceptados_hoy: aceptadosHoy,
       casos_activos: casosActivos,
+      reportes_activos: reportesActivos,
       dispositivos_baneados: baneados,
     };
   }
@@ -597,33 +658,117 @@ export class AdminService {
     return { desde: d.toISOString(), hasta: h.toISOString() };
   }
 
-  async getDashboardKpis(desde?: string, hasta?: string) {
-    // KPI base (reutiliza getDashboard) — siempre en tiempo real, no filtra por rango.
-    const base = await this.getDashboard();
+  async getDashboardKpis(
+    desde?: string,
+    hasta?: string,
+    granularidad?: 'mes' | 'semana' | 'dia',
+    estado_in?: string,
+    estado_out?: string,
+    categoria_in?: string,
+    categoria_out?: string,
+  ) {
+    const parseList = (val?: string) =>
+      val
+        ? val
+            .split(',')
+            .map((s) => s.trim())
+            .filter(Boolean)
+        : [];
+    const estIn = parseList(estado_in);
+    const estOut = parseList(estado_out);
+    const catIn = parseList(categoria_in).map((s) => s.toLowerCase());
+    const catOut = parseList(categoria_out).map((s) => s.toLowerCase());
+
+    // KPI base (reutiliza getDashboard) — filtra por categorías y estados seleccionados
+    const base = await this.getDashboard(catIn, catOut, estIn, estOut);
     const rango = this.resolveRango(desde, hasta);
 
-    // KPI 2: Reportes creados por mes — ultimos 6 meses, o el rango pedido
-    const reportesPorMesQb = this.reporteRepo
+    // Fallback consistente para las 3 agregaciones de abajo cuando no hay
+    // rango explicito: "ultimos 6 meses", nunca all-time. Antes solo
+    // reportesPorPeriodoQb tenia este fallback — porCategoriaQb y
+    // casosPorEstadoQb (de donde sale tasa_resolucion) quedaban sin filtro de
+    // fecha alguno, mezclando todo el historico con el periodo reciente.
+    const seisMesesAtras = new Date();
+    seisMesesAtras.setMonth(seisMesesAtras.getMonth() - 5);
+    seisMesesAtras.setDate(1);
+    seisMesesAtras.setHours(0, 0, 0, 0);
+    const desdePorDefecto = seisMesesAtras.toISOString();
+
+    // KPI 2: Reportes creados por periodo — ultimos 6 meses, o el rango pedido
+    const unit = granularidad === 'semana' ? 'week' : granularidad === 'dia' ? 'day' : 'month';
+    const fmt = unit === 'week' ? `'IYYY-"W"IW'` : unit === 'day' ? `'YYYY-MM-DD'` : `'YYYY-MM'`;
+
+    const reportesPorPeriodoQb = this.reporteRepo
       .createQueryBuilder('r')
-      .select("TO_CHAR(DATE_TRUNC('month', r.creado_en), 'YYYY-MM')", 'mes')
+      .leftJoin(Categoria, 'c', 'c.id = r.categoria_id')
+      .select(`TO_CHAR(DATE_TRUNC('${unit}', r.creado_en), ${fmt})`, 'periodo')
       .addSelect('COUNT(r.id)', 'total')
-      .groupBy("DATE_TRUNC('month', r.creado_en)")
-      .orderBy("DATE_TRUNC('month', r.creado_en)", 'ASC');
+      .groupBy(`DATE_TRUNC('${unit}', r.creado_en)`)
+      .orderBy(`DATE_TRUNC('${unit}', r.creado_en)`, 'ASC');
 
     if (rango) {
-      reportesPorMesQb.where('r.creado_en BETWEEN :desde AND :hasta', rango);
+      reportesPorPeriodoQb.where('r.creado_en BETWEEN :desde AND :hasta', rango);
     } else {
-      const seisMesesAtras = new Date();
-      seisMesesAtras.setMonth(seisMesesAtras.getMonth() - 5);
-      seisMesesAtras.setDate(1);
-      seisMesesAtras.setHours(0, 0, 0, 0);
-      reportesPorMesQb.where('r.creado_en >= :desde', { desde: seisMesesAtras.toISOString() });
+      reportesPorPeriodoQb.where('r.creado_en >= :desde', { desde: desdePorDefecto });
     }
 
-    const reportesPorMesRaw: { mes: string; total: string }[] = await reportesPorMesQb.getRawMany();
+    if (catIn.length > 0)
+      reportesPorPeriodoQb.andWhere('LOWER(c.nombre) IN (:...catIn)', { catIn });
+    if (catOut.length > 0)
+      reportesPorPeriodoQb.andWhere('(LOWER(c.nombre) NOT IN (:...catOut) OR c.nombre IS NULL)', {
+        catOut,
+      });
+    if (estIn.length > 0) reportesPorPeriodoQb.andWhere('r.estado IN (:...estIn)', { estIn });
+    if (estOut.length > 0)
+      reportesPorPeriodoQb.andWhere('r.estado NOT IN (:...estOut)', { estOut });
 
-    const reportesPorMes = reportesPorMesRaw.map((r) => ({
-      mes: r.mes,
+    const reportesPorPeriodoRaw: { periodo: string; total: string }[] =
+      await reportesPorPeriodoQb.getRawMany();
+
+    const reportesPorPeriodo = reportesPorPeriodoRaw.map((r) => ({
+      periodo: r.periodo,
+      total: parseInt(r.total, 10),
+    }));
+
+    // KPI 2b: Obras finalizadas por periodo — cuenta EVENTOS de transicion a
+    // Finalizado dentro de cada periodo (mismo rango/granularidad que
+    // reportesPorPeriodoQb, para que sea directamente comparable en escala).
+    // Deliberadamente separado de casos_por_estado_historico: ese es un stock
+    // (poblacion activa a una fecha), esto es un flujo (cuantas terminaron
+    // ESE periodo) — mezclarlos en el mismo arreglo hacia que "Finalizado"
+    // mostrara un acumulado de TODA la simulacion (miles) al lado de
+    // reportes_por_periodo (cientos), una comparacion sin sentido aunque cada
+    // numero fuera correcto por separado.
+    const finalizadosPorPeriodoQb = this.actualizacionRepo
+      .createQueryBuilder('a')
+      .innerJoin(GrupoReporte, 'g', 'g.id = a.grupo_id')
+      .leftJoin(Categoria, 'c', 'c.id = g.categoria_id')
+      .select(`TO_CHAR(DATE_TRUNC('${unit}', a.creado_en), ${fmt})`, 'periodo')
+      .addSelect('COUNT(*)', 'total')
+      .where('a.estado_nuevo = :finalizado', { finalizado: EstadoReporte.Finalizado })
+      .groupBy(`DATE_TRUNC('${unit}', a.creado_en)`)
+      .orderBy(`DATE_TRUNC('${unit}', a.creado_en)`, 'ASC');
+
+    if (rango) {
+      finalizadosPorPeriodoQb.andWhere('a.creado_en BETWEEN :desde AND :hasta', rango);
+    } else {
+      finalizadosPorPeriodoQb.andWhere('a.creado_en >= :desde', { desde: desdePorDefecto });
+    }
+    if (catIn.length > 0)
+      finalizadosPorPeriodoQb.andWhere('LOWER(c.nombre) IN (:...catIn)', { catIn });
+    if (catOut.length > 0)
+      finalizadosPorPeriodoQb.andWhere(
+        '(LOWER(c.nombre) NOT IN (:...catOut) OR c.nombre IS NULL)',
+        {
+          catOut,
+        },
+      );
+
+    const finalizadosPorPeriodoRaw: { periodo: string; total: string }[] =
+      await finalizadosPorPeriodoQb.getRawMany();
+
+    const finalizadosPorPeriodo = finalizadosPorPeriodoRaw.map((r) => ({
+      periodo: r.periodo,
       total: parseInt(r.total, 10),
     }));
 
@@ -641,27 +786,52 @@ export class AdminService {
 
     if (rango) {
       porCategoriaQb.andWhere('r.creado_en BETWEEN :desde AND :hasta', rango);
+    } else {
+      porCategoriaQb.andWhere('r.creado_en >= :desde', { desde: desdePorDefecto });
     }
+    if (catIn.length > 0) porCategoriaQb.andWhere('LOWER(c.nombre) IN (:...catIn)', { catIn });
+    if (catOut.length > 0)
+      porCategoriaQb.andWhere('LOWER(c.nombre) NOT IN (:...catOut)', { catOut });
+    if (estIn.length > 0) porCategoriaQb.andWhere('r.estado IN (:...estIn)', { estIn });
+    if (estOut.length > 0) porCategoriaQb.andWhere('r.estado NOT IN (:...estOut)', { estOut });
 
     const porCategoriaRaw: { categoria_id: string; nombre: string; total: string }[] =
       await porCategoriaQb.getRawMany();
 
+    const capitalize = (s: string) =>
+      s ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase() : s;
+
     const porCategoria = porCategoriaRaw.map((r) => ({
       categoria_id: parseInt(r.categoria_id, 10),
-      nombre: r.nombre,
+      nombre: capitalize(r.nombre),
       total: parseInt(r.total, 10),
     }));
 
-    // KPI 4: Casos por estado actual (filtra por fecha de creacion del Caso de Obra)
+    // KPI 4: Casos por estado ACTUAL — poblacion completa "a fecha de hasta",
+    // no una cohorte por fecha de creacion. "Casos por estado actual" pregunta
+    // "cuantos casos hay HOY en cada estado", no "cuantos casos CREADOS en
+    // este rango terminaron en cada estado" — por eso el filtro de fecha usa
+    // solo un limite superior (<=hasta), igual que getCasosPorEstadoHistorico
+    // (mismo criterio: "creado antes de este punto"). Con BETWEEN (cohorte),
+    // este total no coincidia con el ultimo punto del historico ni con
+    // tasa_resolucion, aunque ambos dicen representar "el estado actual".
+    const hastaEfectiva = rango ? rango.hasta : new Date().toISOString();
     const casosPorEstadoQb = this.grupoRepo
       .createQueryBuilder('g')
+      .leftJoin(Categoria, 'c', 'c.id = g.categoria_id')
       .select('g.estado_actual', 'estado')
       .addSelect('COUNT(g.id)', 'total')
-      .groupBy('g.estado_actual');
+      .groupBy('g.estado_actual')
+      .where('g.creado_en <= :hasta', { hasta: hastaEfectiva });
 
-    if (rango) {
-      casosPorEstadoQb.where('g.creado_en BETWEEN :desde AND :hasta', rango);
-    }
+    if (catIn.length > 0) casosPorEstadoQb.andWhere('LOWER(c.nombre) IN (:...catIn)', { catIn });
+    if (catOut.length > 0)
+      casosPorEstadoQb.andWhere('(LOWER(c.nombre) NOT IN (:...catOut) OR c.nombre IS NULL)', {
+        catOut,
+      });
+    if (estIn.length > 0) casosPorEstadoQb.andWhere('g.estado_actual IN (:...estIn)', { estIn });
+    if (estOut.length > 0)
+      casosPorEstadoQb.andWhere('g.estado_actual NOT IN (:...estOut)', { estOut });
 
     const casosPorEstadoRaw: { estado: string; total: string }[] =
       await casosPorEstadoQb.getRawMany();
@@ -684,11 +854,28 @@ export class AdminService {
       por_categoria: porCategoria,
     });
 
-    const casosPorEstadoHistorico = await this.getCasosPorEstadoHistorico(desde, hasta);
+    const casosPorEstadoHistoricoRaw = await this.getCasosPorEstadoHistorico(
+      desde,
+      hasta,
+      granularidad,
+      catIn,
+      catOut,
+      estIn,
+      estOut,
+    );
+
+    // Finalizado se excluye SIEMPRE del stock activo — es un balde terminal
+    // que crece para siempre, no tiene sentido mezclarlo con una poblacion
+    // acotada (Aceptado/ValidacionEnCampo/EnTrabajo). Su evolucion real es
+    // finalizados_por_periodo (flujo, arriba), no un stock acumulado.
+    const casosPorEstadoHistorico = casosPorEstadoHistoricoRaw.filter(
+      (r) => r.estado !== EstadoReporte.Finalizado,
+    );
 
     return {
       ...base,
-      reportes_por_mes: reportesPorMes,
+      reportes_por_periodo: reportesPorPeriodo,
+      finalizados_por_periodo: finalizadosPorPeriodo,
       por_categoria: porCategoria,
       casos_por_estado: casosPorEstado,
       casos_por_estado_historico: casosPorEstadoHistorico,
@@ -698,42 +885,83 @@ export class AdminService {
     };
   }
 
-  // Reconstruye, dia por dia, en que estado estaba cada Caso de Obra —
-  // a partir de la bitacora ya existente (actualizaciones_caso), sin
-  // necesitar una tabla de snapshots nueva. Default: ultimos 30 dias.
+  // Reconstruye, para cada punto del rango (dia/semana/mes segun granularidad),
+  // en que estado estaba cada Caso de Obra EN ESE MOMENTO — a partir de la
+  // bitacora ya existente (actualizaciones_caso), sin necesitar una tabla de
+  // snapshots nueva. Es una foto de POBLACION (cuantos casos estan sentados en
+  // cada estado en ese punto), no un conteo de transiciones ocurridas ese
+  // punto: un caso estancado sigue apareciendo en su estado punto tras punto
+  // aunque no reciba actualizaciones nuevas — es lo que permite responder
+  // "en que etapa se estancan los casos" (ver kpiDescriptions.ts). Default:
+  // ultimos 30 dias.
   private async getCasosPorEstadoHistorico(
     desde?: string,
     hasta?: string,
+    granularidad: 'mes' | 'semana' | 'dia' = 'dia',
+    catIn: string[] = [],
+    catOut: string[] = [],
+    estIn: string[] = [],
+    estOut: string[] = [],
   ): Promise<{ dia: string; estado: string; total: number }[]> {
+    const unit = granularidad === 'semana' ? 'week' : granularidad === 'dia' ? 'day' : 'month';
+    const step = `1 ${unit}`;
+    const fmt = unit === 'week' ? 'IYYY-"W"IW' : unit === 'day' ? 'YYYY-MM-DD' : 'YYYY-MM';
+
     const hastaDate = hasta ? new Date(`${hasta}T00:00:00.000`) : new Date();
-    const desdeDate = desde
-      ? new Date(`${desde}T00:00:00.000`)
-      : new Date(hastaDate.getTime() - 29 * 24 * 60 * 60 * 1000);
+    let desdeDate: Date;
+    if (desde) {
+      desdeDate = new Date(`${desde}T00:00:00.000`);
+    } else {
+      desdeDate = new Date(hastaDate);
+      if (unit === 'month') {
+        desdeDate.setMonth(desdeDate.getMonth() - 5);
+        desdeDate.setDate(1);
+      } else if (unit === 'week') {
+        desdeDate.setDate(desdeDate.getDate() - 12 * 7);
+      } else {
+        desdeDate.setDate(desdeDate.getDate() - 29);
+      }
+      desdeDate.setHours(0, 0, 0, 0);
+    }
 
     const desdeStr = desdeDate.toISOString().slice(0, 10);
     const hastaStr = hastaDate.toISOString().slice(0, 10);
 
     const rows: { dia: string; estado: string; total: string }[] = await this.grupoRepo.query(
       `
-      WITH dias AS (
-        SELECT generate_series($1::date, $2::date, '1 day'::interval)::date AS dia
+      WITH puntos AS (
+        SELECT generate_series($1::date, $2::date, $3::interval)::date AS punto
       )
-      SELECT TO_CHAR(d.dia, 'YYYY-MM-DD') AS dia,
+      SELECT TO_CHAR(p.punto, $4) AS dia,
              COALESCE(ultimo.estado_nuevo, 'Aceptado') AS estado,
              COUNT(*) AS total
-      FROM dias d
+      FROM puntos p
       CROSS JOIN grupos_reportes g
+      LEFT JOIN categorias c ON c.id = g.categoria_id
       LEFT JOIN LATERAL (
         SELECT estado_nuevo FROM actualizaciones_caso a
         WHERE a.grupo_id = g.id AND a.estado_nuevo IS NOT NULL
-          AND a.creado_en < d.dia + interval '1 day'
-        ORDER BY a.creado_en DESC LIMIT 1
+          AND a.creado_en < p.punto + $3::interval
+        ORDER BY a.creado_en DESC, a.id DESC LIMIT 1
       ) ultimo ON true
-      WHERE g.creado_en < d.dia + interval '1 day'
-      GROUP BY d.dia, COALESCE(ultimo.estado_nuevo, 'Aceptado')
-      ORDER BY d.dia
+      WHERE g.creado_en < p.punto + $3::interval
+        AND ($5::text[] IS NULL OR LOWER(c.nombre) = ANY($5::text[]))
+        AND ($6::text[] IS NULL OR c.nombre IS NULL OR NOT (LOWER(c.nombre) = ANY($6::text[])))
+        AND ($7::text[] IS NULL OR COALESCE(ultimo.estado_nuevo, 'Aceptado') = ANY($7::text[]))
+        AND ($8::text[] IS NULL OR NOT (COALESCE(ultimo.estado_nuevo, 'Aceptado') = ANY($8::text[])))
+      GROUP BY p.punto, COALESCE(ultimo.estado_nuevo, 'Aceptado')
+      ORDER BY p.punto
       `,
-      [desdeStr, hastaStr],
+      [
+        desdeStr,
+        hastaStr,
+        step,
+        fmt,
+        catIn.length ? catIn : null,
+        catOut.length ? catOut : null,
+        estIn.length ? estIn : null,
+        estOut.length ? estOut : null,
+      ],
     );
 
     return rows.map((r) => ({

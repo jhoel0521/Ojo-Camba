@@ -198,8 +198,26 @@ export class AdminController {
   }
 
   @Get('dashboard/kpis')
-  getDashboardKpis(@Query('desde') desde?: string, @Query('hasta') hasta?: string) {
-    return sendRpc(this.client.send(TCP_PATTERNS.ADMIN.DASHBOARD_KPIS, { desde, hasta }));
+  getDashboardKpis(
+    @Query('desde') desde?: string,
+    @Query('hasta') hasta?: string,
+    @Query('granularidad') granularidad?: string,
+    @Query('estado_in') estadoIn?: string,
+    @Query('estado_out') estadoOut?: string,
+    @Query('categoria_in') categoriaIn?: string,
+    @Query('categoria_out') categoriaOut?: string,
+  ) {
+    return sendRpc(
+      this.client.send(TCP_PATTERNS.ADMIN.DASHBOARD_KPIS, {
+        desde,
+        hasta,
+        granularidad,
+        estado_in: estadoIn,
+        estado_out: estadoOut,
+        categoria_in: categoriaIn,
+        categoria_out: categoriaOut,
+      }),
+    );
   }
 
   @Get('devices')
