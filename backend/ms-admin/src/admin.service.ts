@@ -877,9 +877,7 @@ export class AdminService {
       finalizados_por_periodo: finalizadosPorPeriodo,
       por_categoria: porCategoria,
       casos_por_estado: casosPorEstado,
-      casos_por_estado_historico: casosPorEstadoHistorico.filter(
-        (h) => h.estado !== EstadoReporte.Finalizado,
-      ),
+      casos_por_estado_historico: casosPorEstadoHistorico,
       tasa_resolucion: tasaResolucion,
       rango_aplicado: rango ? { desde, hasta } : null,
       insights,
@@ -955,7 +953,6 @@ export class AdminService {
         AND ($6::text[] IS NULL OR c.nombre IS NULL OR NOT (LOWER(c.nombre) = ANY($6::text[])))
         AND ($7::text[] IS NULL OR COALESCE(ultimo.estado_nuevo, 'Aceptado') = ANY($7::text[]))
         AND ($8::text[] IS NULL OR NOT (COALESCE(ultimo.estado_nuevo, 'Aceptado') = ANY($8::text[])))
-        AND COALESCE(ultimo.estado_nuevo, 'Aceptado') != 'Finalizado'
       GROUP BY p.punto, COALESCE(ultimo.estado_nuevo, 'Aceptado')
       ORDER BY p.punto
       `,
