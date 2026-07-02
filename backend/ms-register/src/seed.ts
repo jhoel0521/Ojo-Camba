@@ -48,39 +48,13 @@ const GRAV_POOL = [
 ];
 const randGrav = () => GRAV_POOL[Math.floor(Math.random() * GRAV_POOL.length)];
 
-// Estado para grupos activos (no Finalizado)
-// monthsAgo: 1 = mes más reciente, 4 = mes más viejo de los activos
-function activeState(monthsAgo: number): string {
-  const r = Math.random();
-  if (monthsAgo >= 3) {
-    return r < 0.55 ? EstadoReporte.EnTrabajo : EstadoReporte.ValidacionEnCampo;
-  }
-  if (monthsAgo === 2) {
-    return r < 0.35
-      ? EstadoReporte.EnTrabajo
-      : r < 0.7
-        ? EstadoReporte.ValidacionEnCampo
-        : EstadoReporte.Aceptado;
-  }
-  // monthsAgo === 1: mes más reciente — mayoría recién aceptados
-  return r < 0.6
-    ? EstadoReporte.Aceptado
-    : r < 0.85
-      ? EstadoReporte.ValidacionEnCampo
-      : EstadoReporte.EnTrabajo;
-}
+// Usuarios ya sembrados por ms-auth (admin, moderador2, tecnico, admin-demo) — se
+// asignan al azar como autor de cada bitácora en vez de hardcodear siempre 1.
+const USUARIOS_SEED = [1, 2, 3, 4];
+const randUsuario = () => USUARIOS_SEED[Math.floor(Math.random() * USUARIOS_SEED.length)];
 
-function shuffle<T>(arr: T[]): T[] {
-  for (let i = arr.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [arr[i], arr[j]] = [arr[j], arr[i]];
-  }
-  return arr;
-}
-
-// Flujo secuencial obligatorio (debe coincidir con TRANSICIONES_VALIDAS en
-// backend/ms-admin/src/admin.service.ts): la bitacora sembrada respeta los
-// mismos pasos, si no el historico del Dashboard sale vacio/plano.
+// Secuencia obligatoria del ciclo de vida de un Caso de Obra (debe coincidir con
+// TRANSICIONES_VALIDAS en backend/ms-admin/src/admin.service.ts).
 const SECUENCIA_ESTADOS = [
   EstadoReporte.Aceptado,
   EstadoReporte.ValidacionEnCampo,
@@ -89,17 +63,79 @@ const SECUENCIA_ESTADOS = [
 ];
 
 const COMENTARIO_POR_ETAPA: Record<string, string> = {
-  [EstadoReporte.Aceptado]: 'Caso registrado y agrupado.',
   [EstadoReporte.ValidacionEnCampo]: 'Técnico asignado, validando la obra en terreno.',
   [EstadoReporte.EnTrabajo]: 'Cuadrilla iniciando los trabajos de reparación.',
   [EstadoReporte.Finalizado]: 'Obra finalizada y verificada.',
 };
 
-// Cadena de estados desde Aceptado hasta estadoFinal (inclusive), en orden —
-// para sembrar una bitacora consistente con el flujo obligatorio.
-function cadenaHasta(estadoFinal: string): EstadoReporte[] {
-  const idx = SECUENCIA_ESTADOS.indexOf(estadoFinal as EstadoReporte);
-  return SECUENCIA_ESTADOS.slice(0, idx + 1);
+function siguienteEstado(actual: EstadoReporte): EstadoReporte | null {
+  const idx = SECUENCIA_ESTADOS.indexOf(actual);
+  if (idx === -1 || idx === SECUENCIA_ESTADOS.length - 1) return null;
+  return SECUENCIA_ESTADOS[idx + 1];
+}
+
+// ── Parámetros de la simulación ─────────────────────────────────────────────
+// Simulación hacia ADELANTE, día por día, desde hoy-DIAS_SIMULACION hasta hoy.
+// El estado final de cada Caso de Obra emerge de la cadena de eventos — nunca
+// se decide de antemano (a diferencia del seed anterior, que elegía el estado
+// final primero y backdateaba una cadena retroactiva para que "cupiera").
+const DIAS_SIMULACION = 700;
+const P_REVISION_DIARIA = 0.35; // ~2.9 dias de espera promedio para revisar un Reportado
+const TASA_ACEPTACION = 0.85;
+const TASA_AGRUPAMIENTO = 0.8; // del resto queda Aceptado suelto, permanentemente
+const TAM_LOTE_MIN = 2;
+const TAM_LOTE_MAX = 5;
+
+// Probabilidad DIARIA de avanzar un paso desde cada etapa (tiempo medio = 1/p).
+// "EnTrabajo" es deliberadamente la más lenta: es el cuello de botella que ya
+// asume buildInsights() en admin.service.ts ("tasa de resolución baja -> revisa
+// los casos represados en 'En trabajo'", con link a /casos?estado=EnTrabajo).
+const P_AVANCE: Record<string, number> = {
+  [EstadoReporte.Aceptado]: 0.08, // ~12.5 dias
+  [EstadoReporte.ValidacionEnCampo]: 0.06, // ~16.7 dias
+  [EstadoReporte.EnTrabajo]: 0.035, // ~28.6 dias
+};
+const P_ESTANCAMIENTO_CRONICO = 0.05; // al ENTRAR a EnTrabajo, 5% de los casos queda con avance reducido
+const P_AVANCE_ESTANCADO = 0.005;
+
+interface CasoActivo {
+  estadoActual: EstadoReporte;
+  estancadoCronico: boolean;
+}
+
+interface PendienteRevision {
+  id: number;
+  categoria_id: number;
+  creadoEnMs: number;
+}
+
+interface ReporteEnBuffer {
+  id: number;
+  creadoEnMs: number;
+}
+
+// Hora aleatoria dentro de una ventana horaria del día dado (7-18h para
+// reportes ciudadanos, 8-17h para acciones de moderador/técnico) — nunca
+// supera "ahora" si el día simulado es el día de hoy.
+function horaAleatoria(dia: Date, horaMin: number, horaMax: number, ahoraMs: number): number {
+  const base = new Date(dia.getFullYear(), dia.getMonth(), dia.getDate()).getTime();
+  const rangoMs = (horaMax - horaMin) * 60 * 60 * 1000;
+  const ms = base + horaMin * 60 * 60 * 1000 + Math.random() * rangoMs;
+  return Math.min(ms, ahoraMs);
+}
+
+// UPDATE en batch de creado_en (una sola consulta por tabla por día) — hace
+// falta porque @CreateDateColumn sobreescribe con NOW() al guardar, sin
+// importar el valor que traiga la entidad antes de .save().
+async function bulkUpdateFechas(tabla: string, pares: { id: number; ms: number }[]) {
+  if (pares.length === 0) return;
+  const values = pares.map((_, i) => `($${i * 2 + 1}::int, $${i * 2 + 2}::timestamptz)`).join(', ');
+  const params: (number | Date)[] = [];
+  for (const p of pares) params.push(p.id, new Date(p.ms));
+  await ds.query(
+    `UPDATE ${tabla} AS t SET creado_en = v.creado_en FROM (VALUES ${values}) AS v(id, creado_en) WHERE t.id = v.id`,
+    params,
+  );
 }
 
 async function seed() {
@@ -121,39 +157,47 @@ async function seed() {
   }
   console.log('Categorías: OK\n');
 
-  const today = new Date();
-  const ACCEPT_RATE = 0.85; // 85 aceptados, 15 rechazados
-  const GROUP_RATE = 0.8; // 80% de aceptados se agrupan en obra
-  const GROUP_SIZE = 3;
+  const hoy = new Date();
+  hoy.setHours(0, 0, 0, 0);
+  const ahoraMs = Date.now();
 
-  // Tasas de resolución para los últimos 4 meses activos
-  // índice 0 = 4 meses atrás (90%), índice 3 = mes más reciente (25%)
-  const RESOLUTION = [0.9, 0.8, 0.5, 0.25];
+  // ── Estado de la simulación (vive solo en memoria durante el loop) ───────
+  const reportesPendientesRevision: PendienteRevision[] = [];
+  const bufferAceptadosSinAgrupar = new Map<number, ReporteEnBuffer[]>(); // categoria_id -> reportes
+  const casosActivos = new Map<number, CasoActivo>(); // grupoId -> estado
+  let proximoCodigoObraSeq = 1;
 
-  let globalGroup = 1;
   let totalReportes = 0;
+  let totalRechazados = 0;
   let totalGrupos = 0;
+  let totalActualizaciones = 0;
 
-  for (let monthAgo = 11; monthAgo >= 0; monthAgo--) {
-    const d = new Date(today.getFullYear(), today.getMonth() - monthAgo, 1);
-    const tYear = d.getFullYear();
-    const tMonth = d.getMonth();
-    const monthLabel = `${tYear}-${String(tMonth + 1).padStart(2, '0')}`;
-    const monthStart = new Date(tYear, tMonth, 1);
-    const monthEnd = new Date(tYear, tMonth + 1, 0, 23, 59, 59);
-    const PER_MONTH = 100 + Math.floor(Math.random() * 901); // 100–1000
+  console.log(`Simulando ${DIAS_SIMULACION} días día a día...\n`);
 
-    // ── PASO 1: Crear 100 reportes como Reportado ──────────────────────────────
-    const toCreate: Reporte[] = [];
-    const catByIndex: number[] = [];
+  for (let diaOffset = -DIAS_SIMULACION; diaOffset <= 0; diaOffset++) {
+    const diaActual = new Date(hoy);
+    diaActual.setDate(diaActual.getDate() + diaOffset);
+    const esFinDeSemana = diaActual.getDay() === 0 || diaActual.getDay() === 6;
 
-    for (let i = 0; i < PER_MONTH; i++) {
+    // ── D1: nuevos reportes del día ──
+    const progreso = (diaOffset + DIAS_SIMULACION) / DIAS_SIMULACION; // 0..1, crece hacia "hoy"
+    const factorCrecimiento = 1 + progreso * 0.6;
+    const factorFinDeSemana = esFinDeSemana ? 0.7 : 1.0;
+    const cantidadHoy = Math.round((6 + Math.random() * 6) * factorCrecimiento * factorFinDeSemana);
+
+    const diaStr = diaActual.toISOString().slice(0, 10);
+    const entidadesDelDia: Reporte[] = [];
+    const categoriasDelDia: number[] = [];
+    const horasDelDia: number[] = [];
+
+    for (let i = 0; i < cantidadHoy; i++) {
       const { lat, lng } = randCoord();
       const cat = randCat();
-      catByIndex.push(cat);
-      toCreate.push(
+      categoriasDelDia.push(cat);
+      horasDelDia.push(horaAleatoria(diaActual, 7, 18, ahoraMs));
+      entidadesDelDia.push(
         reporteRepo.create({
-          device_id: `seed-m${monthAgo}-r${i}`,
+          device_id: `seed-${diaStr}-r${i}`,
           lat,
           lng,
           categoria_id: cat,
@@ -161,148 +205,210 @@ async function seed() {
           h3_res_8: h3.latLngToCell(lat, lng, 8),
           h3_res_11: h3.latLngToCell(lat, lng, 11),
           h3_res_13: h3.latLngToCell(lat, lng, 13),
-          url_imagen: `https://picsum.photos/seed/oc${monthAgo}r${i}/400/300`,
+          url_imagen: `https://picsum.photos/seed/oc${diaStr}r${i}/400/300`,
           estado: EstadoReporte.Reportado,
         }),
       );
     }
 
-    const saved = await reporteRepo.save(toCreate);
-    const reporteInfos = saved.map((r, i) => ({ id: r.id, cat: catByIndex[i] }));
-    const allIds = reporteInfos.map((r) => r.id);
-    totalReportes += saved.length;
-
-    // Backdate creado_en de todos los reportes del mes
-    await ds.query(
-      `UPDATE reportes SET creado_en = $1::timestamptz + random() * ($2::timestamptz - $1::timestamptz) WHERE id = ANY($3::int[])`,
-      [monthStart, monthEnd, allIds],
-    );
-
-    // ── PASO 2: Aceptar 85 / Rechazar 15 ──────────────────────────────────────
-    const shuffled = shuffle([...reporteInfos]);
-    const acceptCount = Math.round(PER_MONTH * ACCEPT_RATE);
-    const toAcceptInfos = shuffled.slice(0, acceptCount);
-    const toRejectIds = shuffled.slice(acceptCount).map((r) => r.id);
-
-    if (toRejectIds.length > 0) {
-      await reporteRepo.update(toRejectIds, { estado: 'Rechazado' as EstadoReporte });
-    }
-
-    // ── PASO 3: De aceptados, 80% agrupar / 20% quedan Aceptado suelto ────────
-    const toGroupCount = Math.round(acceptCount * GROUP_RATE);
-    const toGroupInfos = toAcceptInfos.slice(0, toGroupCount);
-    const toSueltoIds = toAcceptInfos.slice(toGroupCount).map((r) => r.id);
-
-    if (toSueltoIds.length > 0) {
-      await reporteRepo.update(toSueltoIds, { estado: EstadoReporte.Aceptado });
-    }
-
-    // ── PASO 4: Crear grupos de 3 reportes c/u ────────────────────────────────
-    const isActivePeriod = monthAgo < 4;
-    const resolution = isActivePeriod ? RESOLUTION[3 - monthAgo] : 1.0;
-    // monthsAgo para activeState: 1=más reciente, 4=más viejo de los activos
-    const monthsAgoActive = monthAgo + 1;
-
-    const batches: { id: number; cat: number }[][] = [];
-    for (let i = 0; i < toGroupInfos.length; i += GROUP_SIZE) {
-      batches.push(toGroupInfos.slice(i, i + GROUP_SIZE));
-    }
-
-    const finCount = Math.round(batches.length * resolution);
-    const grupoIds: { id: number; actualizacionIds: number[] }[] = [];
-
-    for (let gi = 0; gi < batches.length; gi++) {
-      const batch = batches[gi];
-      const isFinalized = gi < finCount;
-      const grupoEstado = isFinalized ? EstadoReporte.Finalizado : activeState(monthsAgoActive);
-
-      const yy = String(tYear).slice(-2);
-      const codigoObra = `O-${yy}-${String(globalGroup).padStart(7, '0')}`;
-      globalGroup++;
-
-      const grupo = await grupoRepo.save(
-        grupoRepo.create({
-          codigo_obra: codigoObra,
-          estado_actual: grupoEstado,
-          creado_por_usuario_id: 1,
-          categoria_id: batch[0]?.cat ?? 1,
-          fecha_estimada_fin: null,
-        }),
+    let guardados: Reporte[] = [];
+    if (entidadesDelDia.length > 0) {
+      guardados = await reporteRepo.save(entidadesDelDia);
+      await bulkUpdateFechas(
+        'reportes',
+        guardados.map((r, i) => ({ id: r.id, ms: horasDelDia[i] })),
       );
+      totalReportes += guardados.length;
+    }
 
-      await reporteRepo.update(
-        batch.map((r) => r.id),
-        { grupo_id: grupo.id, estado: grupoEstado },
-      );
+    // ── D2: revisar pendientes de DÍAS ANTERIORES (los de hoy se agregan después) ──
+    const idsAceptar: number[] = [];
+    const idsRechazar: number[] = [];
+    const siguientesPendientes: PendienteRevision[] = [];
 
-      // Bitacora con la cadena COMPLETA de transiciones hasta grupoEstado —
-      // no solo el registro inicial — para que el historico dia-a-dia del
-      // Dashboard tenga datos reales que reconstruir (no solo "Aceptado").
-      const cadena = cadenaHasta(grupoEstado);
-      const idsActualizacion: number[] = [];
-      for (let i = 0; i < cadena.length; i++) {
-        const actualizacion = await actualizacionRepo.save(
-          actualizacionRepo.create({
-            grupo_id: grupo.id,
-            usuario_id: 1,
-            comentario:
-              i === 0
-                ? `Caso registrado. ${batch.length} reportes aceptados y agrupados.`
-                : COMENTARIO_POR_ETAPA[cadena[i]],
-            estado_anterior: i > 0 ? cadena[i - 1] : null,
-            estado_nuevo: cadena[i],
+    for (const p of reportesPendientesRevision) {
+      if (Math.random() < P_REVISION_DIARIA) {
+        if (Math.random() < TASA_ACEPTACION) {
+          idsAceptar.push(p.id);
+          const buffer = bufferAceptadosSinAgrupar.get(p.categoria_id) ?? [];
+          buffer.push({ id: p.id, creadoEnMs: p.creadoEnMs });
+          bufferAceptadosSinAgrupar.set(p.categoria_id, buffer);
+        } else {
+          idsRechazar.push(p.id);
+        }
+      } else {
+        siguientesPendientes.push(p);
+      }
+    }
+    reportesPendientesRevision.length = 0;
+    reportesPendientesRevision.push(...siguientesPendientes);
+
+    if (idsAceptar.length > 0)
+      await reporteRepo.update(idsAceptar, { estado: EstadoReporte.Aceptado });
+    if (idsRechazar.length > 0) {
+      await reporteRepo.update(idsRechazar, { estado: EstadoReporte.Rechazado });
+      totalRechazados += idsRechazar.length;
+    }
+
+    // Los reportes de HOY entran a la cola recién ahora — nunca se revisan el mismo día que llegan.
+    for (let i = 0; i < guardados.length; i++) {
+      reportesPendientesRevision.push({
+        id: guardados[i].id,
+        categoria_id: categoriasDelDia[i],
+        creadoEnMs: horasDelDia[i],
+      });
+    }
+
+    // ── D3: agrupar aceptados acumulados, por categoría ──
+    const gruposDelDia: {
+      codigo_obra: string;
+      categoria_id: number;
+      reporteIds: number[];
+      horaMs: number;
+    }[] = [];
+
+    for (const [categoriaId, buffer] of bufferAceptadosSinAgrupar) {
+      while (buffer.length >= TAM_LOTE_MIN) {
+        const tamDeseado =
+          TAM_LOTE_MIN + Math.floor(Math.random() * (TAM_LOTE_MAX - TAM_LOTE_MIN + 1));
+        const tam = Math.min(buffer.length, tamDeseado);
+
+        if (Math.random() >= TASA_AGRUPAMIENTO) {
+          // Este lote queda permanentemente "Aceptado" suelto — nunca se agrupa.
+          buffer.splice(0, tam);
+          continue;
+        }
+
+        const lote = buffer.splice(0, tam);
+        const yy = String(diaActual.getFullYear()).slice(-2);
+        const codigo_obra = `O-${yy}-${String(proximoCodigoObraSeq++).padStart(7, '0')}`;
+        const maxHoraReportes = Math.max(...lote.map((r) => r.creadoEnMs));
+        const horaGrupo = Math.min(maxHoraReportes + 1000 + Math.random() * 5 * 60 * 1000, ahoraMs);
+        gruposDelDia.push({
+          codigo_obra,
+          categoria_id: categoriaId,
+          reporteIds: lote.map((r) => r.id),
+          horaMs: horaGrupo,
+        });
+      }
+    }
+
+    if (gruposDelDia.length > 0) {
+      const gruposGuardados = await grupoRepo.save(
+        gruposDelDia.map((g) =>
+          grupoRepo.create({
+            codigo_obra: g.codigo_obra,
+            estado_actual: EstadoReporte.Aceptado,
+            creado_por_usuario_id: randUsuario(),
+            categoria_id: g.categoria_id,
             fecha_estimada_fin: null,
+          }),
+        ),
+      );
+
+      for (let i = 0; i < gruposGuardados.length; i++) {
+        const grupo = gruposGuardados[i];
+        const meta = gruposDelDia[i];
+        await reporteRepo.update(meta.reporteIds, {
+          grupo_id: grupo.id,
+          estado: EstadoReporte.Aceptado,
+        });
+        casosActivos.set(grupo.id, {
+          estadoActual: EstadoReporte.Aceptado,
+          estancadoCronico: false,
+        });
+      }
+
+      await bulkUpdateFechas(
+        'grupos_reportes',
+        gruposGuardados.map((g, i) => ({ id: g.id, ms: gruposDelDia[i].horaMs })),
+      );
+      totalGrupos += gruposGuardados.length;
+    }
+
+    // ── D4: avanzar casos activos, un paso por caso, con probabilidad diaria ──
+    const actualizacionesDelDia: {
+      grupoId: number;
+      estadoAnterior: EstadoReporte;
+      estadoNuevo: EstadoReporte;
+      comentario: string;
+      usuarioId: number;
+    }[] = [];
+    const cascadasDelDia: { grupoId: number; nuevoEstado: EstadoReporte }[] = [];
+
+    for (const [grupoId, caso] of casosActivos) {
+      const p = caso.estancadoCronico ? P_AVANCE_ESTANCADO : P_AVANCE[caso.estadoActual];
+      if (Math.random() >= p) continue;
+
+      const nuevo = siguienteEstado(caso.estadoActual);
+      if (!nuevo) continue;
+
+      actualizacionesDelDia.push({
+        grupoId,
+        estadoAnterior: caso.estadoActual,
+        estadoNuevo: nuevo,
+        comentario: COMENTARIO_POR_ETAPA[nuevo],
+        usuarioId: randUsuario(),
+      });
+      cascadasDelDia.push({ grupoId, nuevoEstado: nuevo });
+
+      caso.estadoActual = nuevo;
+      if (nuevo === EstadoReporte.EnTrabajo) {
+        caso.estancadoCronico = Math.random() < P_ESTANCAMIENTO_CRONICO;
+      }
+      if (nuevo === EstadoReporte.Finalizado) {
+        casosActivos.delete(grupoId);
+      }
+    }
+
+    if (actualizacionesDelDia.length > 0) {
+      const horasActualizaciones = actualizacionesDelDia.map(() =>
+        horaAleatoria(diaActual, 8, 17, ahoraMs),
+      );
+      const actualizacionesGuardadas = await actualizacionRepo.save(
+        actualizacionesDelDia.map((a) =>
+          actualizacionRepo.create({
+            grupo_id: a.grupoId,
+            usuario_id: a.usuarioId,
+            estado_anterior: a.estadoAnterior,
+            estado_nuevo: a.estadoNuevo,
+            comentario: a.comentario,
             recursos_solicitados: null,
-            url_imagen: null,
+            fecha_estimada_fin: null,
             lat_actualizada: null,
             lng_actualizada: null,
-            reporte_id: null,
+            url_imagen: null,
           }),
-        );
-        idsActualizacion.push(actualizacion.id);
-      }
+        ),
+      );
+      await bulkUpdateFechas(
+        'actualizaciones_caso',
+        actualizacionesGuardadas.map((a, i) => ({ id: a.id, ms: horasActualizaciones[i] })),
+      );
+      totalActualizaciones += actualizacionesGuardadas.length;
 
-      grupoIds.push({ id: grupo.id, actualizacionIds: idsActualizacion });
-
-      totalGrupos++;
-    }
-
-    // Backdate creado_en de grupos y de cada actualizacion de su bitacora —
-    // cada grupo recibe un momento de creacion aleatorio dentro del mes, y
-    // su cadena de actualizaciones se espacia en orden CRECIENTE a partir de
-    // ahi (nunca "Finalizado" con fecha anterior a "Aceptado").
-    for (const { id: grupoId, actualizacionIds } of grupoIds) {
-      const gapMs = Math.max(1, monthEnd.getTime() - monthStart.getTime());
-      const margenFinal = gapMs * 0.15; // deja margen para que quepa toda la cadena antes de monthEnd
-      const inicio = monthStart.getTime() + Math.random() * (gapMs - margenFinal);
-
-      await ds.query('UPDATE grupos_reportes SET creado_en = $1::timestamptz WHERE id = $2', [
-        new Date(inicio),
-        grupoId,
-      ]);
-
-      for (let i = 0; i < actualizacionIds.length; i++) {
-        // fraccion crece estrictamente con i: garantiza que cada paso de la
-        // cadena quede cronologicamente despues del anterior (sin volver a
-        // aleatorizar aca, o se rompe el orden Aceptado -> ... -> Finalizado).
-        const fraccion = (i + 1) / actualizacionIds.length;
-        const fecha = new Date(inicio + margenFinal * fraccion);
-        await ds.query(
-          'UPDATE actualizaciones_caso SET creado_en = $1::timestamptz WHERE id = $2',
-          [fecha, actualizacionIds[i]],
-        );
+      for (const cascada of cascadasDelDia) {
+        await reporteRepo.update({ grupo_id: cascada.grupoId }, { estado: cascada.nuevoEstado });
+        await grupoRepo.update(cascada.grupoId, { estado_actual: cascada.nuevoEstado });
       }
     }
 
-    console.log(
-      `[${monthLabel}]  ${PER_MONTH} rep  |  ` +
-        `${acceptCount} aceptados  ${toRejectIds.length} rechazados  |  ` +
-        `${batches.length} grupos  (${finCount} Finalizado  ${batches.length - finCount} activos)`,
-    );
+    const diaIndex = diaOffset + DIAS_SIMULACION;
+    if (diaIndex % 50 === 0 || diaOffset === 0) {
+      console.log(
+        `[día ${diaIndex}/${DIAS_SIMULACION}, ${diaStr}]  ` +
+          `reportes=${totalReportes}  rechazados=${totalRechazados}  ` +
+          `grupos=${totalGrupos}  actualizaciones=${totalActualizaciones}  ` +
+          `casos activos=${casosActivos.size}`,
+      );
+    }
   }
 
   await ds.destroy();
-  console.log(`\nSeed completado: ${totalReportes} reportes, ${totalGrupos} grupos`);
+  console.log(
+    `\nSeed completado exitosamente: ${totalReportes} reportes, ${totalGrupos} grupos, ` +
+      `${totalActualizaciones} actualizaciones de bitácora`,
+  );
 }
 
 seed().catch((e) => {
