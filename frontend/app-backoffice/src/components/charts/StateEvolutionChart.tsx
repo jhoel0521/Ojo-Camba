@@ -10,23 +10,27 @@ import {
   Line,
 } from 'recharts';
 
-// Solo los 3 estados ACTIVOS de un Caso de Obra — "Finalizado" se excluye a
-// proposito (el backend ya no lo incluye en `historico`: es un balde
-// terminal que solo crece, ver kpiDescriptions.ts). "Rechazado" nunca aplica
-// a un GrupoReporte (solo a Reporte individuales antes de agruparse), asi
-// que tampoco corresponde en este pipeline.
-const ESTADOS_PIPELINE = ['Aceptado', 'ValidacionEnCampo', 'EnTrabajo'] as const;
+// Los 4 estados alcanzables por un Caso de Obra. "Rechazado" nunca aplica a
+// un GrupoReporte (solo a Reporte individuales antes de agruparse), asi que
+// no corresponde en este pipeline. "Finalizado" SI se incluye — es un balde
+// que solo crece (cientos/miles) mientras los otros 3 son una poblacion
+// acotada (decenas), por eso el eje Y usa escala LOGARITMICA: permite ver la
+// FORMA de cada tendencia (Finalizado creciendo, los demas subiendo/bajando)
+// en el mismo grafico sin que la magnitud de uno aplaste al resto.
+const ESTADOS_PIPELINE = ['Aceptado', 'ValidacionEnCampo', 'EnTrabajo', 'Finalizado'] as const;
 
 const COLOR_ESTADO: Record<string, string> = {
   Aceptado: '#ff8c00',
   ValidacionEnCampo: '#8b7365',
   EnTrabajo: '#5e483a',
+  Finalizado: '#16a34a',
 };
 
 const LABEL_ESTADO: Record<string, string> = {
   Aceptado: 'Aceptado',
   ValidacionEnCampo: 'Validación en campo',
   EnTrabajo: 'En trabajo',
+  Finalizado: 'Finalizado',
 };
 
 function formatLabel(periodo: string, granularidad: 'mes' | 'semana' | 'dia' = 'dia'): string {
