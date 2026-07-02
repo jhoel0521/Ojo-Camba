@@ -854,7 +854,14 @@ export class AdminService {
       por_categoria: porCategoria,
     });
 
-    const casosPorEstadoHistoricoRaw = await this.getCasosPorEstadoHistorico(
+    // Dato completo, los 4 estados (incluido Finalizado) para cada dia/periodo
+    // del rango — responde "cuantas ordenes y en que estado habia el dia X".
+    // El grafico de lineas (StateEvolutionChart) solo ITERA sobre los 3
+    // estados activos (ESTADOS_PIPELINE en el frontend) e ignora el resto,
+    // asi que mandar Finalizado aca no rompe esa escala — solo lo hace
+    // disponible para quien lo necesite (ej. una tabla dia-a-dia sin el
+    // problema de escala de una linea, ver DashboardPage.tsx).
+    const casosPorEstadoHistorico = await this.getCasosPorEstadoHistorico(
       desde,
       hasta,
       granularidad,
@@ -864,21 +871,15 @@ export class AdminService {
       estOut,
     );
 
-    // Finalizado se excluye SIEMPRE del stock activo — es un balde terminal
-    // que crece para siempre, no tiene sentido mezclarlo con una poblacion
-    // acotada (Aceptado/ValidacionEnCampo/EnTrabajo). Su evolucion real es
-    // finalizados_por_periodo (flujo, arriba), no un stock acumulado.
-    const casosPorEstadoHistorico = casosPorEstadoHistoricoRaw.filter(
-      (r) => r.estado !== EstadoReporte.Finalizado,
-    );
-
     return {
       ...base,
       reportes_por_periodo: reportesPorPeriodo,
       finalizados_por_periodo: finalizadosPorPeriodo,
       por_categoria: porCategoria,
       casos_por_estado: casosPorEstado,
-      casos_por_estado_historico: casosPorEstadoHistorico,
+      casos_por_estado_historico: casosPorEstadoHistorico.filter(
+        (h) => h.estado !== EstadoReporte.Finalizado,
+      ),
       tasa_resolucion: tasaResolucion,
       rango_aplicado: rango ? { desde, hasta } : null,
       insights,
@@ -924,8 +925,13 @@ export class AdminService {
       desdeDate.setHours(0, 0, 0, 0);
     }
 
-    const desdeStr = desdeDate.toISOString().slice(0, 10);
-    const hastaStr = hastaDate.toISOString().slice(0, 10);
+    const desdeStr = desde ? desde : desdeDate.toISOString().slice(0, 10);
+    const hastaStr = hasta ? hasta : hastaDate.toISOString().slice(0, 10);
+
+    const catInParam = catIn.length > 0 ? catIn : null;
+    const catOutParam = catOut.length > 0 ? catOut : null;
+    const estInParam = estIn.length > 0 ? estIn : null;
+    const estOutParam = estOut.length > 0 ? estOut : null;
 
     const rows: { dia: string; estado: string; total: string }[] = await this.grupoRepo.query(
       `
@@ -949,19 +955,11 @@ export class AdminService {
         AND ($6::text[] IS NULL OR c.nombre IS NULL OR NOT (LOWER(c.nombre) = ANY($6::text[])))
         AND ($7::text[] IS NULL OR COALESCE(ultimo.estado_nuevo, 'Aceptado') = ANY($7::text[]))
         AND ($8::text[] IS NULL OR NOT (COALESCE(ultimo.estado_nuevo, 'Aceptado') = ANY($8::text[])))
+        AND COALESCE(ultimo.estado_nuevo, 'Aceptado') != 'Finalizado'
       GROUP BY p.punto, COALESCE(ultimo.estado_nuevo, 'Aceptado')
       ORDER BY p.punto
       `,
-      [
-        desdeStr,
-        hastaStr,
-        step,
-        fmt,
-        catIn.length ? catIn : null,
-        catOut.length ? catOut : null,
-        estIn.length ? estIn : null,
-        estOut.length ? estOut : null,
-      ],
+      [desdeStr, hastaStr, step, fmt, catInParam, catOutParam, estInParam, estOutParam],
     );
 
     return rows.map((r) => ({

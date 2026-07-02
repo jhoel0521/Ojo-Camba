@@ -77,9 +77,9 @@ erDiagram
     }
     ACTUALIZACIONES_CASO {
         int id PK
-        int reporte_id FK
         int grupo_id FK
         int usuario_id FK
+        varchar estado_anterior
         varchar estado_nuevo
         text comentario
         varchar recursos_solicitados
@@ -99,7 +99,6 @@ erDiagram
     CATEGORIAS ||--o{ REPORTES : "clasifica"
     GRUPOS_REPORTES ||--o{ REPORTES : "agrupa"
     USUARIOS ||--o{ GRUPOS_REPORTES : "crea"
-    REPORTES |o--o{ ACTUALIZACIONES_CASO : "actualiza"
     GRUPOS_REPORTES |o--o{ ACTUALIZACIONES_CASO : "actualiza"
     USUARIOS ||--o{ ACTUALIZACIONES_CASO : "registra"
 ```
@@ -189,7 +188,7 @@ Table categorias {
 Table grupos_reportes {
   id int [pk, increment, note: 'Entidad que agrupa múltiples reportes iguales']
   codigo_obra varchar [unique, note: 'Ej: O-26-0000001 (formato O-YY-NNNNNNN)']
-  estado_actual EstadoReporte [default: 'Aceptado']
+  estado_actual EstadoReporte [default: 'Aceptado', note: 'Solo alcanza Aceptado/ValidacionEnCampo/EnTrabajo/Finalizado — Reportado y Rechazado son estados exclusivos de un Reporte individual antes de agruparse, un Caso de Obra ya formado nunca los alcanza. Transición secuencial obligatoria, sin saltos ni retrocesos.']
   categoria_id int [ref: > categorias.id, null, note: 'Confirmada o corregida por el moderador al aceptar']
   fecha_estimada_fin date [note: 'ETA general de la obra']
   creado_por_usuario_id int [ref: > usuarios.id, note: 'Moderador o técnico que creó el grupo']
@@ -225,14 +224,17 @@ Table reportes {
 Table actualizaciones_caso {
   id int [pk, increment]
   
-  // La actualización va al reporte individual O al grupo entero
-  reporte_id int [ref: > reportes.id, null]
+  // La actualización siempre va al Caso de Obra (grupo) — nunca a un reporte
+  // individual. El campo reporte_id existió en versiones anteriores pero
+  // nunca se llegó a usar (ni backend ni frontend lo escribían/leían); se
+  // eliminó junto con su columna en el esquema real.
   grupo_id int [ref: > grupos_reportes.id, null]
   
-  usuario_id int [ref: > usuarios.id, not null, note: 'Técnico realizando la actualización']
+  usuario_id int [ref: > usuarios.id, not null, note: 'Técnico o moderador realizando la actualización']
   
   // Datos del avance diario
-  estado_nuevo EstadoReporte [null, note: 'Nulo si es solo un comentario sin cambio de fase']
+  estado_anterior EstadoReporte [null, note: 'Estado del grupo justo antes de esta actualización — nulo si estado_nuevo tambien es nulo (solo comentario, sin cambio de fase)']
+  estado_nuevo EstadoReporte [null, note: 'Nulo si es solo un comentario sin cambio de fase. Con valor, debe ser una transición legal según TRANSICIONES_VALIDAS (flujo secuencial obligatorio: Aceptado → ValidacionEnCampo → EnTrabajo → Finalizado)']
   comentario text [not null, note: 'Ej: Día 2 - Retirando escombros']
   recursos_solicitados varchar [null, note: 'Ej: Se solicita volqueta para el día 15']
   fecha_estimada_fin date [null, note: 'Actualización opcional de la fecha de entrega']
@@ -243,6 +245,10 @@ Table actualizaciones_caso {
   
   url_imagen varchar [null, note: 'Foto del progreso']
   creado_en timestamp [default: `now()`]
+
+  indexes {
+    (grupo_id, creado_en) [note: 'Acelera la reconstrucción histórica día-a-día del Dashboard (getCasosPorEstadoHistorico)']
+  }
 }
 
 ```
