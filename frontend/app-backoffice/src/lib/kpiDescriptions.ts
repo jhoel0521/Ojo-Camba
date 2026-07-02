@@ -26,10 +26,19 @@ export const KPI_DESCRIPTIONS: Record<string, KpiDescription> = {
   },
   casos_activos: {
     id: 'casos_activos',
-    nombre: 'Casos activos',
+    nombre: 'Obras activas',
     formula: 'COUNT(casos de obra) WHERE estado_actual NOT IN (Rechazado, Finalizado)',
     interpretacion: 'Casos de Obra en curso, aún no cerrados ni rechazados.',
     decision: 'Carga operativa actual en campo → dimensiona cuadrillas necesarias.',
+  },
+  reportes_activos: {
+    id: 'reportes_activos',
+    nombre: 'Reportes activos',
+    formula: 'COUNT(reportes) WHERE estado NOT IN (Rechazado, Finalizado)',
+    interpretacion:
+      'Reportes individuales aún en curso, se hayan agrupado en una obra o no — complementa a "Obras activas" mostrando el lado reporte en vez del lado obra.',
+    decision:
+      'Muy por encima de "Obras activas" × tamaño promedio de obra → hay reportes sueltos sin agrupar, revisa el agrupamiento.',
   },
   dispositivos_baneados: {
     id: 'dispositivos_baneados',
@@ -38,10 +47,10 @@ export const KPI_DESCRIPTIONS: Record<string, KpiDescription> = {
     interpretacion: 'Dispositivos bloqueados por abuso o contenido inapropiado.',
     decision: 'Incremento inusual → revisar patrón de abuso reciente y reforzar moderación.',
   },
-  reportes_por_mes: {
-    id: 'reportes_por_mes',
-    nombre: 'Reportes por mes',
-    formula: 'COUNT(reportes) GROUP BY DATE_TRUNC(mes, creado_en)',
+  reportes_por_periodo: {
+    id: 'reportes_por_periodo',
+    nombre: 'Reportes por período',
+    formula: 'COUNT(reportes) GROUP BY DATE_TRUNC(granularidad, creado_en)',
     interpretacion:
       'Tendencia de reportes ciudadanos — un aumento sostenido indica más carga operativa.',
     decision: 'Tendencia al alza → planificar refuerzo de personal con anticipación.',
@@ -58,11 +67,21 @@ export const KPI_DESCRIPTIONS: Record<string, KpiDescription> = {
     id: 'casos_por_estado',
     nombre: 'Casos por estado',
     formula:
-      'Reconstruido dia a dia desde la bitacora (actualizaciones_caso): estado de cada caso segun su ultima transicion antes de esa fecha.',
+      'Reconstruido dia a dia desde la bitacora (actualizaciones_caso): estado de cada caso activo segun su ultima transicion antes de esa fecha. Excluye "Finalizado" a propósito.',
     interpretacion:
-      'Evolución del ciclo de vida de las obras a lo largo del tiempo — revela en qué etapa se estancan los casos y qué tan rápido crece "Finalizado".',
+      'Evolución del ciclo de vida ACTIVO de las obras (Aceptado/Validación en campo/En trabajo) a lo largo del tiempo — revela en qué etapa se estancan los casos. "Finalizado" se excluye de este gráfico porque es un balde terminal que solo crece: mezclado con estados activos (una población acotada), su acumulado de toda la historia domina la escala y hace ilegible el resto. Su evolución real está en "Obras finalizadas por período".',
     decision:
       'Una etapa que no baja con el tiempo (ej. "En trabajo" estancado) → investigar qué frena el avance a la siguiente.',
+  },
+  finalizados_por_periodo: {
+    id: 'finalizados_por_periodo',
+    nombre: 'Obras finalizadas por período',
+    formula:
+      "COUNT(actualizaciones_caso) WHERE estado_nuevo = 'Finalizado', GROUP BY DATE_TRUNC(granularidad, creado_en)",
+    interpretacion:
+      'Cuántas obras terminaron efectivamente en cada período — a diferencia de "Casos por estado", este es un conteo por período (flujo), no un acumulado histórico, así que es directamente comparable en escala con "Reportes por período".',
+    decision:
+      'Caída sostenida → el equipo de campo está cerrando menos obras por período, revisar capacidad de cuadrillas.',
   },
   tasa_resolucion: {
     id: 'tasa_resolucion',

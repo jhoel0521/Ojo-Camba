@@ -1,28 +1,22 @@
-import { useEffect, useState, useCallback } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import {
   ClipboardList,
   FolderOpen,
+  FileText,
   Ban,
   CheckCircle,
   AlertTriangle,
   Info,
   CheckCircle2,
+  ArrowRight,
 } from 'lucide-react';
 import {
-  BarChart,
-  Bar,
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
   PieChart,
   Pie,
   Cell,
-  Legend,
+  Tooltip,
+  ResponsiveContainer,
   RadialBarChart,
   RadialBar,
 } from 'recharts';
@@ -31,13 +25,28 @@ import { KPI_DESCRIPTIONS } from '../lib/kpiDescriptions';
 import { friendlyError } from '../lib/errors';
 import { useAuthStore } from '../store/authStore';
 import { useModeration } from '../hooks/useModeration';
+import { useTagFilter } from '../hooks/useTagFilter';
+import { CATEGORIA_NAMES } from '../lib/categories';
+import DashboardFilters from '../components/DashboardFilters';
+import TrendChart from '../components/charts/TrendChart';
+import StateEvolutionChart from '../components/charts/StateEvolutionChart';
 
 // Paleta del design system Ojo Camba
 const COLORS = ['#ff8c00', '#8b7365', '#5e483a', '#b5a498', '#2c221c', '#d2c8be'];
 
-// Estilos por nivel de insight — reusa la convención de color ya establecida
-// en el resto de la app (StatusBadge.tsx para "positivo", banners de error
-// para "alerta"), no inventa una paleta nueva.
+// Catálogos para los tag filters
+const ESTADO_CATALOG = [
+  'Reportado',
+  'Aceptado',
+  'Rechazado',
+  'ValidacionEnCampo',
+  'EnTrabajo',
+  'Finalizado',
+] as const;
+
+const CATEGORIA_CATALOG = Object.values(CATEGORIA_NAMES) as readonly string[];
+
+// Estilos por nivel de insight
 const NIVEL_STYLES: Record<
   DashboardInsight['nivel'],
   { bg: string; border: string; text: string; icon: typeof AlertTriangle }
@@ -57,50 +66,156 @@ const NIVEL_STYLES: Record<
   },
 };
 
-function formatMes(mes: string) {
-  const [year, month] = mes.split('-');
-  const date = new Date(parseInt(year), parseInt(month) - 1, 1);
-  return date.toLocaleDateString('es-BO', { month: 'short', year: '2-digit' });
-}
+type Granularidad = 'mes' | 'semana' | 'dia';
 
-function formatDiaCorto(dia: string) {
-  const [year, month, day] = dia.split('-').map(Number);
-  return new Date(year, month - 1, day).toLocaleDateString('es-BO', {
-    day: 'numeric',
-    month: 'short',
-  });
+function getDefaultDates(g: Granularidad = 'mes') {
+  const today = new Date();
+  const hastaStr = today.toISOString().slice(0, 10);
+  const desdeDate = new Date(today);
+  if (g === 'mes') {
+    desdeDate.setMonth(desdeDate.getMonth() - 5);
+    desdeDate.setDate(1);
+  } else if (g === 'semana') {
+    desdeDate.setDate(desdeDate.getDate() - 12 * 7);
+  } else {
+    desdeDate.setDate(desdeDate.getDate() - 29);
+  }
+  const desdeStr = desdeDate.toISOString().slice(0, 10);
+  return { desde: desdeStr, hasta: hastaStr };
 }
 
 export default function DashboardPage() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const user = useAuthStore((s) => s.user);
+
   const [kpis, setKpis] = useState<DashboardKpis | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [desde, setDesde] = useState('');
-  const [hasta, setHasta] = useState('');
+
+  // Leer valores iniciales de URL searchParams o calcular defaults
+  const urlGranularidad = (searchParams.get('granularidad') as Granularidad) || 'mes';
+  const defaultDates = useMemo(() => getDefaultDates(urlGranularidad), [urlGranularidad]);
+
+  const desde = searchParams.get('desde') ?? defaultDates.desde;
+  const hasta = searchParams.get('hasta') ?? defaultDates.hasta;
+  const granularidad = urlGranularidad;
+
+  // Tag filters
+  const estadoFilter = useTagFilter(ESTADO_CATALOG);
+  const categoriaFilter = useTagFilter(CATEGORIA_CATALOG);
+
+  // Inicializar sets de tags a partir de URL en primer render
+  useEffect(() => {
+    const estIn = searchParams.get('estado_in')?.split(',').filter(Boolean) ?? [];
+    const estOut = searchParams.get('estado_out')?.split(',').filter(Boolean) ?? [];
+    const catIn = searchParams.get('categoria_in')?.split(',').filter(Boolean) ?? [];
+    const catOut = searchParams.get('categoria_out')?.split(',').filter(Boolean) ?? [];
+
+    estIn.forEach((label) => estadoFilter.toggleInclude(label as (typeof ESTADO_CATALOG)[number]));
+    estOut.forEach((label) => estadoFilter.toggleExclude(label as (typeof ESTADO_CATALOG)[number]));
+    catIn.forEach((label) =>
+      categoriaFilter.toggleInclude(label as (typeof CATEGORIA_CATALOG)[number]),
+    );
+    catOut.forEach((label) =>
+      categoriaFilter.toggleExclude(label as (typeof CATEGORIA_CATALOG)[number]),
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const estadoIn = useMemo(
+    () => Array.from(estadoFilter.include).join(','),
+    [estadoFilter.include],
+  );
+  const estadoOut = useMemo(
+    () => Array.from(estadoFilter.exclude).join(','),
+    [estadoFilter.exclude],
+  );
+  const categoriaIn = useMemo(
+    () => Array.from(categoriaFilter.include).join(','),
+    [categoriaFilter.include],
+  );
+  const categoriaOut = useMemo(
+    () => Array.from(categoriaFilter.exclude).join(','),
+    [categoriaFilter.exclude],
+  );
+
+  // Sincronizar estado completo con URL searchParams para compartir/bookmarking
+  const updateUrlParams = useCallback(
+    (updates: Record<string, string | undefined>) => {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          Object.entries(updates).forEach(([k, v]) => {
+            if (v) next.set(k, v);
+            else next.delete(k);
+          });
+          return next;
+        },
+        { replace: true },
+      );
+    },
+    [setSearchParams],
+  );
+
+  // Sincronizar tag filters con URL al cambiar los sets
+  useEffect(() => {
+    updateUrlParams({
+      estado_in: estadoIn || undefined,
+      estado_out: estadoOut || undefined,
+      categoria_in: categoriaIn || undefined,
+      categoria_out: categoriaOut || undefined,
+    });
+  }, [estadoIn, estadoOut, categoriaIn, categoriaOut, updateUrlParams]);
 
   const load = useCallback(() => {
     setLoading(true);
-    getDashboardKpis(desde || undefined, hasta || undefined)
+    getDashboardKpis(
+      desde || undefined,
+      hasta || undefined,
+      granularidad,
+      estadoIn || undefined,
+      estadoOut || undefined,
+      categoriaIn || undefined,
+      categoriaOut || undefined,
+    )
       .then(setKpis)
       .catch((err) => setError(friendlyError(err)))
       .finally(() => setLoading(false));
-  }, [desde, hasta]);
+  }, [desde, hasta, granularidad, estadoIn, estadoOut, categoriaIn, categoriaOut]);
 
   useEffect(() => {
     load();
   }, [load]);
 
-  const limpiarFiltro = () => {
-    setDesde('');
-    setHasta('');
-  };
+  const handleDateRangeChange = useCallback(
+    (d: string, h: string) => {
+      updateUrlParams({ desde: d || undefined, hasta: h || undefined });
+    },
+    [updateUrlParams],
+  );
+
+  const handleClearDateRange = useCallback(() => {
+    const defs = getDefaultDates(granularidad);
+    updateUrlParams({ desde: defs.desde, hasta: defs.hasta });
+  }, [granularidad, updateUrlParams]);
+
+  const handleGranularidadChange = useCallback(
+    (g: Granularidad) => {
+      const defs = getDefaultDates(g);
+      updateUrlParams({ granularidad: g, desde: defs.desde, hasta: defs.hasta });
+    },
+    [updateUrlParams],
+  );
 
   useModeration({
     user: user ? { id: user.id, nombre: user.nombre } : null,
     onStats: load,
   });
+
+  const pieCategoria = kpis?.por_categoria ?? [];
+  const casosPorEstado = kpis?.casos_por_estado ?? [];
+  const tasaResolucion = kpis?.tasa_resolucion ?? 0;
 
   if (loading) {
     return (
@@ -156,7 +271,17 @@ export default function DashboardPage() {
       kpiId: 'aceptados_hoy',
     },
     {
-      label: 'Casos activos',
+      label: 'Reportes activos',
+      testid: 'stat-reportes-activos',
+      value: kpis?.reportes_activos ?? 0,
+      icon: FileText,
+      color: 'text-ladrillo',
+      bg: 'bg-ladrillo/10',
+      path: undefined,
+      kpiId: 'reportes_activos',
+    },
+    {
+      label: 'Obras activas',
       testid: 'stat-casos',
       value: kpis?.casos_activos ?? 0,
       icon: FolderOpen,
@@ -177,112 +302,71 @@ export default function DashboardPage() {
     },
   ];
 
-  const barData = (kpis?.reportes_por_mes ?? []).map((r) => ({
-    mes: formatMes(r.mes),
-    total: r.total,
-  }));
-
-  const pieCategoria = kpis?.por_categoria ?? [];
-
-  const ESTADOS_PIPELINE = ['Aceptado', 'ValidacionEnCampo', 'EnTrabajo', 'Finalizado'];
-  const COLOR_ESTADO: Record<string, string> = {
-    Aceptado: '#ff8c00',
-    ValidacionEnCampo: '#8b7365',
-    EnTrabajo: '#5e483a',
-    Finalizado: '#16a34a',
-  };
-  const historico = kpis?.casos_por_estado_historico ?? [];
-  const diasOrdenados = Array.from(new Set(historico.map((h) => h.dia))).sort();
-  const lineCasosPorEstado = diasOrdenados.map((dia) => {
-    const fila: Record<string, number | string> = { dia: formatDiaCorto(dia) };
-    for (const estado of ESTADOS_PIPELINE) {
-      fila[estado] = historico.find((h) => h.dia === dia && h.estado === estado)?.total ?? 0;
-    }
-    return fila;
-  });
-
-  const tasaResolucion = kpis?.tasa_resolucion ?? 0;
   const rangoActivo = !!(desde || hasta);
+
   return (
     <div>
       <h2 className="font-semibold text-xl text-tierra mb-6">Dashboard</h2>
 
-      {/* Filtro dinámico de fecha — afecta las 3 agregaciones históricas y la tasa de resolución */}
-      <div className="bg-perla rounded-3xl-3 p-4 mb-6 flex flex-wrap items-end gap-3">
-        <div>
-          <label htmlFor="desde" className="block text-xs text-arena uppercase tracking-wide mb-1">
-            Desde
-          </label>
-          <input
-            id="desde"
-            type="date"
-            value={desde}
-            onChange={(e) => setDesde(e.target.value)}
-            className="bg-lienzo border border-arcilla rounded-2xl px-3 py-2 text-sm text-tierra"
-          />
-        </div>
-        <div>
-          <label htmlFor="hasta" className="block text-xs text-arena uppercase tracking-wide mb-1">
-            Hasta
-          </label>
-          <input
-            id="hasta"
-            type="date"
-            value={hasta}
-            onChange={(e) => setHasta(e.target.value)}
-            className="bg-lienzo border border-arcilla rounded-2xl px-3 py-2 text-sm text-tierra"
-          />
-        </div>
-        {rangoActivo && (
-          <button
-            onClick={limpiarFiltro}
-            className="text-xs font-medium text-selva hover:brightness-90 px-3 py-2"
-          >
-            Limpiar filtro
-          </button>
-        )}
-      </div>
+      {/* Panel de filtros — fechas con debounce auto-apply (350ms), URL sync, tags */}
+      <DashboardFilters
+        desde={desde}
+        hasta={hasta}
+        granularidad={granularidad}
+        estadoCatalog={ESTADO_CATALOG}
+        categoriaCatalog={CATEGORIA_CATALOG}
+        estadoInclude={estadoFilter.include as Set<string>}
+        estadoExclude={estadoFilter.exclude as Set<string>}
+        categoriaInclude={categoriaFilter.include as Set<string>}
+        categoriaExclude={categoriaFilter.exclude as Set<string>}
+        onDateRangeChange={handleDateRangeChange}
+        onClearDateRange={handleClearDateRange}
+        onGranularidadChange={handleGranularidadChange}
+        onToggleEstadoInclude={estadoFilter.toggleInclude as (l: string) => void}
+        onToggleEstadoExclude={estadoFilter.toggleExclude as (l: string) => void}
+        onToggleCategoriaInclude={categoriaFilter.toggleInclude as (l: string) => void}
+        onToggleCategoriaExclude={categoriaFilter.toggleExclude as (l: string) => void}
+      />
 
-      {/* Panel de recomendaciones — Knowledge-driven DSS: reglas evaluadas server-side
-          sobre los KPIs ya calculados. Va primero, antes de los datos crudos, para que
-          lo primero que vea el moderador sea la conclusión accionable (ley Apogeo-Final). */}
+      {/* Panel de recomendaciones — Knowledge-driven DSS. El mensaje es texto
+          plano seleccionable/copiable — la navegación vive en un "Ver" chico
+          y explícito, no en toda la tarjeta (evita que seleccionar el texto
+          dispare una navegación accidental). */}
       {kpis && kpis.insights.length > 0 && (
         <div className="space-y-2 mb-6">
           {kpis.insights.map((insight, i) => {
             const style = NIVEL_STYLES[insight.nivel];
             const Icon = style.icon;
-            const card = (
+            return (
               <div
-                className={`flex items-start gap-3 rounded-3xl-2 border px-4 py-3 min-h-[44px] ${style.bg} ${style.border}`}
+                key={i}
+                className={`flex items-start gap-3 rounded-3xl-2 border px-4 py-3 ${style.bg} ${style.border}`}
               >
                 <Icon className={`w-5 h-5 shrink-0 mt-0.5 ${style.text}`} />
-                <p className={`text-sm ${style.text}`}>{insight.mensaje}</p>
+                <div className="flex-1 min-w-0">
+                  <p className={`text-sm ${style.text}`}>{insight.mensaje}</p>
+                  {insight.link && (
+                    <Link
+                      to={insight.link}
+                      className={`inline-flex items-center gap-1 mt-1 min-h-[44px] py-2 -my-2 text-xs font-semibold ${style.text} hover:brightness-90`}
+                    >
+                      Ver <ArrowRight className="w-3 h-3" />
+                    </Link>
+                  )}
+                </div>
               </div>
-            );
-            return insight.link ? (
-              <Link
-                key={i}
-                to={insight.link}
-                className="block hover:brightness-95 transition-[filter]"
-              >
-                {card}
-              </Link>
-            ) : (
-              <div key={i}>{card}</div>
             );
           })}
         </div>
       )}
 
-      {/* KPI 1 — Tarjetas de contadores */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      {/* KPI 1 — Tarjetas de contadores. Texto plano seleccionable/copiable —
+          la navegación vive en un "Ver" chico al final, no en toda la
+          tarjeta (antes un <button> envolvía todo y capturaba el click al
+          intentar seleccionar/copiar el número). */}
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
         {cards.map(({ label, testid, value, icon: Icon, color, bg, path, kpiId }) => (
-          <button
-            key={label}
-            onClick={() => path && navigate(path)}
-            disabled={!path}
-            className={`bg-perla rounded-3xl-3 p-6 text-left hover:shadow-md active:scale-[0.98] transition-all ${path ? 'cursor-pointer' : 'cursor-default'}`}
-          >
+          <div key={label} className="bg-perla rounded-3xl-3 p-6">
             <div className={`w-10 h-10 rounded-2xl ${bg} flex items-center justify-center mb-3`}>
               <Icon className={`w-5 h-5 ${color}`} />
             </div>
@@ -293,41 +377,52 @@ export default function DashboardPage() {
             <p className="text-xs text-arena italic mt-2">
               {KPI_DESCRIPTIONS[kpiId].interpretacion}
             </p>
-          </button>
+            {path && (
+              <button
+                onClick={() => navigate(path)}
+                className="mt-2 -ml-2 inline-flex items-center gap-1 min-h-[44px] px-2 text-xs font-semibold text-caoba hover:text-ladrillo"
+              >
+                Ver <ArrowRight className="w-3 h-3" />
+              </button>
+            )}
+          </div>
         ))}
       </div>
 
+      {/* KPI 4 — Casos por estado, evolución día a día (FULL WIDTH, arriba) */}
+      <div className="bg-perla rounded-3xl-3 p-6 mb-4">
+        <p className="text-xs text-arena uppercase tracking-wide mb-1">Casos por estado</p>
+        <p className="text-xs text-arena italic mb-4">
+          {KPI_DESCRIPTIONS.casos_por_estado.interpretacion}
+        </p>
+        <StateEvolutionChart
+          historico={kpis?.casos_por_estado_historico ?? []}
+          granularidad={granularidad}
+        />
+      </div>
+
+      {/* Gráficas secundarias — grid 2 columnas */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* KPI 2 — Reportes por mes (barras) */}
+        {/* KPI 2 — Tendencia de reportes */}
         <div className="bg-perla rounded-3xl-3 p-6">
           <p className="text-xs text-arena uppercase tracking-wide mb-1">
-            {rangoActivo ? 'Reportes — rango filtrado' : 'Reportes — últimos 6 meses'}
+            {rangoActivo ? 'Reportes — rango filtrado' : 'Reportes — tendencia'}
           </p>
           <p className="text-xs text-arena italic mb-4">
-            {KPI_DESCRIPTIONS.reportes_por_mes.interpretacion}
+            {KPI_DESCRIPTIONS.reportes_por_periodo.interpretacion}
           </p>
-          {barData.length === 0 ? (
-            <div className="h-48 flex items-center justify-center text-sm text-caoba">
-              Sin datos aún
-            </div>
-          ) : (
-            <ResponsiveContainer width="100%" height={200}>
-              <BarChart data={barData} margin={{ top: 4, right: 8, left: -16, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#efebe4" />
-                <XAxis dataKey="mes" tick={{ fontSize: 11, fill: '#b5a498' }} />
-                <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: '#b5a498' }} />
-                <Tooltip
-                  contentStyle={{
-                    background: '#fffdfa',
-                    border: '1px solid #efebe4',
-                    borderRadius: 12,
-                    fontSize: 12,
-                  }}
-                />
-                <Bar dataKey="total" fill="#ff8c00" radius={[4, 4, 0, 0]} name="Reportes" />
-              </BarChart>
-            </ResponsiveContainer>
-          )}
+          <TrendChart data={kpis?.reportes_por_periodo ?? []} granularidad={granularidad} />
+        </div>
+
+        {/* KPI 2b — Obras finalizadas por período (flujo, comparable en escala a reportes_por_periodo) */}
+        <div className="bg-perla rounded-3xl-3 p-6">
+          <p className="text-xs text-arena uppercase tracking-wide mb-1">
+            Obras finalizadas — {rangoActivo ? 'rango filtrado' : 'tendencia'}
+          </p>
+          <p className="text-xs text-arena italic mb-4">
+            {KPI_DESCRIPTIONS.finalizados_por_periodo.interpretacion}
+          </p>
+          <TrendChart data={kpis?.finalizados_por_periodo ?? []} granularidad={granularidad} />
         </div>
 
         {/* KPI 3 — Distribución por categoría (pie) */}
@@ -373,64 +468,6 @@ export default function DashboardPage() {
           )}
         </div>
 
-        {/* KPI 4 — Casos por estado, evolucion dia a dia (linea) */}
-        <div className="bg-perla rounded-3xl-3 p-6">
-          <p className="text-xs text-arena uppercase tracking-wide mb-1">Casos por estado</p>
-          <p className="text-xs text-arena italic mb-4">
-            {KPI_DESCRIPTIONS.casos_por_estado.interpretacion}
-          </p>
-          {lineCasosPorEstado.length === 0 ? (
-            <div className="h-48 flex items-center justify-center text-sm text-caoba">
-              Sin datos aún
-            </div>
-          ) : (
-            <ResponsiveContainer width="100%" height={220}>
-              <LineChart
-                data={lineCasosPorEstado}
-                margin={{ top: 4, right: 8, left: -16, bottom: 0 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" stroke="#efebe4" />
-                <XAxis dataKey="dia" tick={{ fontSize: 10, fill: '#b5a498' }} />
-                <YAxis
-                  yAxisId="activos"
-                  tick={{ fontSize: 11, fill: '#b5a498' }}
-                  allowDecimals={false}
-                />
-                <YAxis
-                  yAxisId="finalizado"
-                  orientation="right"
-                  tick={{ fontSize: 11, fill: '#16a34a' }}
-                  allowDecimals={false}
-                />
-                <Tooltip
-                  contentStyle={{
-                    background: '#fffdfa',
-                    border: '1px solid #efebe4',
-                    borderRadius: 12,
-                    fontSize: 12,
-                  }}
-                />
-                <Legend
-                  iconSize={10}
-                  iconType="circle"
-                  wrapperStyle={{ fontSize: 10, color: '#8b7365' }}
-                />
-                {ESTADOS_PIPELINE.map((estado) => (
-                  <Line
-                    key={estado}
-                    yAxisId={estado === 'Finalizado' ? 'finalizado' : 'activos'}
-                    type="monotone"
-                    dataKey={estado}
-                    stroke={COLOR_ESTADO[estado]}
-                    strokeWidth={2}
-                    dot={false}
-                  />
-                ))}
-              </LineChart>
-            </ResponsiveContainer>
-          )}
-        </div>
-
         {/* KPI 5 — Tasa de resolución (radial) */}
         <div className="bg-perla rounded-3xl-3 p-6">
           <p className="text-xs text-arena uppercase tracking-wide mb-1">Tasa de resolución</p>
@@ -460,8 +497,8 @@ export default function DashboardPage() {
             </div>
           </div>
           <p className="text-xs text-arena text-center mt-2">
-            {kpis?.casos_por_estado.find((e) => e.estado === 'Finalizado')?.total ?? 0} de{' '}
-            {kpis?.casos_por_estado.reduce((a, e) => a + e.total, 0) ?? 0} casos totales
+            {casosPorEstado.find((e) => e.estado === 'Finalizado')?.total ?? 0} de{' '}
+            {casosPorEstado.reduce((a, e) => a + e.total, 0)} casos totales
           </p>
         </div>
       </div>
