@@ -10,9 +10,6 @@ export class ActualizacionCaso {
   id: number;
 
   @Column({ type: 'int', nullable: true })
-  reporte_id: number | null;
-
-  @Column({ type: 'int', nullable: true })
   grupo_id: number | null;
 
   @Column({ type: 'int' })
