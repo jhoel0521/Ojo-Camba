@@ -1,6 +1,10 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, Index } from 'typeorm';
 
+// Acelera getCasosPorEstadoHistorico() (Dashboard): busca, por grupo_id, la
+// ultima fila con estado_nuevo antes de una fecha dada — sin este indice,
+// esa consulta hacia Seq Scan completo por cada (dia x grupo) evaluado.
 @Entity('actualizaciones_caso')
+@Index(['grupo_id', 'creado_en'])
 export class ActualizacionCaso {
   @PrimaryGeneratedColumn()
   id: number;
@@ -13,6 +17,9 @@ export class ActualizacionCaso {
 
   @Column({ type: 'int' })
   usuario_id: number;
+
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  estado_anterior: string | null;
 
   @Column({ type: 'varchar', length: 50, nullable: true })
   estado_nuevo: string | null;

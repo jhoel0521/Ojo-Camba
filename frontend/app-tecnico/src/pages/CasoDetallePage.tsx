@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
   ArrowLeft,
+  ArrowRight,
   MapPin,
   CheckCircle2,
   Loader2,
@@ -25,7 +26,7 @@ import {
 import {
   actualizacionSchema,
   buildActualizacionPayload,
-  ESTADOS_TECNICO,
+  siguientesEstadosTecnico,
   type ActualizacionForm,
   type GpsFix,
 } from '../lib/actualizacion';
@@ -55,8 +56,11 @@ export default function CasoDetallePage() {
     register,
     handleSubmit,
     reset,
+    watch,
     formState: { errors },
   } = useForm<ActualizacionForm>({ resolver: zodResolver(actualizacionSchema) });
+
+  const estadoSeleccionado = watch('estado_nuevo');
 
   useEffect(() => {
     if (isNaN(numId)) {
@@ -204,7 +208,11 @@ export default function CasoDetallePage() {
             id="comentario"
             {...register('comentario')}
             rows={3}
-            placeholder="Describe el trabajo realizado hoy..."
+            placeholder={
+              estadoSeleccionado
+                ? 'Explica por qué cambia de estado...'
+                : 'Describe el trabajo realizado hoy...'
+            }
             className="bg-lienzo border border-arcilla rounded-3xl-3 px-4 py-3 text-sm text-tierra placeholder:text-almendra w-full focus:outline-none focus:border-selva transition-colors resize-none"
           />
           {errors.comentario && (
@@ -219,21 +227,33 @@ export default function CasoDetallePage() {
           >
             Transicion de estado (opcional)
           </label>
-          <div className="relative">
-            <select
-              id="estado_nuevo"
-              {...register('estado_nuevo')}
-              className="bg-lienzo border border-arcilla rounded-3xl-3 px-4 py-3 text-sm text-tierra w-full appearance-none focus:outline-none focus:border-selva transition-colors"
-            >
-              <option value="">Sin cambio de estado</option>
-              {ESTADOS_TECNICO.filter((e) => e !== grupo.estado_actual).map((e) => (
-                <option key={e} value={e}>
-                  {e === 'EnTrabajo' ? 'En Trabajo' : 'Finalizado'}
-                </option>
-              ))}
-            </select>
-            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-arena pointer-events-none" />
-          </div>
+          {(() => {
+            const siguientes = siguientesEstadosTecnico(grupo.estado_actual);
+            if (siguientes.length === 0) {
+              return (
+                <p className="text-xs text-arena italic px-1 py-3">
+                  Sin transición disponible para este caso en este momento.
+                </p>
+              );
+            }
+            return (
+              <div className="relative">
+                <select
+                  id="estado_nuevo"
+                  {...register('estado_nuevo')}
+                  className="bg-lienzo border border-arcilla rounded-3xl-3 px-4 py-3 text-sm text-tierra w-full appearance-none focus:outline-none focus:border-selva transition-colors"
+                >
+                  <option value="">Sin cambio de estado</option>
+                  {siguientes.map((e) => (
+                    <option key={e} value={e}>
+                      {e === 'EnTrabajo' ? 'En Trabajo' : 'Finalizado'}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-arena pointer-events-none" />
+              </div>
+            );
+          })()}
         </div>
 
         <div>
@@ -379,7 +399,17 @@ export default function CasoDetallePage() {
                   <span className="text-xs text-arena">
                     {new Date(a.creado_en).toLocaleString('es-BO')}
                   </span>
-                  {a.estado_nuevo && <StatusBadge estado={a.estado_nuevo} />}
+                  {a.estado_nuevo && (
+                    <span className="flex items-center gap-1.5">
+                      {a.estado_anterior && (
+                        <>
+                          <StatusBadge estado={a.estado_anterior} />
+                          <ArrowRight className="w-3 h-3 text-arena" />
+                        </>
+                      )}
+                      <StatusBadge estado={a.estado_nuevo} />
+                    </span>
+                  )}
                 </div>
                 <p className="text-sm text-tierra whitespace-pre-line">{a.comentario}</p>
                 <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-arena">

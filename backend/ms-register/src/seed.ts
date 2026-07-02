@@ -78,6 +78,30 @@ function shuffle<T>(arr: T[]): T[] {
   return arr;
 }
 
+// Flujo secuencial obligatorio (debe coincidir con TRANSICIONES_VALIDAS en
+// backend/ms-admin/src/admin.service.ts): la bitacora sembrada respeta los
+// mismos pasos, si no el historico del Dashboard sale vacio/plano.
+const SECUENCIA_ESTADOS = [
+  EstadoReporte.Aceptado,
+  EstadoReporte.ValidacionEnCampo,
+  EstadoReporte.EnTrabajo,
+  EstadoReporte.Finalizado,
+];
+
+const COMENTARIO_POR_ETAPA: Record<string, string> = {
+  [EstadoReporte.Aceptado]: 'Caso registrado y agrupado.',
+  [EstadoReporte.ValidacionEnCampo]: 'Técnico asignado, validando la obra en terreno.',
+  [EstadoReporte.EnTrabajo]: 'Cuadrilla iniciando los trabajos de reparación.',
+  [EstadoReporte.Finalizado]: 'Obra finalizada y verificada.',
+};
+
+// Cadena de estados desde Aceptado hasta estadoFinal (inclusive), en orden —
+// para sembrar una bitacora consistente con el flujo obligatorio.
+function cadenaHasta(estadoFinal: string): EstadoReporte[] {
+  const idx = SECUENCIA_ESTADOS.indexOf(estadoFinal as EstadoReporte);
+  return SECUENCIA_ESTADOS.slice(0, idx + 1);
+}
+
 async function seed() {
   await ds.initialize();
   console.log('Conectado a PostgreSQL\n');
@@ -185,7 +209,7 @@ async function seed() {
     }
 
     const finCount = Math.round(batches.length * resolution);
-    const grupoIds: number[] = [];
+    const grupoIds: { id: number; actualizacionIds: number[] }[] = [];
 
     for (let gi = 0; gi < batches.length; gi++) {
       const batch = batches[gi];
@@ -205,41 +229,69 @@ async function seed() {
           fecha_estimada_fin: null,
         }),
       );
-      grupoIds.push(grupo.id);
 
       await reporteRepo.update(
         batch.map((r) => r.id),
         { grupo_id: grupo.id, estado: grupoEstado },
       );
 
-      await actualizacionRepo.save(
-        actualizacionRepo.create({
-          grupo_id: grupo.id,
-          usuario_id: 1,
-          comentario: `Caso registrado. ${batch.length} reportes aceptados y agrupados.`,
-          estado_nuevo: EstadoReporte.Aceptado,
-          fecha_estimada_fin: null,
-          recursos_solicitados: null,
-          url_imagen: null,
-          lat_actualizada: null,
-          lng_actualizada: null,
-          reporte_id: null,
-        }),
-      );
+      // Bitacora con la cadena COMPLETA de transiciones hasta grupoEstado —
+      // no solo el registro inicial — para que el historico dia-a-dia del
+      // Dashboard tenga datos reales que reconstruir (no solo "Aceptado").
+      const cadena = cadenaHasta(grupoEstado);
+      const idsActualizacion: number[] = [];
+      for (let i = 0; i < cadena.length; i++) {
+        const actualizacion = await actualizacionRepo.save(
+          actualizacionRepo.create({
+            grupo_id: grupo.id,
+            usuario_id: 1,
+            comentario:
+              i === 0
+                ? `Caso registrado. ${batch.length} reportes aceptados y agrupados.`
+                : COMENTARIO_POR_ETAPA[cadena[i]],
+            estado_anterior: i > 0 ? cadena[i - 1] : null,
+            estado_nuevo: cadena[i],
+            fecha_estimada_fin: null,
+            recursos_solicitados: null,
+            url_imagen: null,
+            lat_actualizada: null,
+            lng_actualizada: null,
+            reporte_id: null,
+          }),
+        );
+        idsActualizacion.push(actualizacion.id);
+      }
+
+      grupoIds.push({ id: grupo.id, actualizacionIds: idsActualizacion });
 
       totalGrupos++;
     }
 
-    // Backdate creado_en de grupos y actualizaciones del mes
-    if (grupoIds.length > 0) {
-      await ds.query(
-        `UPDATE grupos_reportes SET creado_en = $1::timestamptz + random() * ($2::timestamptz - $1::timestamptz) WHERE id = ANY($3::int[])`,
-        [monthStart, monthEnd, grupoIds],
-      );
-      await ds.query(
-        `UPDATE actualizaciones_caso SET creado_en = $1::timestamptz + random() * ($2::timestamptz - $1::timestamptz) WHERE grupo_id = ANY($3::int[])`,
-        [monthStart, monthEnd, grupoIds],
-      );
+    // Backdate creado_en de grupos y de cada actualizacion de su bitacora —
+    // cada grupo recibe un momento de creacion aleatorio dentro del mes, y
+    // su cadena de actualizaciones se espacia en orden CRECIENTE a partir de
+    // ahi (nunca "Finalizado" con fecha anterior a "Aceptado").
+    for (const { id: grupoId, actualizacionIds } of grupoIds) {
+      const gapMs = Math.max(1, monthEnd.getTime() - monthStart.getTime());
+      const margenFinal = gapMs * 0.15; // deja margen para que quepa toda la cadena antes de monthEnd
+      const inicio = monthStart.getTime() + Math.random() * (gapMs - margenFinal);
+
+      await ds.query('UPDATE grupos_reportes SET creado_en = $1::timestamptz WHERE id = $2', [
+        new Date(inicio),
+        grupoId,
+      ]);
+
+      for (let i = 0; i < actualizacionIds.length; i++) {
+        // fraccion crece estrictamente con i: garantiza que cada paso de la
+        // cadena quede cronologicamente despues del anterior (sin volver a
+        // aleatorizar aca, o se rompe el orden Aceptado -> ... -> Finalizado).
+        const fraccion = (i + 1) / actualizacionIds.length;
+        const fecha = new Date(inicio + margenFinal * fraccion);
+        await ds.query(
+          'UPDATE actualizaciones_caso SET creado_en = $1::timestamptz WHERE id = $2',
+          [fecha, actualizacionIds[i]],
+        );
+      }
     }
 
     console.log(

@@ -5,6 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import {
   ArrowLeft,
+  ArrowRight,
   Send,
   Images,
   ClipboardList,
@@ -40,7 +41,15 @@ const updateSchema = z.object({
 
 type UpdateForm = z.infer<typeof updateSchema>;
 
-const ESTADOS_VALIDOS = ['Aceptado', 'ValidacionEnCampo', 'EnTrabajo', 'Finalizado'];
+// Flujo secuencial obligatorio — debe coincidir con TRANSICIONES_VALIDAS en
+// backend/ms-admin/src/admin.service.ts. Copia local porque el frontend no
+// importa @ojo-camba/common (arrastraria dependencias de TypeORM al bundle).
+const TRANSICIONES_VALIDAS: Record<string, string[]> = {
+  Aceptado: ['ValidacionEnCampo'],
+  ValidacionEnCampo: ['EnTrabajo'],
+  EnTrabajo: ['Finalizado'],
+  Finalizado: [],
+};
 
 export default function CasoDetallePage() {
   const { id } = useParams<{ id: string }>();
@@ -58,8 +67,11 @@ export default function CasoDetallePage() {
     register,
     handleSubmit,
     reset,
+    watch,
     formState: { errors },
   } = useForm<UpdateForm>({ resolver: zodResolver(updateSchema) });
+
+  const estadoSeleccionado = watch('estado_nuevo');
 
   useEffect(() => {
     const numId = parseInt(id ?? '', 10);
@@ -276,7 +288,13 @@ export default function CasoDetallePage() {
                   </div>
                   <div className="pb-5 min-w-0 flex-1">
                     {a.estado_nuevo && (
-                      <div className="mb-1.5">
+                      <div className="mb-1.5 flex items-center gap-1.5 flex-wrap">
+                        {a.estado_anterior && (
+                          <>
+                            <StatusBadge estado={a.estado_anterior} />
+                            <ArrowRight className="w-3 h-3 text-arena" />
+                          </>
+                        )}
                         <StatusBadge estado={a.estado_nuevo} />
                       </div>
                     )}
@@ -340,7 +358,11 @@ export default function CasoDetallePage() {
           <div>
             <textarea
               {...register('comentario')}
-              placeholder="Describe la actualización del caso..."
+              placeholder={
+                estadoSeleccionado
+                  ? 'Explica por qué cambia de estado...'
+                  : 'Describe la actualización del caso...'
+              }
               rows={3}
               className="bg-lienzo border border-arcilla rounded-3xl-3 px-5 py-3.5 text-sm text-tierra placeholder:text-almendra w-full focus:outline-none focus:border-caoba transition-colors resize-none"
             />
@@ -354,17 +376,29 @@ export default function CasoDetallePage() {
               <label className="block text-[10px] font-semibold text-ladrillo uppercase tracking-wide mb-1">
                 Cambiar estado
               </label>
-              <select
-                {...register('estado_nuevo')}
-                className="bg-lienzo border border-arcilla rounded-3xl-3 px-4 py-3 text-sm text-tierra w-full focus:outline-none focus:border-caoba transition-colors"
-              >
-                <option value="">Sin cambio</option>
-                {ESTADOS_VALIDOS.map((e) => (
-                  <option key={e} value={e}>
-                    {e}
-                  </option>
-                ))}
-              </select>
+              {(() => {
+                const siguientesValidos = TRANSICIONES_VALIDAS[grupo?.estado_actual ?? ''] ?? [];
+                if (siguientesValidos.length === 0) {
+                  return (
+                    <p className="text-xs text-arena italic px-1 py-3">
+                      Caso finalizado — sin más transiciones posibles.
+                    </p>
+                  );
+                }
+                return (
+                  <select
+                    {...register('estado_nuevo')}
+                    className="bg-lienzo border border-arcilla rounded-3xl-3 px-4 py-3 text-sm text-tierra w-full focus:outline-none focus:border-caoba transition-colors"
+                  >
+                    <option value="">Sin cambio</option>
+                    {siguientesValidos.map((e) => (
+                      <option key={e} value={e}>
+                        {e}
+                      </option>
+                    ))}
+                  </select>
+                );
+              })()}
             </div>
 
             <div>

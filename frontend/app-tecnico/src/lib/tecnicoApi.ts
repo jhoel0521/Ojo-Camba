@@ -17,6 +17,7 @@ export interface Actualizacion {
   grupo_id: number;
   usuario_id: number;
   comentario: string;
+  estado_anterior: string | null;
   estado_nuevo: string | null;
   url_imagen: string | null;
   recursos_solicitados: string | null;

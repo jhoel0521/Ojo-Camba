@@ -15,10 +15,29 @@ import {
 } from '@ojo-camba/common';
 import { CreateGroupDto, UpdateCaseDto, AcceptReportDto, BanDeviceDto } from './dto';
 
+export interface DashboardInsight {
+  nivel: 'alerta' | 'atencion' | 'positivo';
+  mensaje: string;
+  kpi: string;
+  link?: string;
+}
+
 interface ImagenResult {
   buffer: Buffer;
   contentType: string;
 }
+
+// Flujo obligatorio y secuencial de un Caso de Obra (trazabilidad, pedido del
+// docente): desde cada estado solo se permite avanzar al/los siguiente(s)
+// indicado(s). "Rechazado" no aparece aqui porque aplica solo a Reporte
+// individuales antes de agruparse (ver rejectReport()), nunca a un
+// GrupoReporte ya en curso.
+const TRANSICIONES_VALIDAS: Record<string, EstadoReporte[]> = {
+  [EstadoReporte.Aceptado]: [EstadoReporte.ValidacionEnCampo],
+  [EstadoReporte.ValidacionEnCampo]: [EstadoReporte.EnTrabajo],
+  [EstadoReporte.EnTrabajo]: [EstadoReporte.Finalizado],
+  [EstadoReporte.Finalizado]: [],
+};
 
 const isExternalUrl = (url: string | null): boolean => url?.startsWith('http') === true;
 
@@ -232,10 +251,31 @@ export class AdminService {
 
     // Validar el estado ANTES de persistir la bitacora: evita dejar una
     // actualizacion huerfana cuando estado_nuevo es invalido.
+    //
+    // Nota sobre el texto de estos mensajes: sendRpc() en el gateway enruta
+    // las excepciones por subcadena de texto, no por codigo de error tipado
+    // (deuda tecnica TD-04). "invalido" cae primero en el chequeo de
+    // UnauthorizedException (pensado para tokens), asi que un mensaje de
+    // validacion que lo use termina devolviendo 401 en vez de 400. Se usa
+    // "deben" a proposito porque solo matchea la rama de BadRequestException.
     if (dto.estado_nuevo) {
       const validos = Object.values(EstadoReporte);
       if (!validos.includes(dto.estado_nuevo as EstadoReporte)) {
-        throw new BadRequestException(`Estado invalido. Validos: ${validos.join(', ')}`);
+        throw new BadRequestException(
+          `Los valores de estado deben ser uno de: ${validos.join(', ')}.`,
+        );
+      }
+
+      // Flujo secuencial obligatorio: no basta con que el valor exista en el
+      // enum, tiene que ser una transicion legal desde el estado actual.
+      const siguientesValidos = TRANSICIONES_VALIDAS[grupo.estado_actual] ?? [];
+      if (!siguientesValidos.includes(dto.estado_nuevo as EstadoReporte)) {
+        throw new BadRequestException(
+          `Los cambios de estado deben seguir el flujo secuencial: no se puede pasar de "${grupo.estado_actual}" a "${dto.estado_nuevo}". ` +
+            (siguientesValidos.length
+              ? `Desde "${grupo.estado_actual}" solo se permite pasar a: ${siguientesValidos.join(', ')}.`
+              : `"${grupo.estado_actual}" es un estado terminal, no admite más cambios.`),
+        );
       }
     }
 
@@ -264,6 +304,7 @@ export class AdminService {
       grupo_id: dto.grupo_id,
       usuario_id: dto.usuario_id,
       comentario: dto.comentario,
+      estado_anterior: dto.estado_nuevo ? grupo.estado_actual : null,
       estado_nuevo: dto.estado_nuevo ?? null,
       recursos_solicitados: dto.recursos_solicitados ?? null,
       fecha_estimada_fin: dto.fecha_estimada_fin ?? null,
@@ -636,13 +677,135 @@ export class AdminService {
     const totalActivos = casosPorEstado.reduce((acc, e) => acc + e.total, 0);
     const tasaResolucion = totalActivos > 0 ? Math.round((finalizados / totalActivos) * 100) : 0;
 
+    const insights = this.buildInsights({
+      pendientes: base.pendientes,
+      dispositivos_baneados: base.dispositivos_baneados,
+      tasa_resolucion: tasaResolucion,
+      por_categoria: porCategoria,
+    });
+
+    const casosPorEstadoHistorico = await this.getCasosPorEstadoHistorico(desde, hasta);
+
     return {
       ...base,
       reportes_por_mes: reportesPorMes,
       por_categoria: porCategoria,
       casos_por_estado: casosPorEstado,
+      casos_por_estado_historico: casosPorEstadoHistorico,
       tasa_resolucion: tasaResolucion,
       rango_aplicado: rango ? { desde, hasta } : null,
+      insights,
     };
+  }
+
+  // Reconstruye, dia por dia, en que estado estaba cada Caso de Obra —
+  // a partir de la bitacora ya existente (actualizaciones_caso), sin
+  // necesitar una tabla de snapshots nueva. Default: ultimos 30 dias.
+  private async getCasosPorEstadoHistorico(
+    desde?: string,
+    hasta?: string,
+  ): Promise<{ dia: string; estado: string; total: number }[]> {
+    const hastaDate = hasta ? new Date(`${hasta}T00:00:00.000`) : new Date();
+    const desdeDate = desde
+      ? new Date(`${desde}T00:00:00.000`)
+      : new Date(hastaDate.getTime() - 29 * 24 * 60 * 60 * 1000);
+
+    const desdeStr = desdeDate.toISOString().slice(0, 10);
+    const hastaStr = hastaDate.toISOString().slice(0, 10);
+
+    const rows: { dia: string; estado: string; total: string }[] = await this.grupoRepo.query(
+      `
+      WITH dias AS (
+        SELECT generate_series($1::date, $2::date, '1 day'::interval)::date AS dia
+      )
+      SELECT TO_CHAR(d.dia, 'YYYY-MM-DD') AS dia,
+             COALESCE(ultimo.estado_nuevo, 'Aceptado') AS estado,
+             COUNT(*) AS total
+      FROM dias d
+      CROSS JOIN grupos_reportes g
+      LEFT JOIN LATERAL (
+        SELECT estado_nuevo FROM actualizaciones_caso a
+        WHERE a.grupo_id = g.id AND a.estado_nuevo IS NOT NULL
+          AND a.creado_en < d.dia + interval '1 day'
+        ORDER BY a.creado_en DESC LIMIT 1
+      ) ultimo ON true
+      WHERE g.creado_en < d.dia + interval '1 day'
+      GROUP BY d.dia, COALESCE(ultimo.estado_nuevo, 'Aceptado')
+      ORDER BY d.dia
+      `,
+      [desdeStr, hastaStr],
+    );
+
+    return rows.map((r) => ({
+      dia: r.dia,
+      estado: r.estado,
+      total: parseInt(r.total, 10),
+    }));
+  }
+
+  // Motor de reglas del Dashboard (Knowledge-driven DSS, Power 2002): evalua los
+  // KPIs ya calculados contra umbrales fijos y devuelve acciones sugeridas.
+  // Puro y determinista (sin ML) para que sea trivial de testear y defender.
+  private buildInsights(kpis: {
+    pendientes: number;
+    dispositivos_baneados: number;
+    tasa_resolucion: number;
+    por_categoria: { categoria_id: number; nombre: string; total: number }[];
+  }): DashboardInsight[] {
+    const insights: DashboardInsight[] = [];
+
+    if (kpis.tasa_resolucion < 70) {
+      insights.push({
+        nivel: 'alerta',
+        kpi: 'tasa_resolucion',
+        mensaje: `La tasa de resolución (${kpis.tasa_resolucion}%) está bajo el umbral saludable de 70%. Revisa los casos represados en "En trabajo".`,
+        link: `/casos?estado=${EstadoReporte.EnTrabajo}`,
+      });
+    }
+
+    if (kpis.pendientes > 10) {
+      insights.push({
+        nivel: 'alerta',
+        kpi: 'pendientes',
+        mensaje: `Hay ${kpis.pendientes} reportes esperando revisión. Considera asignar más moderadores hoy.`,
+        link: '/revisar',
+      });
+    }
+
+    const totalCategorias = kpis.por_categoria.reduce((acc, c) => acc + c.total, 0);
+    const dominante = kpis.por_categoria[0];
+    if (dominante && totalCategorias > 0 && dominante.total / totalCategorias > 0.4) {
+      const pct = Math.round((dominante.total / totalCategorias) * 100);
+      insights.push({
+        nivel: 'atencion',
+        kpi: 'por_categoria',
+        mensaje: `"${dominante.nombre}" concentra el ${pct}% de los reportes del período. Prioriza cuadrillas de esa categoría.`,
+      });
+    }
+
+    if (kpis.dispositivos_baneados > 5) {
+      insights.push({
+        nivel: 'atencion',
+        kpi: 'dispositivos_baneados',
+        mensaje: `${kpis.dispositivos_baneados} dispositivos baneados. Revisa el patrón de abuso reciente.`,
+        link: '/usuarios',
+      });
+    }
+
+    if (insights.length === 0) {
+      insights.push({
+        nivel: 'positivo',
+        kpi: 'general',
+        mensaje:
+          'El sistema opera dentro de parámetros saludables — sin backlog crítico ni cuellos de botella.',
+      });
+    }
+
+    const orden: Record<DashboardInsight['nivel'], number> = {
+      alerta: 0,
+      atencion: 1,
+      positivo: 2,
+    };
+    return insights.sort((a, b) => orden[a.nivel] - orden[b.nivel]).slice(0, 4);
   }
 }

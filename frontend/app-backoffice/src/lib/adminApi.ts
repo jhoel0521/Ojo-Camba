@@ -33,6 +33,7 @@ export interface Actualizacion {
   grupo_id: number;
   usuario_id: number;
   comentario: string;
+  estado_anterior: string | null;
   estado_nuevo: string | null;
   url_imagen: string | null;
   recursos_solicitados: string | null;
@@ -49,12 +50,21 @@ export interface DashboardStats {
   dispositivos_baneados: number;
 }
 
+export interface DashboardInsight {
+  nivel: 'alerta' | 'atencion' | 'positivo';
+  mensaje: string;
+  kpi: string;
+  link?: string;
+}
+
 export interface DashboardKpis extends DashboardStats {
   reportes_por_mes: { mes: string; total: number }[];
   por_categoria: { categoria_id: number; nombre: string; total: number }[];
   casos_por_estado: { estado: string; total: number }[];
+  casos_por_estado_historico: { dia: string; estado: string; total: number }[];
   tasa_resolucion: number;
   rango_aplicado: { desde?: string; hasta?: string } | null;
+  insights: DashboardInsight[];
 }
 
 export interface Usuario {
