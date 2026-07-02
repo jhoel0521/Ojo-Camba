@@ -33,6 +33,7 @@ export interface Actualizacion {
   grupo_id: number;
   usuario_id: number;
   comentario: string;
+  estado_anterior: string | null;
   estado_nuevo: string | null;
   url_imagen: string | null;
   recursos_solicitados: string | null;
@@ -46,15 +47,26 @@ export interface DashboardStats {
   pendientes: number;
   aceptados_hoy: number;
   casos_activos: number;
+  reportes_activos: number;
   dispositivos_baneados: number;
 }
 
+export interface DashboardInsight {
+  nivel: 'alerta' | 'atencion' | 'positivo';
+  mensaje: string;
+  kpi: string;
+  link?: string;
+}
+
 export interface DashboardKpis extends DashboardStats {
-  reportes_por_mes: { mes: string; total: number }[];
+  reportes_por_periodo: { periodo: string; total: number }[];
+  finalizados_por_periodo: { periodo: string; total: number }[];
   por_categoria: { categoria_id: number; nombre: string; total: number }[];
   casos_por_estado: { estado: string; total: number }[];
+  casos_por_estado_historico: { dia: string; estado: string; total: number }[];
   tasa_resolucion: number;
   rango_aplicado: { desde?: string; hasta?: string } | null;
+  insights: DashboardInsight[];
 }
 
 export interface Usuario {
@@ -85,10 +97,23 @@ export async function getDashboard(): Promise<DashboardStats> {
   return fetchAPI<DashboardStats>('/admin/dashboard');
 }
 
-export async function getDashboardKpis(desde?: string, hasta?: string): Promise<DashboardKpis> {
+export async function getDashboardKpis(
+  desde?: string,
+  hasta?: string,
+  granularidad?: 'mes' | 'semana' | 'dia',
+  estado_in?: string,
+  estado_out?: string,
+  categoria_in?: string,
+  categoria_out?: string,
+): Promise<DashboardKpis> {
   const params = new URLSearchParams();
   if (desde) params.set('desde', desde);
   if (hasta) params.set('hasta', hasta);
+  if (granularidad) params.set('granularidad', granularidad);
+  if (estado_in) params.set('estado_in', estado_in);
+  if (estado_out) params.set('estado_out', estado_out);
+  if (categoria_in) params.set('categoria_in', categoria_in);
+  if (categoria_out) params.set('categoria_out', categoria_out);
   const qs = params.toString();
   return fetchAPI<DashboardKpis>(`/admin/dashboard/kpis${qs ? `?${qs}` : ''}`);
 }

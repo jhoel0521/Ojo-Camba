@@ -4,6 +4,23 @@ import type { ActualizacionPayload } from './tecnicoApi';
 /** Transiciones de estado que un tecnico en campo puede aplicar (HU-08). */
 export const ESTADOS_TECNICO = ['EnTrabajo', 'Finalizado'] as const;
 
+// Flujo secuencial obligatorio completo — debe coincidir con
+// TRANSICIONES_VALIDAS en backend/ms-admin/src/admin.service.ts. El tecnico
+// solo puede aplicar los pasos que caen dentro de ESTADOS_TECNICO; el paso
+// Aceptado -> ValidacionEnCampo lo hace el backoffice, no el tecnico.
+const TRANSICIONES_VALIDAS: Record<string, string[]> = {
+  Aceptado: ['ValidacionEnCampo'],
+  ValidacionEnCampo: ['EnTrabajo'],
+  EnTrabajo: ['Finalizado'],
+  Finalizado: [],
+};
+
+/** Siguiente(s) estado(s) que el TECNICO puede aplicar desde estadoActual (puede ser []). */
+export function siguientesEstadosTecnico(estadoActual: string): string[] {
+  const siguientes = TRANSICIONES_VALIDAS[estadoActual] ?? [];
+  return siguientes.filter((e) => (ESTADOS_TECNICO as readonly string[]).includes(e));
+}
+
 /**
  * Formulario de bitacora diaria del tecnico.
  *

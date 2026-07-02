@@ -81,7 +81,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         <header className="shrink-0 bg-perla border-b border-arcilla px-6 py-3.5">
           <h1 className="font-semibold text-base text-tierra">{currentLabel}</h1>
         </header>
-        <main className="flex-1 overflow-hidden p-6">{children}</main>
+        <main className="flex-1 overflow-y-auto p-6">{children}</main>
       </div>
     </div>
   );

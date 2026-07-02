@@ -76,8 +76,27 @@ export class AdminController {
   }
 
   @MessagePattern(TCP_PATTERNS.ADMIN.DASHBOARD_KPIS)
-  dashboardKpis(@Payload() dto: { desde?: string; hasta?: string }) {
-    return this.adminService.getDashboardKpis(dto?.desde, dto?.hasta);
+  dashboardKpis(
+    @Payload()
+    dto: {
+      desde?: string;
+      hasta?: string;
+      granularidad?: string;
+      estado_in?: string;
+      estado_out?: string;
+      categoria_in?: string;
+      categoria_out?: string;
+    },
+  ) {
+    return this.adminService.getDashboardKpis(
+      dto?.desde,
+      dto?.hasta,
+      dto?.granularidad as 'mes' | 'semana' | 'dia' | undefined,
+      dto?.estado_in,
+      dto?.estado_out,
+      dto?.categoria_in,
+      dto?.categoria_out,
+    );
   }
 
   @MessagePattern(TCP_PATTERNS.ADMIN.LIST_DEVICES)

@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { RefreshCw, FolderSearch } from 'lucide-react';
 import { listGroups, type GrupoReporte } from '../lib/adminApi';
 import { friendlyError } from '../lib/errors';
@@ -16,13 +17,16 @@ const ESTADOS = [
 const LIMIT = 20;
 
 export default function CasosPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [grupos, setGrupos] = useState<GrupoReporte[]>([]);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
-  const [estadoFiltro, setEstadoFiltro] = useState('');
+  // Se inicializa desde la URL para que los links con ?estado= (ej. desde las
+  // recomendaciones del Dashboard) precarguen el filtro correcto, no "Todos".
+  const [estadoFiltro, setEstadoFiltro] = useState(() => searchParams.get('estado') ?? '');
 
   const fetchData = useCallback(
     async (silent = false) => {
@@ -50,6 +54,7 @@ export default function CasosPage() {
   function handleFiltro(valor: string) {
     setEstadoFiltro(valor);
     setPage(1);
+    setSearchParams(valor ? { estado: valor } : {}, { replace: true });
   }
 
   return (
