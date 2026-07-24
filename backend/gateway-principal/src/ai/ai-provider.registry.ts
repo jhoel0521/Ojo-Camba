@@ -18,7 +18,7 @@ export class AiProviderRegistry {
   get(name?: string): AiProvider {
     const elegido = name
       ? this.providers.find((p) => p.name === name)
-      : this.providers.find((p) => p.isConfigured()) ?? this.providers[0];
+      : (this.providers.find((p) => p.isConfigured()) ?? this.providers[0]);
 
     if (!elegido) {
       throw new InternalServerErrorException('No hay ningún proveedor de IA registrado.');

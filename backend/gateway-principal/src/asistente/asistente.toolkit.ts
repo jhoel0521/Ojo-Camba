@@ -205,7 +205,12 @@ export class AsistenteToolkit implements AiToolkit {
       gravedad_sugerida: gravedad,
       accion,
       hechos: { ...hechos, horas: Math.floor(hechos.horas) },
-      traza: traza.map((r) => ({ id: r.id, bloque: r.bloque, conclusion: r.conclusion, regla: r.texto })),
+      traza: traza.map((r) => ({
+        id: r.id,
+        bloque: r.bloque,
+        conclusion: r.conclusion,
+        regla: r.texto,
+      })),
       nota: 'La gravedad y la traza salen del sistema experto; ubicacion_sensible y palabra_clave_riesgo dependen de criterio humano.',
     };
   }

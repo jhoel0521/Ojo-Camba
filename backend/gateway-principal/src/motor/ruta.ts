@@ -230,9 +230,9 @@ export function compararAlgoritmos(base: Punto, reportes: ReporteRuta[]): Compar
 /** Centroide (promedio de lat/lng) de los reportes: la Base cuando no hay GPS. */
 export function centroide(reportes: ReporteRuta[]): Punto {
   const n = reportes.length || 1;
-  const sum = reportes.reduce(
-    (acc, r) => ({ lat: acc.lat + r.lat, lng: acc.lng + r.lng }),
-    { lat: 0, lng: 0 },
-  );
+  const sum = reportes.reduce((acc, r) => ({ lat: acc.lat + r.lat, lng: acc.lng + r.lng }), {
+    lat: 0,
+    lng: 0,
+  });
   return { lat: sum.lat / n, lng: sum.lng / n };
 }

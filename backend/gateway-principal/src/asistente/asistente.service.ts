@@ -1,4 +1,9 @@
-import { Injectable, Logger, BadRequestException, ServiceUnavailableException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  BadRequestException,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { AiProviderRegistry } from '../ai/ai-provider.registry';
 import { AsistenteToolkit } from './asistente.toolkit';
 import type { AiMessage } from '../ai/ai-provider';
