@@ -1,10 +1,11 @@
 import { Module } from '@nestjs/common';
 import { ClientsModule, Transport } from '@nestjs/microservices';
-import { AsistenteController } from './asistente.controller';
-import { AsistenteService } from './asistente.service';
-import { AsistenteToolkit } from './asistente.toolkit';
-import { GroqProvider } from '../ai/groq.provider';
-import { AiProviderRegistry } from '../ai/ai-provider.registry';
+import { IaController } from './ia.controller';
+import { AsistenteService } from './asistente/asistente.service';
+import { AsistenteToolkit } from './asistente/asistente.toolkit';
+import { TriajeService } from './triaje/triaje.service';
+import { GroqProvider } from './ai/groq.provider';
+import { AiProviderRegistry } from './ai/ai-provider.registry';
 
 @Module({
   imports: [
@@ -27,7 +28,7 @@ import { AiProviderRegistry } from '../ai/ai-provider.registry';
       },
     ]),
   ],
-  controllers: [AsistenteController],
-  providers: [AsistenteService, AsistenteToolkit, GroqProvider, AiProviderRegistry],
+  controllers: [IaController],
+  providers: [AsistenteService, AsistenteToolkit, TriajeService, GroqProvider, AiProviderRegistry],
 })
-export class AsistenteModule {}
+export class IaModule {}

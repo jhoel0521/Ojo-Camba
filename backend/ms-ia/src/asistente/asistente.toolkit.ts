@@ -1,24 +1,18 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
-import { TCP_PATTERNS } from '@ojo-camba/common';
-import { sendRpc } from '../rpc.helper';
-import type { AiToolkit } from '../ai/ai-toolkit';
-import type { AiToolDefinition } from '../ai/ai-provider';
 import {
-  inferirTriaje,
-  tipoDesdeCategoria,
-  temporadaDeFecha,
-  horasTranscurridas,
-  recurrenciaDesdeCercanos,
-  type UbicacionSensible,
-} from '../motor/triaje';
-import {
+  TCP_PATTERNS,
   compararAlgoritmos,
   centroide,
   haversineM,
   MAX_REPORTES_COMPARACION,
+  type UbicacionSensible,
   type ReporteRuta,
-} from '../motor/ruta';
+} from '@ojo-camba/common';
+import { sendRpc } from '../rpc.helper';
+import type { AiToolkit } from '../ai/ai-toolkit';
+import type { AiToolDefinition } from '../ai/ai-provider';
+import { TriajeService } from '../triaje/triaje.service';
 
 /** Reporte tal como lo devuelven ms-register / ms-admin (subconjunto que usamos). */
 interface ReporteCrudo {
@@ -44,6 +38,7 @@ export class AsistenteToolkit implements AiToolkit {
   constructor(
     @Inject('MS_ADMIN') private readonly admin: ClientProxy,
     @Inject('MS_REGISTER') private readonly register: ClientProxy,
+    private readonly triaje: TriajeService,
   ) {}
 
   definitions(): AiToolDefinition[] {
@@ -188,24 +183,22 @@ export class AsistenteToolkit implements AiToolkit {
       distanciasCercanas = [];
     }
 
-    const hechos = {
-      tipo: tipoDesdeCategoria(reporte.categoria_id),
-      temporada: temporadaDeFecha(new Date()),
+    // Misma fuente de verdad que usa GravedadSugerida.tsx en el backoffice.
+    const resultado = this.triaje.inferir({
+      categoria_id: reporte.categoria_id,
+      creado_en: reporte.creado_en,
+      distancias_cercanas_m: distanciasCercanas,
       ubicacion_sensible: ubicacion,
-      recurrencia: recurrenciaDesdeCercanos(distanciasCercanas),
-      horas: horasTranscurridas(reporte.creado_en),
       palabra_clave_riesgo: palabraClave,
-    };
-
-    const { gravedad, traza, accion } = inferirTriaje(hechos);
+    });
 
     return {
       reporte_id: reporteId,
       categoria_id: reporte.categoria_id,
-      gravedad_sugerida: gravedad,
-      accion,
-      hechos: { ...hechos, horas: Math.floor(hechos.horas) },
-      traza: traza.map((r) => ({
+      gravedad_sugerida: resultado.gravedad_sugerida,
+      accion: resultado.accion,
+      hechos: resultado.hechos,
+      traza: resultado.traza.map((r) => ({
         id: r.id,
         bloque: r.bloque,
         conclusion: r.conclusion,
