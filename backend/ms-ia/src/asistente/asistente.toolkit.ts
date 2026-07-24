@@ -2,7 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import {
   TCP_PATTERNS,
-  compararAlgoritmos,
+  analizarRuta,
   centroide,
   haversineM,
   MAX_REPORTES_COMPARACION,
@@ -248,21 +248,18 @@ export class AsistenteToolkit implements AiToolkit {
         mensaje: 'El caso tiene menos de dos reportes: no hace falta sugerir un orden de visita.',
       };
     }
-    if (nodos.length > MAX_REPORTES_COMPARACION) {
-      return {
-        grupo_id: grupoId,
-        reportes: nodos.length,
-        mensaje: `El caso tiene ${nodos.length} reportes. La comparación exhaustiva se limita a ${MAX_REPORTES_COMPARACION} porque el número de rutas crece como n!.`,
-      };
-    }
 
     const base = centroide(nodos);
-    const comp = compararAlgoritmos(base, nodos);
-    const rec = comp.backtracking;
+    // analizarRuta calcula el óptimo exacto mientras es viable (≤8 reportes) y cae
+    // a la heurística de respaldo por encima de eso, en vez de no sugerir nada.
+    const analisis = analizarRuta(base, nodos);
+    const rec = analisis.recomendada;
 
     return {
       grupo_id: grupoId,
+      reportes: nodos.length,
       base: 'centroide del caso (sin GPS del técnico)',
+      exacto: analisis.exacto,
       recomendado: {
         algoritmo: rec.algoritmo,
         total_metros: Math.round(rec.costoM),
@@ -274,14 +271,18 @@ export class AsistenteToolkit implements AiToolkit {
           metros_desde_anterior: Math.round(t.distanciaM),
         })),
       },
-      comparacion: comp.todos.map((r) => ({
-        algoritmo: r.algoritmo,
-        total_metros: Math.round(r.costoM),
-        estados_explorados: r.estadosExplorados,
-        optima: r.optima,
-        respeta_prioridad: r.respetaPrioridad,
-      })),
-      nota: 'Backtracking es el recomendado: mínimo costo entre las rutas que respetan la prioridad por gravedad.',
+      comparacion: analisis.comparacion
+        ? analisis.comparacion.map((r) => ({
+            algoritmo: r.algoritmo,
+            total_metros: Math.round(r.costoM),
+            estados_explorados: r.estadosExplorados,
+            optima: r.optima,
+            respeta_prioridad: r.respetaPrioridad,
+          }))
+        : null,
+      nota: analisis.exacto
+        ? 'Backtracking es el recomendado: mínimo costo entre las rutas que respetan la prioridad por gravedad.'
+        : `El caso tiene ${nodos.length} reportes (más de ${MAX_REPORTES_COMPARACION}), así que se usó una heurística (vecino más cercano por prioridad + mejora local): sugiere un buen orden, no necesariamente el óptimo exacto.`,
     };
   }
 

@@ -2,11 +2,10 @@ import { useEffect, useMemo, useState } from 'react';
 import { Route, Crosshair, Loader2, Check, X } from 'lucide-react';
 import { getGroupReports, type ReporteDeGrupo } from '../lib/tecnicoApi';
 import {
-  compararAlgoritmos,
-  MAX_REPORTES_COMPARACION,
+  analizarRuta,
   type ReporteRuta,
   type ResultadoBusqueda,
-} from '../lib/rutaEstados';
+} from '@ojo-camba/common/motor/ruta';
 import { useGeolocation } from '../hooks/useGeolocation';
 import { categoriaName } from '../lib/categories';
 import { friendlyError } from '../lib/errors';
@@ -67,12 +66,12 @@ export default function RutaSugerida({ grupoId }: { grupoId: number }) {
     [reportes],
   );
 
-  const demasiados = nodos.length > MAX_REPORTES_COMPARACION;
-
-  const comparacion = useMemo(() => {
-    if (!gps.fix || nodos.length < 2 || demasiados) return null;
-    return compararAlgoritmos(gps.fix, nodos);
-  }, [gps.fix, nodos, demasiados]);
+  // analizarRuta calcula el óptimo exacto mientras es viable y cae a la heurística
+  // de respaldo en Casos de Obra grandes, en vez de no sugerir nada.
+  const analisis = useMemo(() => {
+    if (!gps.fix || nodos.length < 2) return null;
+    return analizarRuta(gps.fix, nodos);
+  }, [gps.fix, nodos]);
 
   if (loading) {
     return <div className="bg-perla rounded-3xl-3 h-32 mb-8 animate-pulse" aria-busy="true" />;
@@ -100,14 +99,7 @@ export default function RutaSugerida({ grupoId }: { grupoId: number }) {
         </div>
       )}
 
-      {!error && demasiados && (
-        <p className="text-xs text-arena italic py-2">
-          Este caso tiene {nodos.length} reportes. La comparación exhaustiva se limita a{' '}
-          {MAX_REPORTES_COMPARACION} porque el número de rutas crece como n!.
-        </p>
-      )}
-
-      {!error && !demasiados && (
+      {!error && (
         <>
           <div className="rounded-3xl-3 border border-arcilla p-4 mb-4">
             <div className="flex items-center justify-between gap-3">
@@ -141,10 +133,19 @@ export default function RutaSugerida({ grupoId }: { grupoId: number }) {
             )}
           </div>
 
-          {comparacion && (
+          {analisis && (
             <>
-              <RutaRecomendada resultado={comparacion.backtracking} />
-              <TablaComparativa resultados={comparacion.todos} />
+              <RutaRecomendada resultado={analisis.recomendada} />
+              {analisis.comparacion ? (
+                <TablaComparativa resultados={analisis.comparacion} />
+              ) : (
+                <p className="text-[10px] text-arena leading-relaxed mt-2">
+                  Este caso tiene {nodos.length} reportes: por encima de 8, comparar todas las rutas
+                  posibles es inviable (crecen como n!). Se usó una heurística (vecino más cercano
+                  por prioridad + mejora local): sugiere un buen orden, no necesariamente el óptimo
+                  exacto.
+                </p>
+              )}
             </>
           )}
         </>
@@ -161,7 +162,7 @@ function RutaRecomendada({ resultado }: { resultado: ResultadoBusqueda }) {
           Recomendada
         </span>
         <span className="text-xs text-arena">
-          Backtracking · {metros(resultado.costoM)} en total
+          {resultado.algoritmo} · {metros(resultado.costoM)} en total
         </span>
       </div>
 
