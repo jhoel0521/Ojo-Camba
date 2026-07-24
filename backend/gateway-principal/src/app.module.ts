@@ -6,15 +6,14 @@ import { AuthController } from './auth.controller';
 import { ReportesController } from './reportes.controller';
 import { AdminController } from './admin.controller';
 import { GamifyController } from './gamify.controller';
+import { AsistenteController } from './asistente.controller';
+import { IaController } from './ia.controller';
 import { EventsModule } from './events/events.module';
-import { AsistenteModule } from './asistente/asistente.module';
 
 @Module({
   imports: [
-    // Carga el .env del gateway (incluida GROQ_API_KEY) en process.env.
     ConfigModule.forRoot({ isGlobal: true }),
     EventsModule,
-    AsistenteModule,
     ClientsModule.register([
       {
         name: 'MS_AUTH',
@@ -48,6 +47,14 @@ import { AsistenteModule } from './asistente/asistente.module';
           port: parseInt(process.env.MS_GAMIFY_PORT ?? '3004', 10),
         },
       },
+      {
+        name: 'MS_IA',
+        transport: Transport.TCP,
+        options: {
+          host: process.env.MS_IA_HOST ?? 'localhost',
+          port: parseInt(process.env.MS_IA_PORT ?? '3006', 10),
+        },
+      },
     ]),
   ],
   controllers: [
@@ -56,6 +63,8 @@ import { AsistenteModule } from './asistente/asistente.module';
     ReportesController,
     AdminController,
     GamifyController,
+    AsistenteController,
+    IaController,
   ],
 })
 export class AppModule {}
