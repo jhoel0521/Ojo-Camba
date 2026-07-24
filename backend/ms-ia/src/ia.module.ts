@@ -4,6 +4,7 @@ import { IaController } from './ia.controller';
 import { AsistenteService } from './asistente/asistente.service';
 import { AsistenteToolkit } from './asistente/asistente.toolkit';
 import { TriajeService } from './triaje/triaje.service';
+import { SugerenciaHechosService } from './triaje/sugerencia-hechos.service';
 import { GroqProvider } from './ai/groq.provider';
 import { AiProviderRegistry } from './ai/ai-provider.registry';
 
@@ -29,6 +30,13 @@ import { AiProviderRegistry } from './ai/ai-provider.registry';
     ]),
   ],
   controllers: [IaController],
-  providers: [AsistenteService, AsistenteToolkit, TriajeService, GroqProvider, AiProviderRegistry],
+  providers: [
+    AsistenteService,
+    AsistenteToolkit,
+    TriajeService,
+    SugerenciaHechosService,
+    GroqProvider,
+    AiProviderRegistry,
+  ],
 })
 export class IaModule {}
