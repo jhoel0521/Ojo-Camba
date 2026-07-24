@@ -35,7 +35,7 @@ import {
 import { friendlyError } from '../lib/errors';
 import { getImageUrl } from '../lib/api';
 import { CATEGORIA_NAMES, CATEGORIA_IDS } from '../lib/categories';
-import type { GravedadValor } from '../lib/triaje';
+import type { GravedadValor } from '../lib/triajeApi';
 import PendingReportCard from '../components/PendingReportCard';
 import GravedadBadge from '../components/GravedadBadge';
 import GravedadSugerida from '../components/GravedadSugerida';

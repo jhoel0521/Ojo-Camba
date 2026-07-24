@@ -1,15 +1,21 @@
-import { useMemo, useState } from 'react';
-import { Sparkles, ChevronRight, ChevronDown, Bell, Check, AlertCircle } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import {
+  Sparkles,
+  ChevronRight,
+  ChevronDown,
+  Bell,
+  Check,
+  AlertCircle,
+  Loader2,
+} from 'lucide-react';
 import {
   inferirTriaje,
-  tipoDesdeCategoria,
-  temporadaDeFecha,
-  horasTranscurridas,
-  recurrenciaDesdeCercanos,
   ETIQUETAS_UBICACION,
   type GravedadValor,
   type UbicacionSensible,
-} from '../lib/triaje';
+  type ResultadoTriaje,
+} from '../lib/triajeApi';
+import { friendlyError } from '../lib/errors';
 import GravedadBadge from './GravedadBadge';
 
 interface GravedadSugeridaProps {
@@ -32,20 +38,39 @@ export default function GravedadSugerida({
   const [ubicacionSensible, setUbicacionSensible] = useState<UbicacionSensible>('ninguna');
   const [palabraClaveRiesgo, setPalabraClaveRiesgo] = useState(false);
   const [trazaAbierta, setTrazaAbierta] = useState(false);
+  const [resultado, setResultado] = useState<ResultadoTriaje | null>(null);
+  const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState('');
 
-  const hechos = useMemo(
-    () => ({
-      tipo: tipoDesdeCategoria(categoriaId),
-      temporada: temporadaDeFecha(new Date()),
+  useEffect(() => {
+    let cancelado = false;
+    setCargando(true);
+    setError('');
+    inferirTriaje({
+      categoria_id: categoriaId,
+      creado_en: creadoEn,
+      distancias_cercanas_m: distanciasCercanasM,
       ubicacion_sensible: ubicacionSensible,
-      recurrencia: recurrenciaDesdeCercanos(distanciasCercanasM),
-      horas: horasTranscurridas(creadoEn),
       palabra_clave_riesgo: palabraClaveRiesgo,
-    }),
-    [categoriaId, creadoEn, distanciasCercanasM, ubicacionSensible, palabraClaveRiesgo],
-  );
+    })
+      .then((r) => {
+        if (!cancelado) setResultado(r);
+      })
+      .catch((e) => {
+        if (!cancelado) setError(friendlyError(e));
+      })
+      .finally(() => {
+        if (!cancelado) setCargando(false);
+      });
+    return () => {
+      cancelado = true;
+    };
+  }, [categoriaId, creadoEn, distanciasCercanasM, ubicacionSensible, palabraClaveRiesgo]);
 
-  const { gravedad, traza, accion } = useMemo(() => inferirTriaje(hechos), [hechos]);
+  const gravedad = resultado?.gravedad_sugerida ?? null;
+  const traza = resultado?.traza ?? [];
+  const accion = resultado?.accion ?? null;
+  const hechos = resultado?.hechos;
 
   const yaAplicada = gravedad !== null && gravedad === gravedadActual;
 
@@ -55,7 +80,9 @@ export default function GravedadSugerida({
         <label className="text-[10px] font-bold text-sol-camba uppercase tracking-wider flex items-center gap-1">
           <Sparkles className="w-3 h-3" /> Gravedad sugerida
         </label>
-        {gravedad ? (
+        {cargando ? (
+          <Loader2 className="w-3.5 h-3.5 text-arena animate-spin" />
+        ) : gravedad ? (
           <GravedadBadge gravedad={gravedad} />
         ) : (
           <span className="text-[10px] text-arena font-semibold uppercase tracking-wide">
@@ -64,10 +91,18 @@ export default function GravedadSugerida({
         )}
       </div>
 
-      <p className="text-[10px] text-arena leading-relaxed mb-2">
-        {hechos.tipo} · temporada {hechos.temporada} · {hechos.recurrencia} reporte
-        {hechos.recurrencia > 1 ? 's' : ''} ≤100 m · {Math.floor(hechos.horas)} h de antigüedad
-      </p>
+      {error && (
+        <p role="alert" className="text-[10px] text-red-700 leading-relaxed mb-2">
+          {error}
+        </p>
+      )}
+
+      {hechos && (
+        <p className="text-[10px] text-arena leading-relaxed mb-2">
+          {hechos.tipo} · temporada {hechos.temporada} · {hechos.recurrencia} reporte
+          {hechos.recurrencia > 1 ? 's' : ''} ≤100 m · {Math.floor(hechos.horas)} h de antigüedad
+        </p>
+      )}
 
       <div className="space-y-2">
         <div>
