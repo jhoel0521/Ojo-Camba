@@ -5,6 +5,7 @@ import { AsistenteService } from './asistente/asistente.service';
 import { AsistenteToolkit } from './asistente/asistente.toolkit';
 import { TriajeService } from './triaje/triaje.service';
 import { SugerenciaHechosService } from './triaje/sugerencia-hechos.service';
+import { RecomendacionCuadrillaService } from './cuadrillas/recomendacion.service';
 import { GroqProvider } from './ai/groq.provider';
 import { AiProviderRegistry } from './ai/ai-provider.registry';
 
@@ -35,6 +36,7 @@ import { AiProviderRegistry } from './ai/ai-provider.registry';
     AsistenteToolkit,
     TriajeService,
     SugerenciaHechosService,
+    RecomendacionCuadrillaService,
     GroqProvider,
     AiProviderRegistry,
   ],

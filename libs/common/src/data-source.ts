@@ -5,6 +5,8 @@ import { config } from 'dotenv';
 import { Reporte } from './entities/reporte.entity';
 import { GrupoReporte } from './entities/grupo-reporte.entity';
 import { Categoria } from './entities/categoria.entity';
+import { Especialidad } from './entities/especialidad.entity';
+import { Cuadrilla } from './entities/cuadrilla.entity';
 import { Dispositivo } from './entities/dispositivo.entity';
 import { ActualizacionCaso } from './entities/actualizacion-caso.entity';
 import { Usuario } from './entities/usuario.entity';
@@ -32,6 +34,8 @@ export const AppDataSource = new DataSource({
     Reporte,
     GrupoReporte,
     Categoria,
+    Especialidad,
+    Cuadrilla,
     Dispositivo,
     ActualizacionCaso,
     Usuario,

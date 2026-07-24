@@ -7,13 +7,23 @@ import {
   GrupoReporte,
   ActualizacionCaso,
   Categoria,
+  Cuadrilla,
+  Especialidad,
 } from '@ojo-camba/common';
 import { AdminController } from './admin.controller';
 import { AdminService } from './admin.service';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Reporte, Dispositivo, GrupoReporte, ActualizacionCaso, Categoria]),
+    TypeOrmModule.forFeature([
+      Reporte,
+      Dispositivo,
+      GrupoReporte,
+      ActualizacionCaso,
+      Categoria,
+      Cuadrilla,
+      Especialidad,
+    ]),
     ClientsModule.register([
       {
         name: 'MS_GAMIFY',

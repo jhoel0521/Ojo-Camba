@@ -14,6 +14,7 @@ import { sendRpc } from '../rpc.helper';
 import type { AiToolkit } from '../ai/ai-toolkit';
 import type { AiToolDefinition } from '../ai/ai-provider';
 import { TriajeService } from '../triaje/triaje.service';
+import { RecomendacionCuadrillaService } from '../cuadrillas/recomendacion.service';
 
 /** Reporte tal como lo devuelven ms-register / ms-admin (subconjunto que usamos). */
 interface ReporteCrudo {
@@ -41,6 +42,7 @@ export class AsistenteToolkit implements AiToolkit {
     @Inject('MS_ADMIN') private readonly admin: ClientProxy,
     @Inject('MS_REGISTER') private readonly register: ClientProxy,
     private readonly triaje: TriajeService,
+    private readonly recomendacionCuadrilla: RecomendacionCuadrillaService,
   ) {}
 
   definitions(): AiToolDefinition[] {
@@ -109,6 +111,19 @@ export class AsistenteToolkit implements AiToolkit {
         },
       },
       {
+        name: 'recomendar_cuadrilla',
+        description:
+          'Recomienda qué cuadrilla mandar a un Caso de Obra, puntuando por especialidad (que atienda la categoría del caso) y por carga actual (casos activos ya asignados). Devuelve el ranking completo con la traza de reglas: no inventes la recomendación ni los puntajes, relatá los que devuelve la herramienta.',
+        parameters: {
+          type: 'object',
+          properties: {
+            grupo_id: { type: 'integer', description: 'ID del Caso de Obra (grupo).' },
+          },
+          required: ['grupo_id'],
+          additionalProperties: false,
+        },
+      },
+      {
         name: 'navegar',
         description: `Navega el navegador del operador a una pantalla del Back Office. Rutas válidas: ${RUTAS_VALIDAS.join(', ')}. Para un caso puntual podés usar "/casos/ID".`,
         parameters: {
@@ -133,6 +148,8 @@ export class AsistenteToolkit implements AiToolkit {
         return this.explicarTriaje(input);
       case 'explicar_ruta':
         return this.explicarRuta(input);
+      case 'recomendar_cuadrilla':
+        return this.recomendarCuadrilla(input);
       case 'navegar':
         return this.navegar(input);
       default:
@@ -284,6 +301,20 @@ export class AsistenteToolkit implements AiToolkit {
         ? 'Backtracking es el recomendado: mínimo costo entre las rutas que respetan la prioridad por gravedad.'
         : `El caso tiene ${nodos.length} reportes (más de ${MAX_REPORTES_COMPARACION}), así que se usó una heurística (vecino más cercano por prioridad + mejora local): sugiere un buen orden, no necesariamente el óptimo exacto.`,
     };
+  }
+
+  private async recomendarCuadrilla(
+    input: Record<string, unknown>,
+  ): Promise<Record<string, unknown>> {
+    const grupoId = Number(input.grupo_id);
+    if (!Number.isInteger(grupoId)) return { error: 'grupo_id debe ser un entero.' };
+
+    try {
+      const r = await this.recomendacionCuadrilla.recomendar(grupoId);
+      return { ...r } as unknown as Record<string, unknown>;
+    } catch {
+      return { error: `No pude recomendar una cuadrilla para el Caso de Obra #${grupoId}.` };
+    }
   }
 
   private navegar(input: Record<string, unknown>): Record<string, unknown> {

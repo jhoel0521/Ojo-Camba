@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Body, Param, Inject, Query, Res } from '@nestjs/common';
+import { Controller, Post, Get, Patch, Body, Param, Inject, Query, Res } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
 import { TCP_PATTERNS } from '@ojo-camba/common';
@@ -229,6 +229,52 @@ export class AdminController {
         estado_out: estadoOut,
         categoria_in: categoriaIn,
         categoria_out: categoriaOut,
+      }),
+    );
+  }
+
+  @Get('especialidades')
+  listEspecialidades() {
+    return sendRpc(this.client.send(TCP_PATTERNS.ADMIN.LIST_ESPECIALIDADES, {}));
+  }
+
+  @Get('cuadrillas')
+  listCuadrillas(@Query('solo_activas') soloActivas?: string) {
+    return sendRpc(
+      this.client.send(TCP_PATTERNS.ADMIN.LIST_CUADRILLAS, {
+        solo_activas: soloActivas === 'true',
+      }),
+    );
+  }
+
+  @Post('cuadrillas')
+  createCuadrilla(@Body() dto: { nombre: string; especialidad_id?: number }) {
+    return sendRpc(this.client.send(TCP_PATTERNS.ADMIN.CREATE_CUADRILLA, dto));
+  }
+
+  @Patch('cuadrillas/:id')
+  updateCuadrilla(
+    @Param('id') id: string,
+    @Body() dto: { nombre?: string; especialidad_id?: number | null; activa?: boolean },
+  ) {
+    return sendRpc(
+      this.client.send(TCP_PATTERNS.ADMIN.UPDATE_CUADRILLA, {
+        cuadrilla_id: parseInt(id, 10),
+        ...dto,
+      }),
+    );
+  }
+
+  @Post('groups/:id/cuadrilla')
+  asignarCuadrilla(
+    @Param('id') id: string,
+    @Body() dto: { cuadrilla_id: number | null; usuario_id: number },
+  ) {
+    return sendRpc(
+      this.client.send(TCP_PATTERNS.ADMIN.ASIGNAR_CUADRILLA, {
+        grupo_id: parseInt(id, 10),
+        cuadrilla_id: dto.cuadrilla_id,
+        usuario_id: dto.usuario_id,
       }),
     );
   }

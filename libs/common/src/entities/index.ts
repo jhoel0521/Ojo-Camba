@@ -2,6 +2,8 @@ export { Reporte } from './reporte.entity';
 export { Dispositivo } from './dispositivo.entity';
 export { Categoria } from './categoria.entity';
 export { GrupoReporte } from './grupo-reporte.entity';
+export { Especialidad } from './especialidad.entity';
+export { Cuadrilla } from './cuadrilla.entity';
 export { ActualizacionCaso } from './actualizacion-caso.entity';
 export { Usuario } from './usuario.entity';
 export { Rol } from './rol.entity';

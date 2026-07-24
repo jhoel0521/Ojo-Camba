@@ -1,4 +1,12 @@
-import { IsArray, IsInt, IsNotEmpty, ArrayMinSize, IsOptional, IsIn } from 'class-validator';
+import {
+  IsArray,
+  IsInt,
+  IsNotEmpty,
+  ArrayMinSize,
+  IsOptional,
+  IsIn,
+  IsBoolean,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 import { Gravedad } from '@ojo-camba/common';
 
@@ -55,6 +63,46 @@ export class AcceptReportDto {
 export class RejectReportDto {
   @IsInt()
   report_id: number;
+}
+
+export class CreateCuadrillaDto {
+  @IsNotEmpty()
+  nombre: string;
+
+  @IsOptional()
+  @IsInt()
+  especialidad_id?: number;
+}
+
+export class UpdateCuadrillaDto {
+  @IsInt()
+  cuadrilla_id: number;
+
+  @IsOptional()
+  @IsNotEmpty()
+  nombre?: string;
+
+  // null desvincula la especialidad; undefined la deja como está.
+  @IsOptional()
+  @IsInt()
+  especialidad_id?: number | null;
+
+  @IsOptional()
+  @IsBoolean()
+  activa?: boolean;
+}
+
+export class AsignarCuadrillaDto {
+  @IsInt()
+  grupo_id: number;
+
+  // null desasigna la cuadrilla del caso.
+  @IsOptional()
+  @IsInt()
+  cuadrilla_id?: number | null;
+
+  @IsInt()
+  usuario_id: number;
 }
 
 export class BanDeviceDto {

@@ -7,6 +7,8 @@ import {
   GrupoReporte,
   ActualizacionCaso,
   Categoria,
+  Cuadrilla,
+  Especialidad,
   EstadoReporte,
 } from '@ojo-camba/common';
 import { AdminService, type DashboardInsight } from './admin.service';
@@ -57,6 +59,8 @@ describe('AdminService', () => {
   let grupoRepo: ReturnType<typeof makeRepoMock>;
   let actualizacionRepo: ReturnType<typeof makeRepoMock>;
   let dispositivoRepo: ReturnType<typeof makeRepoMock>;
+  let cuadrillaRepo: ReturnType<typeof makeRepoMock>;
+  let especialidadRepo: ReturnType<typeof makeRepoMock>;
   let gamifyClient: { emit: jest.Mock };
 
   beforeEach(async () => {
@@ -64,6 +68,8 @@ describe('AdminService', () => {
     grupoRepo = makeRepoMock();
     actualizacionRepo = makeRepoMock();
     dispositivoRepo = makeRepoMock();
+    cuadrillaRepo = makeRepoMock();
+    especialidadRepo = makeRepoMock();
     gamifyClient = { emit: jest.fn().mockReturnValue({ subscribe: jest.fn() }) };
 
     // acceptReport corre dentro de reporteRepo.manager.transaction(); el manager
@@ -95,6 +101,8 @@ describe('AdminService', () => {
         { provide: getRepositoryToken(GrupoReporte), useValue: grupoRepo },
         { provide: getRepositoryToken(ActualizacionCaso), useValue: actualizacionRepo },
         { provide: getRepositoryToken(Categoria), useValue: makeRepoMock() },
+        { provide: getRepositoryToken(Cuadrilla), useValue: cuadrillaRepo },
+        { provide: getRepositoryToken(Especialidad), useValue: especialidadRepo },
         { provide: 'MS_GAMIFY', useValue: gamifyClient },
       ],
     }).compile();
@@ -759,6 +767,101 @@ describe('AdminService', () => {
       expect(finalizadosPorPeriodoQb.where).toHaveBeenCalledWith('a.estado_nuevo = :finalizado', {
         finalizado: EstadoReporte.Finalizado,
       });
+    });
+  });
+
+  describe('asignarCuadrilla', () => {
+    const GRUPO = { id: 12, codigo_obra: 'O-26-0000012', cuadrilla_id: null };
+
+    it('asigna la cuadrilla y deja el movimiento en la bitacora', async () => {
+      grupoRepo.findOne.mockResolvedValue({ ...GRUPO });
+      cuadrillaRepo.findOne.mockResolvedValue({ id: 3, nombre: 'Bacheo Norte', activa: true });
+
+      const result = await service.asignarCuadrilla({
+        grupo_id: 12,
+        cuadrilla_id: 3,
+        usuario_id: 1,
+      });
+
+      expect(result.cuadrilla_id).toBe(3);
+      expect(grupoRepo.save).toHaveBeenCalledWith(expect.objectContaining({ cuadrilla_id: 3 }));
+      // El historial de reasignaciones se lee del timeline: no hay tabla aparte.
+      expect(actualizacionRepo.save).toHaveBeenCalledWith(
+        expect.objectContaining({ comentario: 'Cuadrilla asignada: "Bacheo Norte".' }),
+      );
+    });
+
+    it('registra la reasignacion nombrando la cuadrilla anterior', async () => {
+      grupoRepo.findOne.mockResolvedValue({ ...GRUPO, cuadrilla_id: 2 });
+      cuadrillaRepo.findOne
+        .mockResolvedValueOnce({ id: 2, nombre: 'Bacheo Sur', activa: true }) // anterior
+        .mockResolvedValueOnce({ id: 3, nombre: 'Bacheo Norte', activa: true }); // nueva
+
+      await service.asignarCuadrilla({ grupo_id: 12, cuadrilla_id: 3, usuario_id: 1 });
+
+      expect(actualizacionRepo.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          comentario: 'Cuadrilla reasignada: "Bacheo Sur" → "Bacheo Norte".',
+        }),
+      );
+    });
+
+    it('rechaza una cuadrilla dada de baja', async () => {
+      grupoRepo.findOne.mockResolvedValue({ ...GRUPO });
+      cuadrillaRepo.findOne.mockResolvedValue({ id: 1, nombre: 'Bacheo Este', activa: false });
+
+      await expect(
+        service.asignarCuadrilla({ grupo_id: 12, cuadrilla_id: 1, usuario_id: 1 }),
+      ).rejects.toThrow(BadRequestException);
+      expect(grupoRepo.save).not.toHaveBeenCalled();
+    });
+
+    it('cuadrilla_id null desasigna sin romper la bitacora', async () => {
+      grupoRepo.findOne.mockResolvedValue({ ...GRUPO, cuadrilla_id: 2 });
+      cuadrillaRepo.findOne.mockResolvedValue({ id: 2, nombre: 'Bacheo Sur', activa: true });
+
+      const result = await service.asignarCuadrilla({
+        grupo_id: 12,
+        cuadrilla_id: null,
+        usuario_id: 1,
+      });
+
+      expect(result.cuadrilla_id).toBeNull();
+      expect(actualizacionRepo.save).toHaveBeenCalledWith(
+        expect.objectContaining({ comentario: 'Cuadrilla desasignada ("Bacheo Sur").' }),
+      );
+    });
+  });
+
+  describe('listCuadrillas', () => {
+    it('resuelve la especialidad y la carga de casos activos de cada cuadrilla', async () => {
+      cuadrillaRepo.find.mockResolvedValue([
+        { id: 3, nombre: 'Bacheo Norte', especialidad_id: 1, activa: true },
+        { id: 10, nombre: 'Apoyo', especialidad_id: null, activa: true },
+      ]);
+      especialidadRepo.find.mockResolvedValue([
+        { id: 1, nombre: 'Bacheo y pavimento', categoria_id: 1 },
+      ]);
+      grupoRepo.createQueryBuilder = jest
+        .fn()
+        .mockImplementation(() => makeQb([{ cuadrilla_id: 3, total: '4' }]));
+
+      const result = await service.listCuadrillas(true);
+
+      expect(result).toEqual([
+        expect.objectContaining({
+          id: 3,
+          especialidad_nombre: 'Bacheo y pavimento',
+          especialidad_categoria_id: 1,
+          casos_activos: 4,
+        }),
+        expect.objectContaining({
+          id: 10,
+          especialidad_nombre: null,
+          especialidad_categoria_id: null,
+          casos_activos: 0,
+        }),
+      ]);
     });
   });
 });
