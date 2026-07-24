@@ -22,7 +22,7 @@ export interface ReporteRuta {
   categoria_id: number;
 }
 
-export type NombreAlgoritmo = 'BFS' | 'DFS' | 'Backtracking';
+export type NombreAlgoritmo = 'BFS' | 'DFS' | 'Backtracking' | 'Heurística';
 
 export interface TramoRuta {
   reporte: ReporteRuta;
@@ -227,6 +227,125 @@ export function compararAlgoritmos(base: Punto, reportes: ReporteRuta[]): Compar
     r.optima = Math.abs(r.costoM - minimo) < 0.01;
   }
   return { bfs, dfs, backtracking, todos };
+}
+
+/** Costo total (haversine acumulado) de recorrer una ruta desde la Base. */
+export function costoRuta(base: Punto, ruta: ReporteRuta[]): number {
+  let pos = base;
+  let total = 0;
+  for (const r of ruta) {
+    total += haversineM(pos, r);
+    pos = puntoDe(r);
+  }
+  return total;
+}
+
+/**
+ * Mejora local 2-opt: prueba invertir cada segmento [i..k] y se queda con la
+ * inversión si baja el costo. La guarda respetaPrioridad() descarta cualquier
+ * inversión que rompa el orden por gravedad (invertir un tramo que cruza dos
+ * niveles de gravedad lo violaría; invertir dentro de un mismo nivel no).
+ * `contar` acumula las inversiones evaluadas como proxy de "estados explorados".
+ */
+function mejorar2opt(base: Punto, rutaInicial: ReporteRuta[], contar: () => void): ReporteRuta[] {
+  let mejor = [...rutaInicial];
+  let mejorCosto = costoRuta(base, mejor);
+
+  let huboMejora = true;
+  while (huboMejora) {
+    huboMejora = false;
+    for (let i = 0; i < mejor.length - 1; i++) {
+      for (let k = i + 1; k < mejor.length; k++) {
+        contar();
+        const candidata = [
+          ...mejor.slice(0, i),
+          ...mejor.slice(i, k + 1).reverse(),
+          ...mejor.slice(k + 1),
+        ];
+        if (!respetaPrioridad(candidata)) continue;
+        const costo = costoRuta(base, candidata);
+        if (costo < mejorCosto - 0.01) {
+          mejor = candidata;
+          mejorCosto = costo;
+          huboMejora = true;
+        }
+      }
+    }
+  }
+  return mejor;
+}
+
+/**
+ * Heurística de respaldo para Casos de Obra grandes (> MAX_REPORTES_COMPARACION),
+ * donde la comparación exhaustiva es inviable (crece como n!). No garantiza el
+ * óptimo, pero siempre sugiere un orden razonable en tiempo polinómico:
+ *  1. Vecino más cercano respetando la prioridad por gravedad: en cada paso solo
+ *     considera los pendientes de gravedad máxima y salta al más próximo.
+ *  2. Mejora local 2-opt con guarda de prioridad sobre la ruta resultante.
+ * Como el paso 1 solo elige entre los de gravedad máxima, la ruta queda en orden
+ * de gravedad no creciente y respetaPrioridad() se cumple por construcción.
+ */
+export function buscarHeuristica(base: Punto, reportes: ReporteRuta[]): ResultadoBusqueda {
+  let estadosExplorados = 0;
+  const contar = (): void => {
+    estadosExplorados++;
+  };
+
+  const pendientes = [...reportes];
+  const ruta: ReporteRuta[] = [];
+  let pos = base;
+
+  while (pendientes.length > 0) {
+    const nivelMax = Math.max(...pendientes.map((r) => nivelGravedad(r.gravedad)));
+    let mejorIdx = -1;
+    let mejorDist = Infinity;
+    for (let i = 0; i < pendientes.length; i++) {
+      if (nivelGravedad(pendientes[i].gravedad) !== nivelMax) continue;
+      contar();
+      const d = haversineM(pos, pendientes[i]);
+      if (d < mejorDist) {
+        mejorDist = d;
+        mejorIdx = i;
+      }
+    }
+    const elegido = pendientes.splice(mejorIdx, 1)[0];
+    ruta.push(elegido);
+    pos = puntoDe(elegido);
+  }
+
+  const mejorada = mejorar2opt(base, ruta, contar);
+
+  return {
+    algoritmo: 'Heurística',
+    ruta: mejorada,
+    tramos: tramosDe(base, mejorada),
+    costoM: costoRuta(base, mejorada),
+    estadosExplorados,
+    optima: false,
+    respetaPrioridad: respetaPrioridad(mejorada),
+  };
+}
+
+export interface AnalisisRuta {
+  /** Ruta a seguir: la óptima (Backtracking) si el caso es chico, o la heurística si es grande. */
+  recomendada: ResultadoBusqueda;
+  /** Comparación de los tres algoritmos exactos; null cuando se usó la heurística. */
+  comparacion: ResultadoBusqueda[] | null;
+  /** true si se calculó el óptimo exacto; false si fue una aproximación heurística. */
+  exacto: boolean;
+}
+
+/**
+ * Punto de entrada único para sugerir una ruta: usa la comparación exhaustiva
+ * (óptima) mientras es viable, y cae a la heurística de respaldo por encima de
+ * MAX_REPORTES_COMPARACION, en vez de no sugerir nada.
+ */
+export function analizarRuta(base: Punto, reportes: ReporteRuta[]): AnalisisRuta {
+  if (reportes.length <= MAX_REPORTES_COMPARACION) {
+    const comp = compararAlgoritmos(base, reportes);
+    return { recomendada: comp.backtracking, comparacion: comp.todos, exacto: true };
+  }
+  return { recomendada: buscarHeuristica(base, reportes), comparacion: null, exacto: false };
 }
 
 /** Centroide (promedio de lat/lng) de los reportes: la Base cuando no hay GPS. */
