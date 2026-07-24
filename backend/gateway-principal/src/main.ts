@@ -12,7 +12,7 @@ async function bootstrap() {
   app.enableCors({ origin: (process.env.CORS_ORIGIN ?? '*').split(',') });
   app.useWebSocketAdapter(new IoAdapter(app));
 
-  const port = parseInt(process.env.PORT ?? '3000', 10);
+  const port = parseInt(process.env.PORT_GT_P ?? '3000', 10);
   await app.listen(port, '0.0.0.0');
   console.log(`Gateway Principal running on http://0.0.0.0:${port}`);
 }
