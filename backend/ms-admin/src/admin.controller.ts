@@ -2,7 +2,15 @@ import { Controller } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import { TCP_PATTERNS } from '@ojo-camba/common';
 import { AdminService } from './admin.service';
-import { CreateGroupDto, UpdateCaseDto, AcceptReportDto, BanDeviceDto } from './dto';
+import {
+  CreateGroupDto,
+  UpdateCaseDto,
+  AcceptReportDto,
+  BanDeviceDto,
+  CreateCuadrillaDto,
+  UpdateCuadrillaDto,
+  AsignarCuadrillaDto,
+} from './dto';
 
 @Controller()
 export class AdminController {
@@ -141,5 +149,30 @@ export class AdminController {
   @MessagePattern(TCP_PATTERNS.ADMIN.LIST_GROUPS_NEARBY)
   listNearbyGroups(@Payload() dto: { lat: number; lng: number; radius?: number }) {
     return this.adminService.listNearbyGroups(dto.lat, dto.lng, dto.radius);
+  }
+
+  @MessagePattern(TCP_PATTERNS.ADMIN.LIST_ESPECIALIDADES)
+  listEspecialidades() {
+    return this.adminService.listEspecialidades();
+  }
+
+  @MessagePattern(TCP_PATTERNS.ADMIN.LIST_CUADRILLAS)
+  listCuadrillas(@Payload() dto: { solo_activas?: boolean }) {
+    return this.adminService.listCuadrillas(dto?.solo_activas);
+  }
+
+  @MessagePattern(TCP_PATTERNS.ADMIN.CREATE_CUADRILLA)
+  createCuadrilla(@Payload() dto: CreateCuadrillaDto) {
+    return this.adminService.createCuadrilla(dto);
+  }
+
+  @MessagePattern(TCP_PATTERNS.ADMIN.UPDATE_CUADRILLA)
+  updateCuadrilla(@Payload() dto: UpdateCuadrillaDto) {
+    return this.adminService.updateCuadrilla(dto);
+  }
+
+  @MessagePattern(TCP_PATTERNS.ADMIN.ASIGNAR_CUADRILLA)
+  asignarCuadrilla(@Payload() dto: AsignarCuadrillaDto) {
+    return this.adminService.asignarCuadrilla(dto);
   }
 }

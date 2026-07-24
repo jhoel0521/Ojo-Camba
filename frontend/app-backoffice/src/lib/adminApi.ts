@@ -26,6 +26,10 @@ export interface GrupoReporte {
   creado_en: string;
   total_reportes?: number;
   preview_imagen?: string;
+  /** Cuadrilla asignada al caso (Fase 5). Null mientras nadie la asigna. */
+  cuadrilla_id?: number | null;
+  /** Solo lo devuelve GET /admin/groups/:id, no el listado. */
+  cuadrilla_nombre?: string | null;
 }
 
 export interface Actualizacion {

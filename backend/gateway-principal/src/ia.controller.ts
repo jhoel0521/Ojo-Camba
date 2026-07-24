@@ -21,6 +21,13 @@ export class IaController {
     return sendRpc(this.client.send(TCP_PATTERNS.IA.INFERIR_TRIAJE, dto));
   }
 
+  @Post('casos/:id/recomendar-cuadrilla')
+  recomendarCuadrilla(@Param('id') id: string) {
+    return sendRpc(
+      this.client.send(TCP_PATTERNS.IA.RECOMENDAR_CUADRILLA, { grupo_id: parseInt(id, 10) }),
+    );
+  }
+
   @Post('reportes/:id/sugerencia-hechos')
   sugerirHechos(@Param('id') id: string, @Body() dto: { nearby_report_ids?: number[] }) {
     return sendRpc(

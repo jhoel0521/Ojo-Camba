@@ -42,6 +42,11 @@ export const TCP_PATTERNS = {
     UNBAN_DEVICE: 'admin.unban_device',
     GET_UPDATE_IMAGEN: 'admin.get_update_imagen',
     LIST_GROUPS_NEARBY: 'admin.list_groups_nearby',
+    LIST_ESPECIALIDADES: 'admin.list_especialidades',
+    LIST_CUADRILLAS: 'admin.list_cuadrillas',
+    CREATE_CUADRILLA: 'admin.create_cuadrilla',
+    UPDATE_CUADRILLA: 'admin.update_cuadrilla',
+    ASIGNAR_CUADRILLA: 'admin.asignar_cuadrilla',
   },
   GAMIFY: {
     PING: 'gamify.ping',
@@ -54,5 +59,6 @@ export const TCP_PATTERNS = {
     CHAT: 'ia.chat',
     INFERIR_TRIAJE: 'ia.inferir_triaje',
     SUGERIR_HECHOS: 'ia.sugerir_hechos',
+    RECOMENDAR_CUADRILLA: 'ia.recomendar_cuadrilla',
   },
 } as const;

@@ -7,6 +7,7 @@ import {
   SugerenciaHechosService,
   type SugerenciaHechosDto,
 } from './triaje/sugerencia-hechos.service';
+import { RecomendacionCuadrillaService } from './cuadrillas/recomendacion.service';
 
 @Controller()
 export class IaController {
@@ -14,6 +15,7 @@ export class IaController {
     private readonly asistente: AsistenteService,
     private readonly triaje: TriajeService,
     private readonly sugerenciaHechos: SugerenciaHechosService,
+    private readonly recomendacionCuadrilla: RecomendacionCuadrillaService,
   ) {}
 
   @MessagePattern(TCP_PATTERNS.IA.PING)
@@ -34,5 +36,10 @@ export class IaController {
   @MessagePattern(TCP_PATTERNS.IA.SUGERIR_HECHOS)
   sugerirHechos(@Payload() dto: SugerenciaHechosDto) {
     return this.sugerenciaHechos.sugerir(dto);
+  }
+
+  @MessagePattern(TCP_PATTERNS.IA.RECOMENDAR_CUADRILLA)
+  recomendarCuadrilla(@Payload() dto: { grupo_id: number }) {
+    return this.recomendacionCuadrilla.recomendar(Number(dto?.grupo_id));
   }
 }
