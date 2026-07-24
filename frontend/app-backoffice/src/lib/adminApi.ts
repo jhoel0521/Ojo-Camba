@@ -137,9 +137,13 @@ export async function acceptReport(
   });
 }
 
-export async function listNearbyGroups(h3_cell: string): Promise<GrupoReporte[]> {
+export async function listNearbyGroups(
+  h3_cell: string,
+  categoriaId?: number,
+): Promise<GrupoReporte[]> {
+  const categoriaQs = categoriaId !== undefined ? `&categoria_id=${categoriaId}` : '';
   const res = await fetchAPI<GrupoReporte[] | { data: GrupoReporte[] }>(
-    `/admin/groups/by-cell?h3_cell=${encodeURIComponent(h3_cell)}&h3_resolution=11`,
+    `/admin/groups/by-cell?h3_cell=${encodeURIComponent(h3_cell)}&h3_resolution=11${categoriaQs}`,
   );
   return Array.isArray(res) ? res : ((res as { data: GrupoReporte[] }).data ?? []);
 }
@@ -236,8 +240,12 @@ export async function listNearbyReports(
   lat: number,
   lng: number,
   radius = 100,
+  categoriaId?: number,
 ): Promise<PendingReport[]> {
-  return fetchAPI<PendingReport[]>(`/admin/reports/nearby?lat=${lat}&lng=${lng}&radius=${radius}`);
+  const categoriaQs = categoriaId !== undefined ? `&categoria_id=${categoriaId}` : '';
+  return fetchAPI<PendingReport[]>(
+    `/admin/reports/nearby?lat=${lat}&lng=${lng}&radius=${radius}${categoriaQs}`,
+  );
 }
 
 export async function listUsers(

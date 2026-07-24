@@ -8,6 +8,7 @@ import {
   AlertCircle,
   Loader2,
   Camera,
+  FolderOpen,
 } from 'lucide-react';
 import {
   inferirTriaje,
@@ -20,6 +21,7 @@ import {
   type ResultadoTriaje,
 } from '../lib/triajeApi';
 import { friendlyError } from '../lib/errors';
+import type { GrupoReporte } from '../lib/adminApi';
 import GravedadBadge from './GravedadBadge';
 
 interface GravedadSugeridaProps {
@@ -30,6 +32,8 @@ interface GravedadSugeridaProps {
   distanciasCercanasM: number[];
   /** IDs de reportes cercanos pendientes, para que "Analizar foto" los coteje por duplicado. */
   nearbyReportIds: number[];
+  /** Obras activas cercanas ya cargadas, para que "Analizar foto" sugiera si el reporte pertenece a alguna. */
+  nearbyObras: GrupoReporte[];
   /** true si la foto es una URL externa (no gestionada por nuestro S3): no se puede analizar. */
   imagenExterna: boolean;
   /** Gravedad que tiene ahora el formulario, para saber si la sugerencia ya se aplicó. */
@@ -37,6 +41,8 @@ interface GravedadSugeridaProps {
   onAplicar: (gravedad: GravedadValor) => void;
   /** IDs que la IA marcó como "mismo problema" que este reporte, para pre-seleccionar en el grupo. */
   onDuplicadosSugeridos?: (ids: number[]) => void;
+  /** La IA sugiere que este reporte pertenece a una obra ya activa; el moderador confirma con el flujo existente. */
+  onSugerenciaObra?: (grupoId: number) => void;
 }
 
 interface RadioPillsProps<T extends string> {
@@ -108,10 +114,12 @@ export default function GravedadSugerida({
   creadoEn,
   distanciasCercanasM,
   nearbyReportIds,
+  nearbyObras,
   imagenExterna,
   gravedadActual,
   onAplicar,
   onDuplicadosSugeridos,
+  onSugerenciaObra,
 }: GravedadSugeridaProps) {
   const [ubicacionSensible, setUbicacionSensible] = useState<UbicacionSensible>('ninguna');
   const [palabraClaveRiesgo, setPalabraClaveRiesgo] = useState(false);
@@ -123,6 +131,9 @@ export default function GravedadSugerida({
   const [analizando, setAnalizando] = useState(false);
   const [errorAnalisis, setErrorAnalisis] = useState('');
   const [notaIa, setNotaIa] = useState('');
+  const [obraSugerida, setObraSugerida] = useState<{ grupoId: number; codigoObra: string } | null>(
+    null,
+  );
 
   useEffect(() => {
     let cancelado = false;
@@ -161,8 +172,13 @@ export default function GravedadSugerida({
     setAnalizando(true);
     setErrorAnalisis('');
     setNotaIa('');
+    setObraSugerida(null);
     try {
-      const r = await sugerenciaHechos(reporteId, nearbyReportIds);
+      const r = await sugerenciaHechos(
+        reporteId,
+        nearbyReportIds,
+        nearbyObras.map((o) => o.id),
+      );
       setUbicacionSensible(r.ubicacion_sensible);
       setPalabraClaveRiesgo(r.palabra_clave_riesgo);
       setTemporadaForzada(r.parece_lluvia ? 'lluvias' : 'seca');
@@ -170,6 +186,11 @@ export default function GravedadSugerida({
 
       const duplicados = r.duplicados.filter((d) => d.es_mismo_problema).map((d) => d.reporte_id);
       if (duplicados.length > 0) onDuplicadosSugeridos?.(duplicados);
+
+      if (r.pertenece_a_obra?.pertenece) {
+        const obra = nearbyObras.find((o) => o.id === r.pertenece_a_obra?.grupo_id);
+        if (obra) setObraSugerida({ grupoId: obra.id, codigoObra: obra.codigo_obra });
+      }
     } catch (e) {
       setErrorAnalisis(friendlyError(e));
     } finally {
@@ -251,6 +272,27 @@ export default function GravedadSugerida({
           <Sparkles className="w-3 h-3 inline mr-1 -mt-0.5" />
           {notaIa}
         </p>
+      )}
+
+      {obraSugerida && (
+        <div className="mb-3 bg-yeso border border-caoba/40 rounded-3xl-2 px-3 py-2.5 space-y-2">
+          <p className="text-[11px] text-tierra leading-relaxed flex items-start gap-1.5">
+            <FolderOpen className="w-3.5 h-3.5 text-caoba shrink-0 mt-px" />
+            La IA sugiere que este reporte es la misma obra que{' '}
+            <span className="font-bold font-mono">{obraSugerida.codigoObra}</span>.
+          </p>
+          <button
+            onClick={() => {
+              onSugerenciaObra?.(obraSugerida.grupoId);
+              setObraSugerida(null);
+            }}
+            data-testid="btn-sugerencia-obra"
+            className="w-full flex items-center justify-center gap-2 bg-caoba text-perla font-semibold text-xs min-h-11 px-4 rounded-3xl-3 hover:brightness-110 transition-all"
+          >
+            <FolderOpen className="w-3.5 h-3.5" />
+            Añadir a {obraSugerida.codigoObra}
+          </button>
+        </div>
       )}
 
       <div className="space-y-3">

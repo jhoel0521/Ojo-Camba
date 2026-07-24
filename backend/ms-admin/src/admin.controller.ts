@@ -60,9 +60,20 @@ export class AdminController {
 
   @MessagePattern(TCP_PATTERNS.ADMIN.LIST_GROUPS_BY_CELL)
   listGroupsByCell(
-    @Payload() dto: { h3_cell: string; h3_resolution: number; solo_activos?: boolean },
+    @Payload()
+    dto: {
+      h3_cell: string;
+      h3_resolution: number;
+      solo_activos?: boolean;
+      categoria_id?: number;
+    },
   ) {
-    return this.adminService.listGroupsByCell(dto.h3_cell, dto.h3_resolution, dto.solo_activos);
+    return this.adminService.listGroupsByCell(
+      dto.h3_cell,
+      dto.h3_resolution,
+      dto.solo_activos,
+      dto.categoria_id,
+    );
   }
 
   @MessagePattern(TCP_PATTERNS.ADMIN.GET_GROUPS_HEATMAP)
@@ -110,8 +121,10 @@ export class AdminController {
   }
 
   @MessagePattern(TCP_PATTERNS.ADMIN.LIST_NEARBY_REPORTS)
-  listNearbyReports(@Payload() dto: { lat: number; lng: number; radius?: number }) {
-    return this.adminService.listNearbyReports(dto.lat, dto.lng, dto.radius);
+  listNearbyReports(
+    @Payload() dto: { lat: number; lng: number; radius?: number; categoria_id?: number },
+  ) {
+    return this.adminService.listNearbyReports(dto.lat, dto.lng, dto.radius, dto.categoria_id);
   }
 
   @MessagePattern(TCP_PATTERNS.ADMIN.UNBAN_DEVICE)

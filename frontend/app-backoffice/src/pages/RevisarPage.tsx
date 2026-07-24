@@ -149,8 +149,8 @@ export default function RevisarPage() {
     setNearbyPending([]);
     try {
       const [obras, nearby] = await Promise.all([
-        listNearbyGroups(report.h3_res_11),
-        listNearbyReports(report.lat, report.lng, 100),
+        listNearbyGroups(report.h3_res_11, report.categoria_id),
+        listNearbyReports(report.lat, report.lng, 100, report.categoria_id),
       ]);
       setNearbyObras(obras);
       setNearbyPending(
@@ -418,10 +418,12 @@ export default function RevisarPage() {
                 creadoEn={selectedReport.creado_en}
                 distanciasCercanasM={distanciasCercanasM}
                 nearbyReportIds={nearbyPending.map((r) => r.id)}
+                nearbyObras={nearbyObras}
                 imagenExterna={selectedReport.url_imagen?.startsWith('http') ?? false}
                 gravedadActual={editedGravedad}
                 onAplicar={(g: GravedadValor) => setEditedGravedad(g)}
                 onDuplicadosSugeridos={handleDuplicadosSugeridos}
+                onSugerenciaObra={handleAddToObra}
               />
 
               <div className="grid grid-cols-2 gap-3 pt-3 border-t border-arcilla">

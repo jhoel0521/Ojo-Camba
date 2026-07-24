@@ -68,26 +68,38 @@ export interface DuplicadoSugerido {
   justificacion: string;
 }
 
+export interface PerteneceAObraSugerido {
+  grupo_id: number;
+  pertenece: boolean;
+  justificacion: string;
+}
+
 export interface SugerenciaHechosResultado {
   ubicacion_sensible: UbicacionSensible;
   palabra_clave_riesgo: boolean;
   parece_lluvia: boolean;
   duplicados: DuplicadoSugerido[];
+  pertenece_a_obra: PerteneceAObraSugerido | null;
   justificacion_breve: string;
 }
 
 /**
  * Botón "Analizar foto": el modelo de visión de Groq mira la foto del reporte
  * (y las de los cercanos, si se pasan) y sugiere los 3 hechos de criterio
- * humano + candidatos a duplicado. Nunca decide la gravedad ni fusiona
- * reportes — el moderador confirma o corrige lo que precarga.
+ * humano + candidatos a duplicado + si pertenece a una obra activa cercana.
+ * Nunca decide la gravedad ni fusiona/asigna nada — el moderador confirma o
+ * corrige lo que precarga.
  */
 export function sugerenciaHechos(
   reporteId: number,
   nearbyReportIds: number[],
+  nearbyGroupIds: number[],
 ): Promise<SugerenciaHechosResultado> {
   return fetchAPI<SugerenciaHechosResultado>(`/ia/reportes/${reporteId}/sugerencia-hechos`, {
     method: 'POST',
-    body: JSON.stringify({ nearby_report_ids: nearbyReportIds }),
+    body: JSON.stringify({
+      nearby_report_ids: nearbyReportIds,
+      nearby_group_ids: nearbyGroupIds,
+    }),
   });
 }

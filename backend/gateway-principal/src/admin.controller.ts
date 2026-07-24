@@ -18,12 +18,14 @@ export class AdminController {
     @Query('lat') lat: string,
     @Query('lng') lng: string,
     @Query('radius') radius?: string,
+    @Query('categoria_id') categoriaId?: string,
   ) {
     return sendRpc(
       this.client.send(TCP_PATTERNS.ADMIN.LIST_NEARBY_REPORTS, {
         lat: parseFloat(lat),
         lng: parseFloat(lng),
         radius: radius ? parseInt(radius, 10) : undefined,
+        categoria_id: categoriaId ? parseInt(categoriaId, 10) : undefined,
       }),
     );
   }
@@ -152,12 +154,21 @@ export class AdminController {
   }
 
   @Get('groups/by-cell')
-  listGroupsByCell(@Query() q: { h3_cell: string; h3_resolution?: string; solo_activos?: string }) {
+  listGroupsByCell(
+    @Query()
+    q: {
+      h3_cell: string;
+      h3_resolution?: string;
+      solo_activos?: string;
+      categoria_id?: string;
+    },
+  ) {
     return sendRpc(
       this.client.send(TCP_PATTERNS.ADMIN.LIST_GROUPS_BY_CELL, {
         h3_cell: q.h3_cell,
         h3_resolution: q.h3_resolution ? parseInt(q.h3_resolution, 10) : 8,
         solo_activos: q.solo_activos !== 'false',
+        categoria_id: q.categoria_id ? parseInt(q.categoria_id, 10) : undefined,
       }),
     );
   }
