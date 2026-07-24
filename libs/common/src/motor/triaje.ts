@@ -1,10 +1,10 @@
 /**
- * Motor simbólico de triaje (lado servidor).
+ * Motor simbólico de triaje — fuente canónica única.
  *
- * Portado de frontend/app-backoffice/src/lib/triaje.ts para que las herramientas
- * del asistente devuelvan la MISMA traza de reglas que ve el moderador. El LLM
- * relata esta traza; no la inventa. (A futuro conviene mover este motor a
- * libs/common y que frontend y backend compartan una sola fuente de verdad.)
+ * Vive en libs/common (sin dependencias externas) para que ms-ia (herramienta
+ * `explicar_triaje` del asistente, endpoint `ia.inferir_triaje`) y el backoffice
+ * (vía HTTP, ver frontend/app-backoffice/src/lib/triajeApi.ts) usen exactamente
+ * la misma lógica y traza de reglas. El LLM relata esta traza; no la inventa.
  */
 
 export type GravedadValor = 'Baja' | 'Media' | 'Alta' | 'Emergencia';

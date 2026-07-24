@@ -1,10 +1,12 @@
 /**
- * Motor simbólico de ruta (lado servidor).
+ * Motor simbólico de ruta — fuente canónica única.
  *
- * Portado de frontend/app-tecnico/src/lib/rutaEstados.ts. Como el servidor no
- * tiene el GPS del técnico, la "Base" del recorrido es el centroide de los
- * reportes del Caso de Obra (una vista de planificación). Las herramientas del
- * asistente devuelven esta traza; el LLM la relata, no la inventa.
+ * Vive en libs/common (sin dependencias externas) para que ms-ia lo use con el
+ * centroide del Caso de Obra como Base (el servidor no tiene el GPS del
+ * técnico), y para que a futuro frontend/app-tecnico pueda importar las mismas
+ * funciones puras usando el GPS real como Base, sin duplicar el algoritmo. Las
+ * herramientas del asistente devuelven esta traza; el LLM la relata, no la
+ * inventa.
  */
 
 export interface Punto {

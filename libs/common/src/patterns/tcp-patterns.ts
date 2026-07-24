@@ -49,4 +49,9 @@ export const TCP_PATTERNS = {
     GET_USER_STATS: 'gamify.get_user_stats',
     GET_LEVELS: 'gamify.get_levels',
   },
+  IA: {
+    PING: 'ia.ping',
+    CHAT: 'ia.chat',
+    INFERIR_TRIAJE: 'ia.inferir_triaje',
+  },
 } as const;
