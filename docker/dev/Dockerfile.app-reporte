@@ -12,6 +12,7 @@ COPY backend/ms-auth/package.json                 backend/ms-auth/
 COPY backend/ms-register/package.json             backend/ms-register/
 COPY backend/ms-admin/package.json                backend/ms-admin/
 COPY backend/ms-gamify/package.json               backend/ms-gamify/
+COPY backend/ms-ia/package.json                   backend/ms-ia/
 COPY backend/gateway-principal/package.json       backend/gateway-principal/
 COPY backend/gateway-status/package.json          backend/gateway-status/
 COPY frontend/app-reporte/package.json            frontend/app-reporte/

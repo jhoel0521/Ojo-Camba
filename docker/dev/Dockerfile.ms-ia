@@ -26,11 +26,11 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
 COPY tsconfig.base.json ./
 COPY libs/common/tsconfig.json libs/common/
 COPY libs/common/src/          libs/common/src/
-COPY backend/gateway-principal/tsconfig.json  backend/gateway-principal/
-COPY backend/gateway-principal/nest-cli.json  backend/gateway-principal/
+COPY backend/ms-ia/tsconfig.json  backend/ms-ia/
+COPY backend/ms-ia/nest-cli.json  backend/ms-ia/
 
 RUN cd /app/libs/common && pnpm build
 
-WORKDIR /app/backend/gateway-principal
+WORKDIR /app/backend/ms-ia
 
 CMD ["pnpm", "dev"]

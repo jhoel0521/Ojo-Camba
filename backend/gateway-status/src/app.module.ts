@@ -58,6 +58,14 @@ import { StatusService } from './status.service';
           port: parseInt(process.env.MS_GAMIFY_PORT ?? '3004', 10),
         },
       },
+      {
+        name: 'MS_IA',
+        transport: Transport.TCP,
+        options: {
+          host: process.env.MS_IA_HOST ?? 'localhost',
+          port: parseInt(process.env.MS_IA_PORT ?? '3006', 10),
+        },
+      },
     ]),
   ],
   controllers: [StatusController],
