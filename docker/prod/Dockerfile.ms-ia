@@ -1,0 +1,46 @@
+# ── Stage 1: Build ──────────────────────────────────────────
+FROM node:22-alpine AS builder
+
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
+RUN corepack enable && corepack prepare pnpm@9 --activate
+
+WORKDIR /app
+
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
+COPY libs/common/package.json libs/common/
+COPY backend/ms-ia/package.json backend/ms-ia/
+
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
+    pnpm install --frozen-lockfile
+
+COPY tsconfig.base.json ./
+COPY libs/common/ libs/common/
+COPY backend/ms-ia/ backend/ms-ia/
+
+WORKDIR /app/libs/common
+RUN pnpm build
+
+RUN rm -f /app/backend/ms-ia/node_modules/@ojo-camba/common && \
+    mkdir -p /app/backend/ms-ia/node_modules/@ojo-camba/common && \
+    cp -r dist package.json /app/backend/ms-ia/node_modules/@ojo-camba/common/
+
+WORKDIR /app/backend/ms-ia
+RUN pnpm build
+
+WORKDIR /app
+RUN pnpm --filter @ojo-camba/ms-ia deploy --prod /app/out
+
+# ── Stage 2: Run ─────────────────────────────────────────────
+FROM node:22-alpine AS runner
+
+ENV NODE_ENV=production
+WORKDIR /app
+
+COPY --from=builder /app/out ./
+
+USER node
+
+EXPOSE 3006
+
+CMD ["node", "dist/main"]
