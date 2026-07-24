@@ -156,7 +156,7 @@ services:
     ports:
       - "3000:3000"
     environment:
-      PORT: 3000
+      PORT_GT_P: 3000
       CORS_ORIGIN: http://localhost:5173,http://localhost:5174,http://localhost:5175,http://localhost:5176
       MS_AUTH_HOST: ms-auth
       MS_AUTH_PORT: 3001
@@ -186,7 +186,7 @@ services:
     ports:
       - "3005:3005"
     environment:
-      PORT: 3005
+      PORT_GT_S: 3005
       DATABASE_URL: postgresql://ojocamba:ojocamba_secret@postgres:5432/ojocamba
       MS_AUTH_HOST: ms-auth
       MS_AUTH_PORT: 3001
@@ -196,6 +196,8 @@ services:
       MS_ADMIN_PORT: 3003
       MS_GAMIFY_HOST: ms-gamify
       MS_GAMIFY_PORT: 3004
+      MS_IA_HOST: ms-ia
+      MS_IA_PORT: 3006
     networks:
       - ojo-camba-net
     depends_on:
@@ -208,6 +210,8 @@ services:
       ms-admin:
         condition: service_started
       ms-gamify:
+        condition: service_started
+      ms-ia:
         condition: service_started
 
   # ── Frontend Vite dev servers ────────────────────────────────

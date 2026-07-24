@@ -401,7 +401,12 @@ export class AdminService {
     return qb.getRawMany();
   }
 
-  async listGroupsByCell(h3_cell: string, h3_resolution: number, soloActivos = true) {
+  async listGroupsByCell(
+    h3_cell: string,
+    h3_resolution: number,
+    soloActivos = true,
+    categoriaId?: number,
+  ) {
     const col = `r.h3_res_${h3_resolution}`;
     const qb = this.grupoRepo
       .createQueryBuilder('g')
@@ -420,6 +425,10 @@ export class AdminService {
       qb.andWhere('g.estado_actual NOT IN (:...estados)', {
         estados: [EstadoReporte.Rechazado, EstadoReporte.Finalizado],
       });
+    }
+    // Sin esto, un poste de luz a 50m aparecia como "obra cercana" de un bache.
+    if (categoriaId !== undefined) {
+      qb.andWhere('g.categoria_id = :categoriaId', { categoriaId });
     }
     return qb.getRawMany();
   }
@@ -567,10 +576,10 @@ export class AdminService {
     }));
   }
 
-  async listNearbyReports(lat: number, lng: number, radiusM = 100) {
+  async listNearbyReports(lat: number, lng: number, radiusM = 100, categoriaId?: number) {
     // Bounding box approximation: 1° ≈ 111,000m
     const delta = radiusM / 111000;
-    const data = await this.reporteRepo
+    const qb = this.reporteRepo
       .createQueryBuilder('r')
       .where('r.estado = :estado', { estado: EstadoReporte.Reportado })
       .andWhere('CAST(r.lat AS FLOAT) BETWEEN :minLat AND :maxLat', {
@@ -581,8 +590,13 @@ export class AdminService {
         minLng: lng - delta,
         maxLng: lng + delta,
       })
-      .orderBy('r.creado_en', 'DESC')
-      .getMany();
+      .orderBy('r.creado_en', 'DESC');
+
+    // Sin esto, un poste de luz a 50m aparecia como "cercano" de un bache.
+    if (categoriaId !== undefined) {
+      qb.andWhere('r.categoria_id = :categoriaId', { categoriaId });
+    }
+    const data = await qb.getMany();
 
     return data.map((r) => ({
       ...r,

@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { getDeviceId } from '../lib/device';
 
 export interface DeviceInfo {
   hasCamera: boolean;
@@ -11,11 +12,7 @@ export interface DeviceInfo {
 
 export function useDevice(callback: (info: DeviceInfo) => void) {
   useEffect(() => {
-    let deviceId = localStorage.getItem('ojo_camba_device_id');
-    if (!deviceId) {
-      deviceId = crypto.randomUUID();
-      localStorage.setItem('ojo_camba_device_id', deviceId);
-    }
+    const deviceId = getDeviceId();
 
     const checkMedia = async () => {
       let hasCamera = false;

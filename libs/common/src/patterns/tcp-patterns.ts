@@ -53,5 +53,6 @@ export const TCP_PATTERNS = {
     PING: 'ia.ping',
     CHAT: 'ia.chat',
     INFERIR_TRIAJE: 'ia.inferir_triaje',
+    SUGERIR_HECHOS: 'ia.sugerir_hechos',
   },
 } as const;

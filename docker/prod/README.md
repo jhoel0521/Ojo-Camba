@@ -45,7 +45,8 @@ pnpm docker:down
 
 | Variable | gateway-principal | gateway-status | ms-auth | ms-register | ms-admin | ms-gamify | ms-ia |
 |----------|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-| `PORT` | 3000 | 3005 | — | — | — | — | — |
+| `PORT_GT_P` | 3000 | — | — | — | — | — | — |
+| `PORT_GT_S` | — | 3005 | — | — | — | — | — |
 | `TCP_PORT` | — | — | 3001 | 3002 | 3003 | 3004 | 3006 |
 | `DATABASE_URL` | — | ✅ | ✅ | ✅ | ✅ | ✅ | — |
 | `JWT_SECRET` | — | — | ✅ | — | — | — | — |
@@ -206,7 +207,7 @@ Port:        3000
 Health:      GET / → 200
 Dominio:     api.ojocamba.com
 Env vars:
-  PORT=3000
+  PORT_GT_P=3000
   MS_AUTH_HOST=<ip-o-host-ms-auth>
   MS_AUTH_PORT=3001
   MS_REGISTER_HOST=<ip-o-host-ms-register>
@@ -230,7 +231,7 @@ Port:        3005
 Health:      GET / → 200
 Dominio:     status-api.ojocamba.com
 Env vars:
-  PORT=3005
+  PORT_GT_S=3005
   DATABASE_URL=postgresql://<user>:<pass>@<host-db>:5432/ojocamba
   MS_AUTH_HOST=<ip-o-host-ms-auth>
   MS_AUTH_PORT=3001

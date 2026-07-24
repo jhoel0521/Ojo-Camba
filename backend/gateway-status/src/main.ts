@@ -10,7 +10,7 @@ async function bootstrap() {
 
   app.enableCors();
 
-  const port = parseInt(process.env.PORT ?? '3005', 10);
+  const port = parseInt(process.env.PORT_GT_S ?? '3005', 10);
   await app.listen(port, '0.0.0.0');
   console.log(`Gateway Status running on http://0.0.0.0:${port}`);
 }
