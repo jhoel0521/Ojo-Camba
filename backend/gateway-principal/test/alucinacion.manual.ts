@@ -32,24 +32,38 @@ const resultadoRuta = {
 const explicacionFiel =
   'La ruta sugerida visita primero el reporte 42 (a 120 metros) y luego el 43, ' +
   'recorriendo 317 metros en total y atendiendo antes la Emergencia. La decisión final es tuya.';
-afirmar('Caso 1 — explicación fiel no marca ningún número', verificarAlucinacionNumerica(explicacionFiel, resultadoRuta), []);
+afirmar(
+  'Caso 1 — explicación fiel no marca ningún número',
+  verificarAlucinacionNumerica(explicacionFiel, resultadoRuta),
+  [],
+);
 
 // ── Caso 2: explicación con una cifra INVENTADA ("40%") que no está en el JSON ─
 const explicacionAlucinada =
   'Seguir esta ruta reduce el tiempo de traslado en un 40% y recorre 317 metros. ' +
   'Vos decidís si la usás.';
-afirmar('Caso 2 — cifra inventada (40) queda marcada', verificarAlucinacionNumerica(explicacionAlucinada, resultadoRuta), ['40']);
+afirmar(
+  'Caso 2 — cifra inventada (40) queda marcada',
+  verificarAlucinacionNumerica(explicacionAlucinada, resultadoRuta),
+  ['40'],
+);
 
 // ── Caso 3 (extra): triaje fiel, números provenientes de los hechos y la traza ─
 const resultadoTriaje = {
   gravedadSugerida: 'Alta',
   hechos: { recurrencia: 3, horasAntiguedad: 50 },
-  reglasAplicadas: [{ id: 'R13', descripcion: 'SI gravedad = Media Y horas >= 48 ENTONCES gravedad = Alta' }],
+  reglasAplicadas: [
+    { id: 'R13', descripcion: 'SI gravedad = Media Y horas >= 48 ENTONCES gravedad = Alta' },
+  ],
 };
 const explicacionTriaje =
   'Se sugiere gravedad Alta porque el problema se reportó 3 veces y ya pasaron 50 horas ' +
   'sin atención, superando el umbral de 48. Confirmá vos la clasificación.';
-afirmar('Caso 3 — triaje fiel (3, 50 y 48 están respaldados)', verificarAlucinacionNumerica(explicacionTriaje, resultadoTriaje), []);
+afirmar(
+  'Caso 3 — triaje fiel (3, 50 y 48 están respaldados)',
+  verificarAlucinacionNumerica(explicacionTriaje, resultadoTriaje),
+  [],
+);
 
 if (fallos === 0) {
   console.log('\nTODAS LAS PRUEBAS PASARON');

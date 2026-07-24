@@ -280,9 +280,8 @@ export default function GravedadSugerida({
                   <AlertTriangle className="w-3.5 h-3.5 text-red-600 shrink-0 mt-px" />
                   <p className="text-[10px] text-red-700 leading-relaxed">
                     <strong className="font-bold">Verificá antes de confiar:</strong> la IA mencionó
-                    cifras que no están en el análisis (
-                    {explicacion.numerosSospechosos.join(', ')}). Revisalas vos antes de usar esta
-                    explicación.
+                    cifras que no están en el análisis ({explicacion.numerosSospechosos.join(', ')}
+                    ). Revisalas vos antes de usar esta explicación.
                   </p>
                 </div>
               )}
