@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Route, Crosshair, Loader2, Check, X, Bot, AlertTriangle, AlertCircle } from 'lucide-react';
+import { Route, Crosshair, Loader2, Check, X } from 'lucide-react';
 import { getGroupReports, type ReporteDeGrupo } from '../lib/tecnicoApi';
 import {
   compararAlgoritmos,
@@ -7,7 +7,6 @@ import {
   type ReporteRuta,
   type ResultadoBusqueda,
 } from '../lib/rutaEstados';
-import { explicar, type ExplicacionIA } from '../lib/explicadorApi';
 import { useGeolocation } from '../hooks/useGeolocation';
 import { categoriaName } from '../lib/categories';
 import { friendlyError } from '../lib/errors';
@@ -155,40 +154,6 @@ export default function RutaSugerida({ grupoId }: { grupoId: number }) {
 }
 
 function RutaRecomendada({ resultado }: { resultado: ResultadoBusqueda }) {
-  // Explicación con IA — estrictamente bajo demanda para no gastar cuota de la API.
-  const [explicando, setExplicando] = useState(false);
-  const [explicacion, setExplicacion] = useState<ExplicacionIA | null>(null);
-  const [errorIA, setErrorIA] = useState('');
-
-  // Si cambia la ruta recomendada, la explicación previa deja de corresponder.
-  useEffect(() => {
-    setExplicacion(null);
-    setErrorIA('');
-  }, [resultado]);
-
-  async function pedirExplicacion(): Promise<void> {
-    setExplicando(true);
-    setErrorIA('');
-    try {
-      const payload = {
-        totalMetros: Math.round(resultado.costoM),
-        respetaPrioridad: resultado.respetaPrioridad,
-        orden: resultado.tramos.map((t, i) => ({
-          posicion: i + 1,
-          reporteId: t.reporte.id,
-          gravedad: t.reporte.gravedad,
-          metrosDesdeAnterior: Math.round(t.distanciaM),
-        })),
-      };
-      setExplicacion(await explicar('ruta', payload));
-    } catch (e) {
-      setExplicacion(null);
-      setErrorIA(friendlyError(e));
-    } finally {
-      setExplicando(false);
-    }
-  }
-
   return (
     <div data-testid="ruta-recomendada" className="mb-5">
       <div className="flex items-center gap-2 mb-3">
@@ -224,65 +189,6 @@ function RutaRecomendada({ resultado }: { resultado: ResultadoBusqueda }) {
           </li>
         ))}
       </ol>
-
-      <div className="mt-4" data-testid="explicador-ia">
-        <button
-          type="button"
-          onClick={pedirExplicacion}
-          disabled={explicando}
-          data-testid="btn-explicar-ia"
-          className="w-full flex items-center justify-center gap-2 bg-lienzo border border-caoba text-caoba font-semibold text-xs min-h-9 px-4 rounded-3xl-3 hover:bg-caoba hover:text-perla disabled:opacity-60 transition-colors"
-        >
-          {explicando ? (
-            <>
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              Generando explicación…
-            </>
-          ) : (
-            <>
-              <Bot className="w-3.5 h-3.5" />
-              {explicacion ? 'Regenerar explicación' : 'Explicar con IA'}
-            </>
-          )}
-        </button>
-
-        {errorIA && (
-          <div
-            role="alert"
-            className="mt-2 bg-red-50 border border-red-200 rounded-2xl px-3 py-2 flex items-start gap-2"
-          >
-            <AlertCircle className="w-3.5 h-3.5 text-red-600 shrink-0 mt-px" />
-            <p className="text-[11px] text-red-700 leading-relaxed">{errorIA}</p>
-          </div>
-        )}
-
-        {explicacion && (
-          <div className="mt-2 space-y-2" data-testid="explicacion-ia">
-            <div className="bg-lienzo border border-arcilla rounded-3xl-2 px-3 py-2.5">
-              <p className="text-[11px] text-tierra leading-relaxed">{explicacion.explicacion}</p>
-            </div>
-
-            {explicacion.numerosSospechosos.length > 0 && (
-              <div
-                role="alert"
-                data-testid="aviso-numeros-sospechosos"
-                className="bg-red-50 border border-red-300 rounded-2xl px-3 py-2 flex items-start gap-2"
-              >
-                <AlertTriangle className="w-3.5 h-3.5 text-red-600 shrink-0 mt-px" />
-                <p className="text-[10px] text-red-700 leading-relaxed">
-                  <strong className="font-bold">Verificá antes de confiar:</strong> la IA mencionó
-                  cifras que no están en el cálculo ({explicacion.numerosSospechosos.join(', ')}).
-                  Revisalas vos antes de usar esta explicación.
-                </p>
-              </div>
-            )}
-
-            <p className="text-[9px] text-arena leading-relaxed px-1">
-              Texto generado por IA a partir del cálculo. Es un apoyo: vos decidís tu recorrido.
-            </p>
-          </div>
-        )}
-      </div>
     </div>
   );
 }

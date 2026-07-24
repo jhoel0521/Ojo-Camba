@@ -1,6 +1,7 @@
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { MapPin, ClipboardList, FolderOpen, Users, LogOut, Construction } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
+import Asistente from './Asistente';
 
 const NAV_ITEMS = [
   { to: '/', icon: Construction, label: 'Dashboard' },
@@ -83,6 +84,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         </header>
         <main className="flex-1 overflow-y-auto p-6">{children}</main>
       </div>
+
+      <Asistente />
     </div>
   );
 }

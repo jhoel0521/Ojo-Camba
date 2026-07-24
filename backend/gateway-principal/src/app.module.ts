@@ -7,14 +7,14 @@ import { ReportesController } from './reportes.controller';
 import { AdminController } from './admin.controller';
 import { GamifyController } from './gamify.controller';
 import { EventsModule } from './events/events.module';
-import { ExplicadorModule } from './explicador/explicador.module';
+import { AsistenteModule } from './asistente/asistente.module';
 
 @Module({
   imports: [
     // Carga el .env del gateway (incluida GROQ_API_KEY) en process.env.
     ConfigModule.forRoot({ isGlobal: true }),
     EventsModule,
-    ExplicadorModule,
+    AsistenteModule,
     ClientsModule.register([
       {
         name: 'MS_AUTH',
