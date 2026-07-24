@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   List,
   CheckCircle,
@@ -35,7 +35,10 @@ import {
 import { friendlyError } from '../lib/errors';
 import { getImageUrl } from '../lib/api';
 import { CATEGORIA_NAMES, CATEGORIA_IDS } from '../lib/categories';
+import type { GravedadValor } from '../lib/triaje';
 import PendingReportCard from '../components/PendingReportCard';
+import GravedadBadge from '../components/GravedadBadge';
+import GravedadSugerida from '../components/GravedadSugerida';
 import NearbyReportsList, { type NearbyReport } from '../components/NearbyReportsList';
 import ConfirmModal from '../components/ConfirmModal';
 import Pagination from '../components/Pagination';
@@ -62,6 +65,7 @@ export default function RevisarPage() {
 
   const [selectedReport, setSelectedReport] = useState<PendingReport | null>(null);
   const [editedCategoriaId, setEditedCategoriaId] = useState<number>(0);
+  const [editedGravedad, setEditedGravedad] = useState<string>('');
   const [nearbySelected, setNearbySelected] = useState<Set<number>>(new Set());
   const [nearbyObras, setNearbyObras] = useState<GrupoReporte[]>([]);
   const [nearbyPending, setNearbyPending] = useState<NearbyReport[]>([]);
@@ -139,6 +143,7 @@ export default function RevisarPage() {
     setSelectedReport(report);
     claim(report.id);
     setEditedCategoriaId(report.categoria_id);
+    setEditedGravedad(report.gravedad);
     setNearbySelected(new Set());
     setNearbyObras([]);
     setNearbyPending([]);
@@ -159,13 +164,13 @@ export default function RevisarPage() {
     }
   };
 
-  const handleAccept = (id: number, categoriaId?: number) => {
+  const handleAccept = (id: number, categoriaId?: number, gravedad?: string) => {
     if (!user) return;
     setConfirmModal({
       title: 'Aceptar reporte',
       message: `Al aceptar el reporte #${id} se creará automáticamente un Caso de Obra individual.`,
       action: async () => {
-        await acceptReport(id, user.id, categoriaId);
+        await acceptReport(id, user.id, categoriaId, undefined, gravedad);
         removeReports([id]);
       },
     });
@@ -202,7 +207,7 @@ export default function RevisarPage() {
       title: 'Añadir a obra existente',
       message: `El reporte #${selectedReport.id} se añadirá a ${obra?.codigo_obra ?? `obra #${grupoId}`}.`,
       action: async () => {
-        await acceptReport(selectedReport.id, user.id, editedCategoriaId, grupoId);
+        await acceptReport(selectedReport.id, user.id, editedCategoriaId, grupoId, editedGravedad);
         removeReports([selectedReport.id]);
       },
     });
@@ -230,6 +235,12 @@ export default function RevisarPage() {
   };
 
   const nearbyReports = nearbyPending;
+
+  // Insumo de recurrencia para el triaje: reutiliza los cercanos ya cargados en openDetail.
+  const distanciasCercanasM = useMemo(
+    () => nearbyPending.map((r) => r.distanciaM),
+    [nearbyPending],
+  );
 
   return (
     <div className="-m-6 h-full overflow-hidden flex">
@@ -321,6 +332,7 @@ export default function RevisarPage() {
                   url_imagen={r.url_imagen}
                   device_id={r.device_id}
                   creado_en={r.creado_en}
+                  gravedad={r.gravedad}
                   selected={selectedReport?.id === r.id}
                   onSelect={() => openDetail(r)}
                   loading={actionLoading}
@@ -351,6 +363,7 @@ export default function RevisarPage() {
                 #{selectedReport.id}
               </span>
               <h2 className="text-base font-bold text-tierra">Inspección del Reporte</h2>
+              {editedGravedad && <GravedadBadge gravedad={editedGravedad} />}
             </div>
 
             <div className="rounded-3xl-2 overflow-hidden border border-arcilla relative group">
@@ -388,7 +401,16 @@ export default function RevisarPage() {
                 )}
               </div>
 
-              <div className="grid grid-cols-2 gap-3 pt-1 border-t border-arcilla">
+              <GravedadSugerida
+                key={selectedReport.id}
+                categoriaId={editedCategoriaId}
+                creadoEn={selectedReport.creado_en}
+                distanciasCercanasM={distanciasCercanasM}
+                gravedadActual={editedGravedad}
+                onAplicar={(g: GravedadValor) => setEditedGravedad(g)}
+              />
+
+              <div className="grid grid-cols-2 gap-3 pt-3 border-t border-arcilla">
                 <div>
                   <h3 className="text-[10px] font-bold text-arena uppercase tracking-wide mb-1 flex items-center gap-1">
                     <MapPin className="w-3 h-3" /> Coordenadas
@@ -439,7 +461,7 @@ export default function RevisarPage() {
                 </button>
               ) : (
                 <button
-                  onClick={() => handleAccept(selectedReport.id, editedCategoriaId)}
+                  onClick={() => handleAccept(selectedReport.id, editedCategoriaId, editedGravedad)}
                   disabled={actionLoading}
                   data-testid="btn-aceptar"
                   className="w-full flex items-center justify-center gap-2 bg-sol-camba text-perla font-bold text-sm min-h-11 px-5 rounded-3xl-3 hover:brightness-110 disabled:opacity-50 transition-all shadow-sm"

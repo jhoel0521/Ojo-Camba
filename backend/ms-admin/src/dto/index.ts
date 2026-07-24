@@ -1,5 +1,6 @@
-import { IsArray, IsInt, IsNotEmpty, ArrayMinSize, IsOptional } from 'class-validator';
+import { IsArray, IsInt, IsNotEmpty, ArrayMinSize, IsOptional, IsIn } from 'class-validator';
 import { Type } from 'class-transformer';
+import { Gravedad } from '@ojo-camba/common';
 
 export class CreateGroupDto {
   @IsArray()
@@ -44,6 +45,11 @@ export class AcceptReportDto {
   @IsOptional()
   @IsInt()
   grupo_id?: number;
+
+  // El moderador puede ajustar la gravedad al aceptar (triaje asistido).
+  @IsOptional()
+  @IsIn(Object.values(Gravedad))
+  gravedad?: string;
 }
 
 export class RejectReportDto {

@@ -68,7 +68,8 @@ export class AdminController {
   @Post('reports/:id/accept')
   async acceptReport(
     @Param('id') id: string,
-    @Body() dto: { moderador_id: number; categoria_id?: number; grupo_id?: number },
+    @Body()
+    dto: { moderador_id: number; categoria_id?: number; grupo_id?: number; gravedad?: string },
   ) {
     const result = await sendRpc(
       this.client.send(TCP_PATTERNS.ADMIN.ACCEPT_REPORT, {
@@ -76,6 +77,7 @@ export class AdminController {
         moderador_id: dto.moderador_id,
         categoria_id: dto.categoria_id,
         grupo_id: dto.grupo_id,
+        gravedad: dto.gravedad,
       }),
     );
     // Tiempo real: sacar el reporte de las bandejas y refrescar contadores.

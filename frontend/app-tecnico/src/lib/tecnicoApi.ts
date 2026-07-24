@@ -27,6 +27,20 @@ export interface Actualizacion {
   creado_en: string;
 }
 
+/** Reporte individual dentro de un Caso de Obra (GET /admin/groups/:id/reports). */
+export interface ReporteDeGrupo {
+  id: number;
+  categoria_id: number;
+  grupo_id: number | null;
+  estado: string;
+  gravedad: string;
+  lat: number;
+  lng: number;
+  url_imagen: string | null;
+  device_id: string;
+  creado_en: string;
+}
+
 export interface PaginatedResponse<T> {
   data: T[];
   total: number;
@@ -66,6 +80,10 @@ export async function listGroupsNearby(
 
 export async function getGroup(id: number): Promise<GrupoReporte> {
   return fetchAPI<GrupoReporte>(`/admin/groups/${id}`);
+}
+
+export async function getGroupReports(id: number): Promise<ReporteDeGrupo[]> {
+  return fetchAPI<ReporteDeGrupo[]>(`/admin/groups/${id}/reports`);
 }
 
 export async function getCaseTimeline(id: number): Promise<Actualizacion[]> {
