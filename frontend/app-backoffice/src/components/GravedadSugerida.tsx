@@ -1,5 +1,15 @@
-import { useMemo, useState } from 'react';
-import { Sparkles, ChevronRight, ChevronDown, Bell, Check, AlertCircle } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import {
+  Sparkles,
+  ChevronRight,
+  ChevronDown,
+  Bell,
+  Check,
+  AlertCircle,
+  AlertTriangle,
+  Bot,
+  Loader2,
+} from 'lucide-react';
 import {
   inferirTriaje,
   tipoDesdeCategoria,
@@ -10,6 +20,8 @@ import {
   type GravedadValor,
   type UbicacionSensible,
 } from '../lib/triaje';
+import { explicar, type ExplicacionIA } from '../lib/explicadorApi';
+import { friendlyError } from '../lib/errors';
 import GravedadBadge from './GravedadBadge';
 
 interface GravedadSugeridaProps {
@@ -48,6 +60,47 @@ export default function GravedadSugerida({
   const { gravedad, traza, accion } = useMemo(() => inferirTriaje(hechos), [hechos]);
 
   const yaAplicada = gravedad !== null && gravedad === gravedadActual;
+
+  // Explicación con IA — estrictamente bajo demanda para no gastar cuota de la API.
+  const [explicando, setExplicando] = useState(false);
+  const [explicacion, setExplicacion] = useState<ExplicacionIA | null>(null);
+  const [errorIA, setErrorIA] = useState('');
+
+  // Si cambian los hechos, la explicación previa deja de corresponder: se descarta.
+  useEffect(() => {
+    setExplicacion(null);
+    setErrorIA('');
+  }, [hechos, gravedad]);
+
+  async function pedirExplicacion(): Promise<void> {
+    setExplicando(true);
+    setErrorIA('');
+    try {
+      const resultado = {
+        gravedadSugerida: gravedad,
+        accion,
+        hechos: {
+          tipo: hechos.tipo,
+          temporada: hechos.temporada,
+          ubicacion_sensible: hechos.ubicacion_sensible,
+          recurrencia: hechos.recurrencia,
+          horasAntiguedad: Math.floor(hechos.horas),
+          palabra_clave_riesgo: hechos.palabra_clave_riesgo,
+        },
+        reglasAplicadas: traza.map((r) => ({
+          id: r.id,
+          conclusion: r.conclusion,
+          descripcion: r.texto,
+        })),
+      };
+      setExplicacion(await explicar('triaje', resultado));
+    } catch (e) {
+      setExplicacion(null);
+      setErrorIA(friendlyError(e));
+    } finally {
+      setExplicando(false);
+    }
+  }
 
   return (
     <div className="pt-3 border-t border-arcilla" data-testid="gravedad-sugerida">
@@ -177,6 +230,67 @@ export default function GravedadSugerida({
                 </li>
               ))}
             </ol>
+          )}
+        </div>
+      )}
+
+      {gravedad && (
+        <div className="mt-3 pt-3 border-t border-arcilla" data-testid="explicador-ia">
+          <button
+            onClick={pedirExplicacion}
+            disabled={explicando}
+            data-testid="btn-explicar-ia"
+            className="w-full flex items-center justify-center gap-2 bg-sol-camba/10 text-sol-camba border border-sol-camba/40 font-semibold text-xs min-h-9 px-4 rounded-3xl-3 hover:bg-sol-camba/20 disabled:opacity-60 transition-colors"
+          >
+            {explicando ? (
+              <>
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                Generando explicación…
+              </>
+            ) : (
+              <>
+                <Bot className="w-3.5 h-3.5" />
+                {explicacion ? 'Regenerar explicación' : 'Explicar con IA'}
+              </>
+            )}
+          </button>
+
+          {errorIA && (
+            <div
+              role="alert"
+              className="mt-2 bg-red-50 border border-red-200 rounded-2xl px-3 py-2 flex items-start gap-2"
+            >
+              <AlertCircle className="w-3.5 h-3.5 text-red-600 shrink-0 mt-px" />
+              <p className="text-[11px] text-red-700 leading-relaxed">{errorIA}</p>
+            </div>
+          )}
+
+          {explicacion && (
+            <div className="mt-2 space-y-2" data-testid="explicacion-ia">
+              <div className="bg-lienzo border border-arcilla rounded-3xl-2 px-3 py-2.5">
+                <p className="text-[11px] text-tierra leading-relaxed">{explicacion.explicacion}</p>
+              </div>
+
+              {explicacion.numerosSospechosos.length > 0 && (
+                <div
+                  role="alert"
+                  data-testid="aviso-numeros-sospechosos"
+                  className="bg-red-50 border border-red-300 rounded-2xl px-3 py-2 flex items-start gap-2"
+                >
+                  <AlertTriangle className="w-3.5 h-3.5 text-red-600 shrink-0 mt-px" />
+                  <p className="text-[10px] text-red-700 leading-relaxed">
+                    <strong className="font-bold">Verificá antes de confiar:</strong> la IA mencionó
+                    cifras que no están en el análisis (
+                    {explicacion.numerosSospechosos.join(', ')}). Revisalas vos antes de usar esta
+                    explicación.
+                  </p>
+                </div>
+              )}
+
+              <p className="text-[9px] text-arena leading-relaxed px-1">
+                Texto generado por IA a partir del análisis. Es un apoyo: la decisión es tuya.
+              </p>
+            </div>
           )}
         </div>
       )}

@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import { HealthController } from './health.controller';
 import { AuthController } from './auth.controller';
@@ -6,10 +7,14 @@ import { ReportesController } from './reportes.controller';
 import { AdminController } from './admin.controller';
 import { GamifyController } from './gamify.controller';
 import { EventsModule } from './events/events.module';
+import { ExplicadorModule } from './explicador/explicador.module';
 
 @Module({
   imports: [
+    // Carga el .env del gateway (incluida GROQ_API_KEY) en process.env.
+    ConfigModule.forRoot({ isGlobal: true }),
     EventsModule,
+    ExplicadorModule,
     ClientsModule.register([
       {
         name: 'MS_AUTH',
