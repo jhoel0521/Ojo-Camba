@@ -234,6 +234,16 @@ export default function RevisarPage() {
     });
   };
 
+  // "Analizar foto" sugiere duplicados; el moderador sigue pudiendo desmarcarlos.
+  const handleDuplicadosSugeridos = (ids: number[]) => {
+    const validos = new Set(nearbyPending.map((r) => r.id));
+    setNearbySelected((prev) => {
+      const next = new Set(prev);
+      ids.filter((id) => validos.has(id)).forEach((id) => next.add(id));
+      return next;
+    });
+  };
+
   const nearbyReports = nearbyPending;
 
   // Insumo de recurrencia para el triaje: reutiliza los cercanos ya cargados en openDetail.
@@ -403,11 +413,15 @@ export default function RevisarPage() {
 
               <GravedadSugerida
                 key={selectedReport.id}
+                reporteId={selectedReport.id}
                 categoriaId={editedCategoriaId}
                 creadoEn={selectedReport.creado_en}
                 distanciasCercanasM={distanciasCercanasM}
+                nearbyReportIds={nearbyPending.map((r) => r.id)}
+                imagenExterna={selectedReport.url_imagen?.startsWith('http') ?? false}
                 gravedadActual={editedGravedad}
                 onAplicar={(g: GravedadValor) => setEditedGravedad(g)}
+                onDuplicadosSugeridos={handleDuplicadosSugeridos}
               />
 
               <div className="grid grid-cols-2 gap-3 pt-3 border-t border-arcilla">
