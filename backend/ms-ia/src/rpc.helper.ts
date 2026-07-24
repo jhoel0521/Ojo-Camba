@@ -29,7 +29,13 @@ export async function sendRpc<T>(source: Observable<T>): Promise<T> {
       msg.includes('expirado')
     )
       throw new UnauthorizedException(msg);
-    if (msg.includes('no encontrado') || msg.includes('No encontrado') || msg.includes('existe'))
+    if (
+      msg.includes('no encontrado') ||
+      msg.includes('No encontrado') ||
+      msg.includes('no encontrada') ||
+      msg.includes('no gestionada') ||
+      msg.includes('existe')
+    )
       throw new NotFoundException(msg);
     if (
       msg.includes('deben') ||
