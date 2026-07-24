@@ -11,6 +11,7 @@ import {
   ActualizacionCaso,
   Categoria,
   EstadoReporte,
+  Gravedad,
   TCP_PATTERNS,
 } from '@ojo-camba/common';
 import { CreateGroupDto, UpdateCaseDto, AcceptReportDto, BanDeviceDto } from './dto';
@@ -118,6 +119,16 @@ export class AdminService {
       }
 
       reporte.estado = EstadoReporte.Aceptado;
+
+      // La gravedad solo cambia si el moderador la envio explicitamente; el triaje sugiere,
+      // no decide. El @IsIn del DTO no alcanza: este microservicio no tiene ValidationPipe,
+      // asi que sin esta guarda cualquier string llegaria a la columna.
+      if (dto.gravedad) {
+        if (!Object.values(Gravedad).includes(dto.gravedad as Gravedad)) {
+          throw new BadRequestException(`Gravedad invalida: ${dto.gravedad}`);
+        }
+        reporte.gravedad = dto.gravedad;
+      }
 
       if (dto.grupo_id) {
         const grupo = await manager.findOne(GrupoReporte, { where: { id: dto.grupo_id } });
@@ -923,8 +934,13 @@ export class AdminService {
       desdeDate.setHours(0, 0, 0, 0);
     }
 
-    const desdeStr = desde ? desde : desdeDate.toISOString().slice(0, 10);
-    const hastaStr = hasta ? hasta : hastaDate.toISOString().slice(0, 10);
+    // Formateamos con el calendario local: toISOString() convierte a UTC y, en husos
+    // negativos como UTC-4, empuja la hora actual al dia siguiente por la tarde/noche,
+    // rompiendo el span de "ultimos N dias" (30 en vez de 29) segun la hora.
+    const toLocalYmd = (d: Date) =>
+      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const desdeStr = desde ? desde : toLocalYmd(desdeDate);
+    const hastaStr = hasta ? hasta : toLocalYmd(hastaDate);
 
     const catInParam = catIn.length > 0 ? catIn : null;
     const catOutParam = catOut.length > 0 ? catOut : null;

@@ -129,10 +129,11 @@ export async function acceptReport(
   moderador_id: number,
   categoria_id?: number,
   grupo_id?: number,
+  gravedad?: string,
 ): Promise<{ id: number; estado: string; grupo_id: number; codigo_obra: string }> {
   return fetchAPI(`/admin/reports/${id}/accept`, {
     method: 'POST',
-    body: JSON.stringify({ moderador_id, categoria_id, grupo_id }),
+    body: JSON.stringify({ moderador_id, categoria_id, grupo_id, gravedad }),
   });
 }
 

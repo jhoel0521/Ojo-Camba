@@ -1,14 +1,18 @@
 import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import { HealthController } from './health.controller';
 import { AuthController } from './auth.controller';
 import { ReportesController } from './reportes.controller';
 import { AdminController } from './admin.controller';
 import { GamifyController } from './gamify.controller';
+import { AsistenteController } from './asistente.controller';
+import { IaController } from './ia.controller';
 import { EventsModule } from './events/events.module';
 
 @Module({
   imports: [
+    ConfigModule.forRoot({ isGlobal: true }),
     EventsModule,
     ClientsModule.register([
       {
@@ -43,6 +47,14 @@ import { EventsModule } from './events/events.module';
           port: parseInt(process.env.MS_GAMIFY_PORT ?? '3004', 10),
         },
       },
+      {
+        name: 'MS_IA',
+        transport: Transport.TCP,
+        options: {
+          host: process.env.MS_IA_HOST ?? 'localhost',
+          port: parseInt(process.env.MS_IA_PORT ?? '3006', 10),
+        },
+      },
     ]),
   ],
   controllers: [
@@ -51,6 +63,8 @@ import { EventsModule } from './events/events.module';
     ReportesController,
     AdminController,
     GamifyController,
+    AsistenteController,
+    IaController,
   ],
 })
 export class AppModule {}

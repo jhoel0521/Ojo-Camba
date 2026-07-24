@@ -42,6 +42,7 @@ export class StatusService {
     @Inject('MS_REGISTER') private readonly registerClient: ClientProxy,
     @Inject('MS_ADMIN') private readonly adminClient: ClientProxy,
     @Inject('MS_GAMIFY') private readonly gamifyClient: ClientProxy,
+    @Inject('MS_IA') private readonly iaClient: ClientProxy,
     @InjectRepository(PingLog) private readonly pingLogRepo: Repository<PingLog>,
   ) {
     this.pingAll();
@@ -62,6 +63,7 @@ export class StatusService {
       { name: 'ms-register', client: this.registerClient, pattern: TCP_PATTERNS.REGISTER.PING },
       { name: 'ms-admin', client: this.adminClient, pattern: TCP_PATTERNS.ADMIN.PING },
       { name: 'ms-gamify', client: this.gamifyClient, pattern: TCP_PATTERNS.GAMIFY.PING },
+      { name: 'ms-ia', client: this.iaClient, pattern: TCP_PATTERNS.IA.PING },
     ];
 
     const results = await Promise.allSettled(

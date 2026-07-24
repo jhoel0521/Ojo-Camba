@@ -34,6 +34,7 @@ import { useGeolocation } from '../hooks/useGeolocation';
 import { useAuthStore } from '../store/authStore';
 import { friendlyError } from '../lib/errors';
 import StatusBadge from '../components/StatusBadge';
+import RutaSugerida from '../components/RutaSugerida';
 import { getImageUrl } from '../lib/api';
 
 export default function CasoDetallePage() {
@@ -171,6 +172,9 @@ export default function CasoDetallePage() {
           )}
         </div>
       </div>
+
+      {/* Ruta sugerida: solo se muestra si el caso agrupa 2 o mas reportes */}
+      <RutaSugerida grupoId={numId} />
 
       {/* Formulario de bitacora diaria */}
       <form

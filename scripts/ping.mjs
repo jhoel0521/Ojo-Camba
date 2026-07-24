@@ -13,6 +13,7 @@ const SERVICES = [
   { label: 'ms-register',       type: 'tcp',  port: 3002 },
   { label: 'ms-admin',          type: 'tcp',  port: 3003 },
   { label: 'ms-gamify',         type: 'tcp',  port: 3004 },
+  { label: 'ms-ia',             type: 'tcp',  port: 3006 },
   { label: 'app-reporte',       type: 'http', port: 5173, path: '/' },
   { label: 'app-backoffice',    type: 'http', port: 5174, path: '/' },
   { label: 'app-tecnico',       type: 'http', port: 5175, path: '/' },

@@ -28,8 +28,9 @@ function makeHistoryRepo(rawRows: Record<string, unknown>[]) {
 }
 
 describe('StatusService — agregacion de ping (ISSUE-20)', () => {
-  it('reporta status global "ok" cuando los 4 microservicios responden', async () => {
+  it('reporta status global "ok" cuando los 5 microservicios responden', async () => {
     const service = new StatusService(
+      makeClient('ok') as never,
       makeClient('ok') as never,
       makeClient('ok') as never,
       makeClient('ok') as never,
@@ -42,12 +43,13 @@ describe('StatusService — agregacion de ping (ISSUE-20)', () => {
 
     expect(result.status).toBe('ok');
     expect(result.services.every((s) => s.status === 'ok')).toBe(true);
-    expect(result.services).toHaveLength(4);
+    expect(result.services).toHaveLength(5);
   });
 
   it('marca como "Interrupcion" (down) solo el microservicio caido, sin afectar a los demas', async () => {
     const service = new StatusService(
       makeClient('down') as never, // ms-auth caido
+      makeClient('ok') as never,
       makeClient('ok') as never,
       makeClient('ok') as never,
       makeClient('ok') as never,
@@ -68,6 +70,7 @@ describe('StatusService — agregacion de ping (ISSUE-20)', () => {
   it('incluye latencia solo para los servicios que respondieron', async () => {
     const service = new StatusService(
       makeClient('down') as never,
+      makeClient('ok') as never,
       makeClient('ok') as never,
       makeClient('ok') as never,
       makeClient('ok') as never,
@@ -92,6 +95,7 @@ describe('StatusService — historial de uptime (ISSUE-20)', () => {
       makeClient('down') as never,
       makeClient('ok') as never,
       makeClient('ok') as never,
+      makeClient('ok') as never,
       pingLogRepo as never,
     );
 
@@ -103,7 +107,7 @@ describe('StatusService — historial de uptime (ISSUE-20)', () => {
       { servicio: string; estado: string }[],
     ];
     const rows = lastCall[0];
-    expect(rows).toHaveLength(4);
+    expect(rows).toHaveLength(5);
     expect(rows.find((r) => r.servicio === 'ms-register')?.estado).toBe('down');
   });
 
@@ -114,6 +118,7 @@ describe('StatusService — historial de uptime (ISSUE-20)', () => {
       { servicio: 'ms-register', dia: new Date('2026-06-30'), ok_count: '59', total_count: '60' },
     ];
     const service = new StatusService(
+      makeClient('ok') as never,
       makeClient('ok') as never,
       makeClient('ok') as never,
       makeClient('ok') as never,
@@ -136,6 +141,7 @@ describe('StatusService — historial de uptime (ISSUE-20)', () => {
   it('acota "days" entre 1 y 90 antes de consultar', async () => {
     const repo = makeHistoryRepo([]);
     const service = new StatusService(
+      makeClient('ok') as never,
       makeClient('ok') as never,
       makeClient('ok') as never,
       makeClient('ok') as never,

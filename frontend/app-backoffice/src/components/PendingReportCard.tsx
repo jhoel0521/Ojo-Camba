@@ -1,6 +1,7 @@
 import { getImageUrl } from '../lib/api';
 import { CATEGORIA_NAMES } from '../lib/categories';
 import StatusBadge from './StatusBadge';
+import GravedadBadge from './GravedadBadge';
 
 interface PendingReportCardProps {
   id: number;
@@ -8,6 +9,7 @@ interface PendingReportCardProps {
   url_imagen: string;
   device_id: string;
   creado_en: string;
+  gravedad?: string;
   selected?: boolean;
   onSelect: (id: number) => void;
   loading?: boolean;
@@ -19,6 +21,7 @@ export default function PendingReportCard({
   url_imagen,
   device_id,
   creado_en,
+  gravedad,
   selected,
   onSelect,
   loading,
@@ -51,7 +54,10 @@ export default function PendingReportCard({
         className="w-14 h-14 object-cover rounded-2xl shrink-0 bg-yeso"
       />
       <div className="min-w-0 flex-1">
-        <StatusBadge estado="Reportado" />
+        <div className="flex items-center gap-1">
+          <StatusBadge estado="Reportado" />
+          {gravedad && <GravedadBadge gravedad={gravedad} />}
+        </div>
         <p className="text-xs text-tierra font-medium truncate mt-1">
           {CATEGORIA_NAMES[categoria_id] || 'Otro'}
         </p>
