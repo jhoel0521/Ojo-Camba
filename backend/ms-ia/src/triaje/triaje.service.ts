@@ -7,6 +7,7 @@ import {
   recurrenciaDesdeCercanos,
   type BloqueTriaje,
   type GravedadValor,
+  type Temporada,
   type UbicacionSensible,
 } from '@ojo-camba/common';
 
@@ -16,6 +17,12 @@ export interface InferirTriajeDto {
   distancias_cercanas_m?: number[];
   ubicacion_sensible?: UbicacionSensible;
   palabra_clave_riesgo?: boolean;
+  /**
+   * El calendario (nov-mar = lluvias) es un default, no un hecho: un surazo de
+   * invierno puede traer lluvia fuerte fuera de esa ventana. Si se manda, pisa
+   * al calendario — el operador conoce el clima real mejor que una fecha.
+   */
+  temporada_forzada?: Temporada;
 }
 
 export interface TrazaTriajeDto {
@@ -40,6 +47,7 @@ export interface InferirTriajeResultado {
 }
 
 const UBICACIONES: UbicacionSensible[] = ['ninguna', 'via_principal', 'escuela', 'hospital'];
+const TEMPORADAS: Temporada[] = ['lluvias', 'seca'];
 
 /**
  * Fuente única del motor de triaje para todo el sistema: la usa tanto
@@ -60,9 +68,13 @@ export class TriajeService {
       ? (dto.ubicacion_sensible as UbicacionSensible)
       : 'ninguna';
 
+    const temporada: Temporada = TEMPORADAS.includes(dto.temporada_forzada as Temporada)
+      ? (dto.temporada_forzada as Temporada)
+      : temporadaDeFecha(new Date());
+
     const hechos = {
       tipo: tipoDesdeCategoria(categoriaId),
-      temporada: temporadaDeFecha(new Date()),
+      temporada,
       ubicacion_sensible: ubicacion,
       recurrencia: recurrenciaDesdeCercanos(dto.distancias_cercanas_m ?? []),
       horas: horasTranscurridas(dto.creado_en),

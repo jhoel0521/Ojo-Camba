@@ -7,6 +7,7 @@ import {
   haversineM,
   MAX_REPORTES_COMPARACION,
   type UbicacionSensible,
+  type Temporada,
   type ReporteRuta,
 } from '@ojo-camba/common';
 import { sendRpc } from '../rpc.helper';
@@ -25,6 +26,7 @@ interface ReporteCrudo {
 }
 
 const UBICACIONES: UbicacionSensible[] = ['ninguna', 'via_principal', 'escuela', 'hospital'];
+const TEMPORADAS: Temporada[] = ['lluvias', 'seca'];
 const RUTAS_VALIDAS = ['/', '/revisar', '/casos', '/usuarios'];
 
 /**
@@ -67,7 +69,7 @@ export class AsistenteToolkit implements AiToolkit {
       {
         name: 'explicar_triaje',
         description:
-          'Corre el sistema experto de triaje para un reporte y devuelve la gravedad sugerida y la traza de reglas SI-ENTONCES que la justifican. La explicación se apoya en esta traza; no inventes la gravedad. dos hechos dependen de criterio humano: ubicacion_sensible y palabra_clave_riesgo (pasalos si el operador los indica).',
+          'Corre el sistema experto de triaje para un reporte y devuelve la gravedad sugerida y la traza de reglas SI-ENTONCES que la justifican. La explicación se apoya en esta traza; no inventes la gravedad. tres hechos dependen de criterio humano: ubicacion_sensible, palabra_clave_riesgo y temporada_forzada (pasalos si el operador los indica).',
         parameters: {
           type: 'object',
           properties: {
@@ -81,6 +83,12 @@ export class AsistenteToolkit implements AiToolkit {
               type: 'boolean',
               description:
                 'true si la descripción menciona riesgo (hundimiento, cable caído, colapso, herido). Por defecto false.',
+            },
+            temporada_forzada: {
+              type: 'string',
+              enum: TEMPORADAS,
+              description:
+                'Por defecto la temporada se calcula por calendario (nov-mar=lluvias, abr-oct=seca), pero eso es solo un promedio y puede no coincidir con el clima real (ej. un surazo trae lluvia fuerte en invierno). Si el operador te dice que está lloviendo o que está seco ahora mismo, pasá este valor para que pise al calendario.',
             },
           },
           required: ['reporte_id'],
@@ -157,6 +165,9 @@ export class AsistenteToolkit implements AiToolkit {
       ? (input.ubicacion_sensible as UbicacionSensible)
       : 'ninguna';
     const palabraClave = input.palabra_clave_riesgo === true;
+    const temporadaForzada = TEMPORADAS.includes(input.temporada_forzada as Temporada)
+      ? (input.temporada_forzada as Temporada)
+      : undefined;
 
     let reporte: ReporteCrudo;
     try {
@@ -190,6 +201,7 @@ export class AsistenteToolkit implements AiToolkit {
       distancias_cercanas_m: distanciasCercanas,
       ubicacion_sensible: ubicacion,
       palabra_clave_riesgo: palabraClave,
+      temporada_forzada: temporadaForzada,
     });
 
     return {
@@ -204,7 +216,7 @@ export class AsistenteToolkit implements AiToolkit {
         conclusion: r.conclusion,
         regla: r.texto,
       })),
-      nota: 'La gravedad y la traza salen del sistema experto; ubicacion_sensible y palabra_clave_riesgo dependen de criterio humano.',
+      nota: 'La gravedad y la traza salen del sistema experto; ubicacion_sensible, palabra_clave_riesgo y temporada_forzada dependen de criterio humano.',
     };
   }
 

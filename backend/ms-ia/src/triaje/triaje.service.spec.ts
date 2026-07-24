@@ -45,4 +45,22 @@ describe('TriajeService', () => {
   it('rechaza creado_en faltante con BadRequestException', () => {
     expect(() => service.inferir({ categoria_id: 1 } as never)).toThrow(BadRequestException);
   });
+
+  it('temporada_forzada pisa el calendario: mismo canal_obstruido en julio sin regla vs. con R2 al forzar lluvias', () => {
+    const hechosBase = {
+      categoria_id: 4, // canal_obstruido
+      creado_en: '2026-07-24T10:00:00.000Z', // julio -> "seca" por calendario
+      ubicacion_sensible: 'via_principal' as const,
+      palabra_clave_riesgo: false,
+    };
+
+    const sinForzar = service.inferir(hechosBase);
+    expect(sinForzar.hechos.temporada).toBe('seca');
+    expect(sinForzar.gravedad_sugerida).toBeNull(); // ninguna regla cubre canal_obstruido en seca
+
+    const forzandoLluvias = service.inferir({ ...hechosBase, temporada_forzada: 'lluvias' });
+    expect(forzandoLluvias.hechos.temporada).toBe('lluvias');
+    expect(forzandoLluvias.gravedad_sugerida).toBe('Emergencia');
+    expect(forzandoLluvias.traza.map((t) => t.id)).toContain('R2');
+  });
 });
