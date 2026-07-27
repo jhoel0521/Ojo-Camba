@@ -1,6 +1,6 @@
 import { of } from 'rxjs';
 import { SugerenciaHechosService } from './sugerencia-hechos.service';
-import type { GroqProvider } from '../ai/groq.provider';
+import type { AiProviderRegistry } from '../ai/ai-provider.registry';
 
 function makeRegisterClient(reportes: Record<number, { categoria_id: number }>) {
   return {
@@ -50,7 +50,9 @@ function makeAdminClient(grupos: Record<number, GrupoFixture>) {
 }
 
 function makeGroq(respuesta: string) {
-  return { chatConImagenes: jest.fn().mockResolvedValue(respuesta) } as unknown as GroqProvider;
+  return {
+    chatConImagenes: jest.fn().mockResolvedValue(respuesta),
+  } as unknown as AiProviderRegistry;
 }
 
 const SIN_OBRAS = makeAdminClient({});

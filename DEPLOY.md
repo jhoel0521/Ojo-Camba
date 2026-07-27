@@ -38,35 +38,41 @@ pnpm ping
 | 2 | `ms-register` | `docker/prod/Dockerfile.ms-register` | ❌ (TCP) | ❌ |
 | 3 | `ms-admin` | `docker/prod/Dockerfile.ms-admin` | ❌ (TCP) | ❌ |
 | 4 | `ms-gamify` | `docker/prod/Dockerfile.ms-gamify` | ❌ (TCP) | ❌ |
-| 5 | `gateway-principal` | `docker/prod/Dockerfile.gateway-principal` | ✅ (3000) | ✅ |
-| 6 | `gateway-status` | `docker/prod/Dockerfile.gateway-status` | ✅ (3005) | ✅ |
-| 7 | `app-reporte` | `docker/prod/Dockerfile.app-reporte` | ✅ (80) | ✅ |
-| 8 | `app-backoffice` | `docker/prod/Dockerfile.app-backoffice` | ✅ (80) | ✅ |
-| 9 | `app-tecnico` | `docker/prod/Dockerfile.app-tecnico` | ✅ (80) | ✅ |
-| 10 | `app-status` | `docker/prod/Dockerfile.app-status` | ✅ (80) | ✅ |
+| 5 | `ms-ia` | `docker/prod/Dockerfile.ms-ia` | ❌ (TCP) | ❌ |
+| 6 | `gateway-principal` | `docker/prod/Dockerfile.gateway-principal` | ✅ (3000) | ✅ |
+| 7 | `gateway-status` | `docker/prod/Dockerfile.gateway-status` | ✅ (3005) | ✅ |
+| 8 | `app-reporte` | `docker/prod/Dockerfile.app-reporte` | ✅ (80) | ✅ |
+| 9 | `app-backoffice` | `docker/prod/Dockerfile.app-backoffice` | ✅ (80) | ✅ |
+| 10 | `app-tecnico` | `docker/prod/Dockerfile.app-tecnico` | ✅ (80) | ✅ |
+| 11 | `app-status` | `docker/prod/Dockerfile.app-status` | ✅ (80) | ✅ |
 
 ### Variables de entorno por servicio — Backend
 
-| Variable | gw-principal | gw-status | ms-auth | ms-register | ms-admin | ms-gamify |
-|---|:---:|:---:|:---:|:---:|:---:|:---:|
-| `PORT` | ✅ (3000) | ✅ (3005) | — | — | — | — |
-| `TCP_PORT` | — | — | ✅ (3001) | ✅ (3002) | ✅ (3003) | ✅ (3004) |
-| `MS_AUTH_HOST` | ✅ | ✅ | — | — | — | ✅ |
-| `MS_AUTH_PORT` | ✅ | ✅ | — | — | — | ✅ |
-| `MS_REGISTER_HOST` | ✅ | ✅ | — | — | — | — |
-| `MS_REGISTER_PORT` | ✅ | ✅ | — | — | — | — |
-| `MS_ADMIN_HOST` | ✅ | ✅ | — | — | — | — |
-| `MS_ADMIN_PORT` | ✅ | ✅ | — | — | — | — |
-| `MS_GAMIFY_HOST` | ✅ | ✅ | — | — | ✅ | — |
-| `MS_GAMIFY_PORT` | ✅ | ✅ | — | — | ✅ | — |
-| `DATABASE_URL` | — | — | ✅ | ✅ | ✅ | ✅ |
-| `JWT_SECRET` | — | — | ✅ | — | — | — |
-| `JWT_EXPIRES_IN` | — | — | ✅ | — | — | — |
-| `S3_ENDPOINT` | — | — | — | ✅ | ✅ | — |
-| `S3_ACCESS_KEY` | — | — | — | ✅ | ✅ | — |
-| `S3_SECRET_KEY` | — | — | — | ✅ | ✅ | — |
-| `S3_BUCKET` | — | — | — | ✅ | ✅ | — |
-| `PUNTOS_POR_REPORTE_ACEPTADO` | — | — | — | — | — | ✅ (def. 10) |
+| Variable | gw-principal | gw-status | ms-auth | ms-register | ms-admin | ms-gamify | ms-ia |
+|---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| `PORT` | ✅ (3000) | ✅ (3005) | — | — | — | — | — |
+| `TCP_PORT` | — | — | ✅ (3001) | ✅ (3002) | ✅ (3003) | ✅ (3004) | ✅ (3006) |
+| `MS_AUTH_HOST` | ✅ | ✅ | — | — | — | ✅ | — |
+| `MS_AUTH_PORT` | ✅ | ✅ | — | — | — | ✅ | — |
+| `MS_REGISTER_HOST` | ✅ | ✅ | — | — | — | — | ✅ |
+| `MS_REGISTER_PORT` | ✅ | ✅ | — | — | — | — | ✅ |
+| `MS_ADMIN_HOST` | ✅ | ✅ | — | — | — | — | ✅ |
+| `MS_ADMIN_PORT` | ✅ | ✅ | — | — | — | — | ✅ |
+| `MS_GAMIFY_HOST` | ✅ | ✅ | — | — | ✅ | — | — |
+| `MS_GAMIFY_PORT` | ✅ | ✅ | — | — | ✅ | — | — |
+| `MS_IA_HOST` | ✅ | ✅ | — | — | — | — | — |
+| `MS_IA_PORT` | ✅ | ✅ | — | — | — | — | — |
+| `DATABASE_URL` | — | — | ✅ | ✅ | ✅ | ✅ | ✅ |
+| `JWT_SECRET` | — | — | ✅ | — | — | — | — |
+| `JWT_EXPIRES_IN` | — | — | ✅ | — | — | — | — |
+| `S3_ENDPOINT` | — | — | — | ✅ | ✅ | — | — |
+| `S3_ACCESS_KEY` | — | — | — | ✅ | ✅ | — | — |
+| `S3_SECRET_KEY` | — | — | — | ✅ | ✅ | — | — |
+| `S3_BUCKET` | — | — | — | ✅ | ✅ | — | — |
+| `PUNTOS_POR_REPORTE_ACEPTADO` | — | — | — | — | — | ✅ (def. 10) | — |
+| `AI_CONFIG_ENCRYPTION_KEY` | — | — | — | — | — | — | ✅ |
+
+`AI_CONFIG_ENCRYPTION_KEY` es una clave maestra estable de 32 bytes para cifrar las credenciales configurables de Groq, Gemini, DeepSeek y OpenAI. Generarla una sola vez con `openssl rand -hex 32`, guardarla como secreto del servicio `ms-ia` y ejecutar `pnpm db:migrate` antes de desplegar esta versión.
 
 ### Variables de entorno — Frontend (build args)
 
@@ -98,6 +104,7 @@ Coolify redeploya **solo** los servicios cuyos archivos cambiaron.
 | `ms-register` | `backend/ms-register/**` `libs/common/**` `tsconfig.base.json` `pnpm-workspace.yaml` `docker/prod/Dockerfile.ms-register` |
 | `ms-admin` | `backend/ms-admin/**` `libs/common/**` `tsconfig.base.json` `pnpm-workspace.yaml` `docker/prod/Dockerfile.ms-admin` |
 | `ms-gamify` | `backend/ms-gamify/**` `libs/common/**` `tsconfig.base.json` `pnpm-workspace.yaml` `docker/prod/Dockerfile.ms-gamify` |
+| `ms-ia` | `backend/ms-ia/**` `libs/common/**` `tsconfig.base.json` `pnpm-workspace.yaml` `docker/prod/Dockerfile.ms-ia` |
 | `gateway-principal` | `backend/gateway-principal/**` `libs/common/**` `tsconfig.base.json` `pnpm-workspace.yaml` `docker/prod/Dockerfile.gateway-principal` |
 | `gateway-status` | `backend/gateway-status/**` `libs/common/**` `tsconfig.base.json` `pnpm-workspace.yaml` `docker/prod/Dockerfile.gateway-status` |
 | `app-reporte` | `frontend/app-reporte/**` `pnpm-workspace.yaml` `docker/prod/Dockerfile.app-reporte` `docker/prod/nginx.conf` |
@@ -162,6 +169,8 @@ Env vars:
   DATABASE_URL=postgresql://user:pass@host:5432/ojocamba
   MS_GAMIFY_HOST=<host-interno-coolify>
   MS_GAMIFY_PORT=3004
+  MS_IA_HOST=<host-interno-coolify>
+  MS_IA_PORT=3006
   S3_ENDPOINT=<s3-host>
   S3_ACCESS_KEY=<access-key>
   S3_SECRET_KEY=<secret-key>
@@ -187,6 +196,28 @@ Env vars:
 Watch Paths:
   backend/ms-gamify/**  libs/common/**  tsconfig.base.json  pnpm-workspace.yaml  docker/prod/Dockerfile.ms-gamify
 ```
+
+#### `ms-ia`
+
+```
+Tipo:         Dockerfile
+Dockerfile:   docker/prod/Dockerfile.ms-ia
+Build context: /
+Port:         (vacío — TCP interno)
+Health check: (ninguno)
+Env vars:
+  TCP_PORT=3006
+  DATABASE_URL=postgresql://user:pass@host:5432/ojocamba
+  AI_CONFIG_ENCRYPTION_KEY=<openssl-rand-hex-32>
+  MS_ADMIN_HOST=<host-interno-coolify>
+  MS_ADMIN_PORT=3003
+  MS_REGISTER_HOST=<host-interno-coolify>
+  MS_REGISTER_PORT=3002
+Watch Paths:
+  backend/ms-ia/**  libs/common/**  tsconfig.base.json  pnpm-workspace.yaml  docker/prod/Dockerfile.ms-ia
+```
+
+Ejecutá `pnpm db:migrate` una vez antes de iniciar `ms-ia`; las API keys se cargan después desde **Backoffice → IA y respaldos**, no desde variables de entorno.
 
 #### `gateway-principal`
 

@@ -48,7 +48,7 @@ pnpm docker:down
 | `PORT_GT_P` | 3000 | — | — | — | — | — | — |
 | `PORT_GT_S` | — | 3005 | — | — | — | — | — |
 | `TCP_PORT` | — | — | 3001 | 3002 | 3003 | 3004 | 3006 |
-| `DATABASE_URL` | — | ✅ | ✅ | ✅ | ✅ | ✅ | — |
+| `DATABASE_URL` | — | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | `JWT_SECRET` | — | — | ✅ | — | — | — | — |
 | `JWT_EXPIRES_IN` | — | — | ✅ | — | — | — | — |
 | `MS_AUTH_HOST` | ✅ | ✅ | — | — | — | — | — |
@@ -68,6 +68,7 @@ pnpm docker:down
 | `GROQ_API_KEY` | — | — | — | — | — | — | ✅ |
 | `GROQ_MODEL` | — | — | — | — | — | — | ✅ |
 | `GROQ_BASE_URL` | — | — | — | — | — | — | ✅ |
+| `AI_CONFIG_ENCRYPTION_KEY` | — | — | — | — | — | — | ✅ |
 
 ### Variables de entorno — Frontend (Build Args)
 
@@ -189,6 +190,9 @@ Env vars:
   MS_ADMIN_PORT=3003
   MS_REGISTER_HOST=<ip-o-host-ms-register>
   MS_REGISTER_PORT=3002
+  DATABASE_URL=postgresql://<usuario>:<clave>@<host>:5432/<base>
+  AI_CONFIG_ENCRYPTION_KEY=<openssl-rand-hex-32>
+  # GROQ_API_KEY es solo compatibilidad inicial; luego las claves se gestionan en Backoffice.
   GROQ_API_KEY=<clave-groq>
   GROQ_MODEL=llama-3.3-70b-versatile
   GROQ_BASE_URL=https://api.groq.com/openai/v1
@@ -196,7 +200,7 @@ Watch Paths:
   backend/ms-ia/**  libs/**  package.json  pnpm-lock.yaml  tsconfig.base.json  docker/prod/Dockerfile.ms-ia
 ```
 
-> Sin `DATABASE_URL`: `ms-ia` no tiene entidades propias, solo habla TCP con `ms-admin`/`ms-register`. Sin migraciones que correr al arrancar.
+> `ms-ia` requiere `DATABASE_URL` para leer proveedores, prioridades y credenciales cifradas. Ejecutá `pnpm db:migrate` una vez antes del despliegue para crear `ai_provider_configs`. `AI_CONFIG_ENCRYPTION_KEY` es una clave maestra estable de 32 bytes (generar con `openssl rand -hex 32`): no se cambia desde la UI ni se debe perder.
 
 #### `gateway-principal`
 

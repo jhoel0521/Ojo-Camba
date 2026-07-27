@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { OpenAiCompatibleProvider } from './openai-compatible.provider';
 
 @Injectable()
-export class GroqProvider extends OpenAiCompatibleProvider {
-  readonly name = 'groq';
+export class OpenAiProvider extends OpenAiCompatibleProvider {
+  readonly name = 'openai';
   readonly supportsVision = true;
 }

@@ -2,7 +2,8 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { TCP_PATTERNS, tipoDesdeCategoria, type UbicacionSensible } from '@ojo-camba/common';
 import { sendRpc } from '../rpc.helper';
-import { GroqProvider, type AiImagen } from '../ai/groq.provider';
+import { AiProviderRegistry } from '../ai/ai-provider.registry';
+import type { AiImagen } from '../ai/ai-provider';
 
 const UBICACIONES: UbicacionSensible[] = ['ninguna', 'via_principal', 'escuela', 'hospital'];
 /** Groq acepta hasta 5 imágenes por request: 1 del reporte + hasta 4 cercanos. */
@@ -94,7 +95,7 @@ export class SugerenciaHechosService {
   constructor(
     @Inject('MS_ADMIN') private readonly admin: ClientProxy,
     @Inject('MS_REGISTER') private readonly register: ClientProxy,
-    private readonly groq: GroqProvider,
+    private readonly providers: AiProviderRegistry,
   ) {}
 
   async sugerir(dto: SugerenciaHechosDto): Promise<SugerenciaHechosResultado> {
@@ -131,7 +132,7 @@ export class SugerenciaHechosService {
       cercanos,
       obras,
     );
-    const contentCrudo = await this.groq.chatConImagenes(prompt, imagenes);
+    const contentCrudo = await this.providers.chatConImagenes(prompt, imagenes);
 
     return this.parsearRespuesta(
       contentCrudo,

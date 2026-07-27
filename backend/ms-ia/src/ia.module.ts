@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ClientsModule, Transport } from '@nestjs/microservices';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { AiProviderConfig } from '@ojo-camba/common';
 import { IaController } from './ia.controller';
 import { AsistenteService } from './asistente/asistente.service';
 import { AsistenteToolkit } from './asistente/asistente.toolkit';
@@ -8,9 +10,15 @@ import { SugerenciaHechosService } from './triaje/sugerencia-hechos.service';
 import { RecomendacionCuadrillaService } from './cuadrillas/recomendacion.service';
 import { GroqProvider } from './ai/groq.provider';
 import { AiProviderRegistry } from './ai/ai-provider.registry';
+import { GeminiProvider } from './ai/gemini.provider';
+import { DeepSeekProvider } from './ai/deepseek.provider';
+import { OpenAiProvider } from './ai/openai.provider';
+import { AiConfigurationService } from './ai/ai-configuration.service';
+import { AiCredentialCipher } from './ai/ai-credential-cipher.service';
 
 @Module({
   imports: [
+    TypeOrmModule.forFeature([AiProviderConfig]),
     ClientsModule.register([
       {
         name: 'MS_ADMIN',
@@ -38,6 +46,11 @@ import { AiProviderRegistry } from './ai/ai-provider.registry';
     SugerenciaHechosService,
     RecomendacionCuadrillaService,
     GroqProvider,
+    GeminiProvider,
+    DeepSeekProvider,
+    OpenAiProvider,
+    AiConfigurationService,
+    AiCredentialCipher,
     AiProviderRegistry,
   ],
 })

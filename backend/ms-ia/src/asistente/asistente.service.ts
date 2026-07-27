@@ -1,9 +1,4 @@
-import {
-  Injectable,
-  Logger,
-  BadRequestException,
-  ServiceUnavailableException,
-} from '@nestjs/common';
+import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { AiProviderRegistry } from '../ai/ai-provider.registry';
 import { AsistenteToolkit } from './asistente.toolkit';
 import type { AiMessage } from '../ai/ai-provider';
@@ -47,13 +42,6 @@ export class AsistenteService {
     const mensaje = (dto?.message ?? '').trim();
     if (!mensaje) throw new BadRequestException('El campo "message" es requerido.');
 
-    const provider = this.providers.get();
-    if (!provider.isConfigured()) {
-      throw new ServiceUnavailableException(
-        'El asistente no está configurado: falta GROQ_API_KEY en el servidor.',
-      );
-    }
-
     const historialEntrada = this.limpiarHistorial(dto.history);
     const system = this.buildSystemPrompt();
 
@@ -66,7 +54,7 @@ export class AsistenteService {
     let redirect: string | undefined;
 
     for (let paso = 0; paso < MAX_PASOS; paso++) {
-      const { message: asistente } = await provider.chat({
+      const { message: asistente } = await this.providers.chat({
         system,
         messages,
         tools: this.toolkit.definitions(),
