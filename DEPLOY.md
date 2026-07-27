@@ -383,6 +383,14 @@ curl https://ojocamba.bo           # → HTML (app-reporte)
 curl https://admin.ojocamba.bo     # → HTML (app-backoffice)
 curl https://tecnico.ojocamba.bo   # → HTML (app-tecnico)
 curl https://status.ojocamba.bo    # → HTML (app-status)
+
+# PWA: los archivos de control se revalidan; los assets con hash son inmutables.
+curl -I https://admin.ojocamba.bo/sw.js
+# → Cache-Control: no-cache, no-store, must-revalidate
+curl -I https://admin.ojocamba.bo/registerSW.js
+# → Cache-Control: no-cache, no-store, must-revalidate
+curl -I https://admin.ojocamba.bo/assets/<archivo-con-hash>.js
+# → Cache-Control: public, immutable
 ```
 
 ---
