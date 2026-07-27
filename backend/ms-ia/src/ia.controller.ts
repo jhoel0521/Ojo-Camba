@@ -8,6 +8,12 @@ import {
   type SugerenciaHechosDto,
 } from './triaje/sugerencia-hechos.service';
 import { RecomendacionCuadrillaService } from './cuadrillas/recomendacion.service';
+import {
+  AiConfigurationService,
+  type UpdateAiProviderConfigDto,
+} from './ai/ai-configuration.service';
+import { AiProviderRegistry } from './ai/ai-provider.registry';
+import type { AiProviderName } from '@ojo-camba/common';
 
 @Controller()
 export class IaController {
@@ -16,6 +22,8 @@ export class IaController {
     private readonly triaje: TriajeService,
     private readonly sugerenciaHechos: SugerenciaHechosService,
     private readonly recomendacionCuadrilla: RecomendacionCuadrillaService,
+    private readonly configuration: AiConfigurationService,
+    private readonly providers: AiProviderRegistry,
   ) {}
 
   @MessagePattern(TCP_PATTERNS.IA.PING)
@@ -41,5 +49,22 @@ export class IaController {
   @MessagePattern(TCP_PATTERNS.IA.RECOMENDAR_CUADRILLA)
   recomendarCuadrilla(@Payload() dto: { grupo_id: number }) {
     return this.recomendacionCuadrilla.recomendar(Number(dto?.grupo_id));
+  }
+
+  @MessagePattern(TCP_PATTERNS.IA.LIST_PROVIDER_CONFIGS)
+  listProviderConfigs() {
+    return this.configuration.list();
+  }
+
+  @MessagePattern(TCP_PATTERNS.IA.UPDATE_PROVIDER_CONFIG)
+  updateProviderConfig(
+    @Payload() dto: { provider: AiProviderName; changes: UpdateAiProviderConfigDto },
+  ) {
+    return this.configuration.update(dto.provider, dto.changes);
+  }
+
+  @MessagePattern(TCP_PATTERNS.IA.TEST_PROVIDER_CONFIG)
+  testProviderConfig(@Payload() dto: { provider: string }) {
+    return this.providers.test(dto.provider);
   }
 }

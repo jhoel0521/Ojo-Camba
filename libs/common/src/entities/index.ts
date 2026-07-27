@@ -12,3 +12,4 @@ export { RefreshToken } from './refresh-token.entity';
 export { Nivel } from './nivel.entity';
 export { HistorialPuntos } from './historial-puntos.entity';
 export { PingLog } from './ping-log.entity';
+export { AiProviderConfig, type AiProviderName } from './ai-provider-config.entity';

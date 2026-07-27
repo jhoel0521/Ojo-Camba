@@ -41,6 +41,19 @@ export interface AiChatParams {
   tools: AiToolDefinition[];
 }
 
+export interface AiImagen {
+  base64: string;
+  contentType: string;
+}
+
+export interface AiProviderSettings {
+  provider: string;
+  apiKey: string;
+  baseUrl: string;
+  textModel: string | null;
+  visionModel: string | null;
+}
+
 /** Respuesta del proveedor: el mensaje del asistente (puede traer toolCalls). */
 export interface AiChatResult {
   message: AiMessage;
@@ -50,6 +63,11 @@ export interface AiProvider {
   /** Identificador estable, p. ej. 'groq'. */
   readonly name: string;
   /** true si el proveedor tiene su credencial configurada y puede usarse. */
-  isConfigured(): boolean;
-  chat(params: AiChatParams): Promise<AiChatResult>;
+  supportsVision: boolean;
+  chat(settings: AiProviderSettings, params: AiChatParams): Promise<AiChatResult>;
+  chatConImagenes?(
+    settings: AiProviderSettings,
+    prompt: string,
+    imagenes: AiImagen[],
+  ): Promise<string>;
 }

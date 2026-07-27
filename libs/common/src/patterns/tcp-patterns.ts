@@ -60,5 +60,8 @@ export const TCP_PATTERNS = {
     INFERIR_TRIAJE: 'ia.inferir_triaje',
     SUGERIR_HECHOS: 'ia.sugerir_hechos',
     RECOMENDAR_CUADRILLA: 'ia.recomendar_cuadrilla',
+    LIST_PROVIDER_CONFIGS: 'ia.list_provider_configs',
+    UPDATE_PROVIDER_CONFIG: 'ia.update_provider_config',
+    TEST_PROVIDER_CONFIG: 'ia.test_provider_config',
   },
 } as const;

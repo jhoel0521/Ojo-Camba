@@ -1,7 +1,8 @@
-import { Controller, Post, Body, Inject } from '@nestjs/common';
+import { Controller, Post, Body, Inject, UseGuards } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { TCP_PATTERNS } from '@ojo-camba/common';
 import { sendRpc } from './rpc.helper';
+import { BackofficeGuard } from './ai-access.guard';
 
 export interface TurnoHistorial {
   role: 'user' | 'assistant';
@@ -20,6 +21,7 @@ export interface AsistenteChatRespuesta {
 }
 
 @Controller('asistente')
+@UseGuards(BackofficeGuard)
 export class AsistenteController {
   constructor(@Inject('MS_IA') private readonly client: ClientProxy) {}
 
