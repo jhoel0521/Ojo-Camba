@@ -18,16 +18,6 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    if (isLoggedIn && user?.roles) {
-      if (user.roles.some((r) => MODERATOR_ROLES.includes(r))) {
-        setChecking(false);
-        return;
-      }
-      setDenied(true);
-      setChecking(false);
-      return;
-    }
-
     fetchAPI<{ valid: boolean; user_id: number; roles: string[]; email: string }>(
       '/auth/validate',
       { method: 'POST', body: JSON.stringify({ token }) },
@@ -44,15 +34,18 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
             setChecking(false);
             return;
           }
+          setDenied(true);
+          setChecking(false);
+          return;
         }
         logout();
         setChecking(false);
       })
       .catch(() => {
+        logout();
         setChecking(false);
       });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [login, logout]);
 
   if (checking) {
     return (
