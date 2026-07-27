@@ -332,6 +332,38 @@ Watch Paths:
 4. `gateway-principal` `gateway-status` (después de los MS)
 5. `app-reporte` `app-backoffice` `app-tecnico` `app-status` (cualquier orden)
 
+### Reinicio limpio de base de datos en producción
+
+`pnpm prod:db:fresh` es el equivalente protegido de `php artisan migrate:fresh`.
+Elimina **todo** el schema `public`, restaura las extensiones y aplica las migraciones; no carga
+usuarios, reportes ni imágenes demo.
+
+Antes de ejecutarlo, activá mantenimiento y verificá un backup restaurable de PostgreSQL. El
+comando exige la base esperada, un identificador de backup y una confirmación explícita:
+
+```bash
+# Revisión sin cambios
+DATABASE_URL='<url-de-produccion>' pnpm prod:db:fresh -- --database=ojocamba --dry-run
+
+# Ejecución real: sólo desde una terminal de mantenimiento autorizada
+NODE_ENV=production DATABASE_URL='<url-de-produccion>' PROD_DB_BACKUP_ID='<backup-verificado>' PROD_DB_FRESH_CONFIRM=DELETE_ALL_PRODUCTION_DATA pnpm prod:db:fresh -- --database=ojocamba
+```
+
+Después del reinicio, creá el administrador inicial sin usar los seeds demo. Cargá las variables
+`BOOTSTRAP_ADMIN_NAME`, `BOOTSTRAP_ADMIN_EMAIL` y `BOOTSTRAP_ADMIN_PASSWORD` como secretos de
+Coolify y ejecutá una única vez:
+
+```bash
+NODE_ENV=production BOOTSTRAP_ADMIN_CONFIRM=CREATE_INITIAL_ADMIN pnpm prod:db:bootstrap
+```
+
+Si se ejecuta desde la terminal del contenedor `ms-auth` ya desplegado, usá
+`node dist/bootstrap-production.js` con las mismas variables de entorno.
+
+Conservá el mismo `AI_CONFIG_ENCRYPTION_KEY` y cargá los proveedores desde **Backoffice → IA y
+respaldos**. El reset de PostgreSQL no borra objetos en MinIO: limpiá el bucket `reportes` sólo
+después de tener su backup y confirmar que es exclusivo de esta aplicación.
+
 ### Verificación post-deploy
 
 ```bash

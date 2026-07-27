@@ -8,7 +8,7 @@ const require = createRequire(import.meta.url);
 const INITIAL_MIGRATION_TIMESTAMP = 1782762626216n;
 const INITIAL_MIGRATION_NAME = 'InitialSchema1782762626216';
 
-async function migrate() {
+export async function runMigrations() {
   const { AppDataSource } = require(join(__dirname, '..', 'libs', 'common', 'dist', 'data-source.js'));
   await AppDataSource.initialize();
 
@@ -56,7 +56,9 @@ async function migrate() {
   await AppDataSource.destroy();
 }
 
-migrate().catch((err) => {
-  console.error('Migration failed:', err.message);
-  process.exit(1);
-});
+if (process.argv[1]?.endsWith('db-migrate.mjs')) {
+  runMigrations().catch((err) => {
+    console.error('Migration failed:', err.message);
+    process.exit(1);
+  });
+}
