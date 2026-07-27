@@ -21,7 +21,8 @@ pnpm docker:down
 ### Prerrequisitos
 
 - Servidor con Coolify instalado
-- Stack de infra levantado (`docker-compose.infra.yml`) con PostgreSQL 16 + PostGIS + h3-pg y MinIO
+- Stack de infra levantado (`docker-compose.infra.yml`) con PostgreSQL 16 + PostGIS y MinIO. La
+  extensión `h3-pg` es opcional: la aplicación calcula las celdas con `h3-js`.
 - Repositorio Git conectado a Coolify
 - Rama a desplegar configurada (`main`)
 
@@ -96,7 +97,7 @@ Si modificás un archivo, Coolify redeploya **solo** los servicios afectados.
 
 | Servicio | Watch Paths |
 |----------|------------|
-| `ms-auth` | `backend/ms-auth/**`<br>`libs/**`<br>`package.json`<br>`pnpm-lock.yaml`<br>`tsconfig.base.json`<br>`docker/prod/Dockerfile.ms-auth` |
+| `ms-auth` | `backend/ms-auth/**`<br>`libs/**`<br>`scripts/db-migrate.mjs`<br>`scripts/prod-db-fresh.mjs`<br>`package.json`<br>`pnpm-lock.yaml`<br>`tsconfig.base.json`<br>`docker/prod/Dockerfile.ms-auth` |
 | `ms-register` | `backend/ms-register/**`<br>`libs/**`<br>`package.json`<br>`pnpm-lock.yaml`<br>`tsconfig.base.json`<br>`docker/prod/Dockerfile.ms-register` |
 | `ms-admin` | `backend/ms-admin/**`<br>`libs/**`<br>`package.json`<br>`pnpm-lock.yaml`<br>`tsconfig.base.json`<br>`docker/prod/Dockerfile.ms-admin` |
 | `ms-gamify` | `backend/ms-gamify/**`<br>`libs/**`<br>`package.json`<br>`pnpm-lock.yaml`<br>`tsconfig.base.json`<br>`docker/prod/Dockerfile.ms-gamify` |

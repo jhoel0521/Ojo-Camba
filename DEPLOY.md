@@ -100,7 +100,7 @@ Coolify redeploya **solo** los servicios cuyos archivos cambiaron.
 
 | Servicio | Watch Paths |
 |---|---|
-| `ms-auth` | `backend/ms-auth/**` `libs/common/**` `tsconfig.base.json` `pnpm-workspace.yaml` `docker/prod/Dockerfile.ms-auth` |
+| `ms-auth` | `backend/ms-auth/**` `libs/common/**` `scripts/db-migrate.mjs` `scripts/prod-db-fresh.mjs` `tsconfig.base.json` `pnpm-workspace.yaml` `docker/prod/Dockerfile.ms-auth` |
 | `ms-register` | `backend/ms-register/**` `libs/common/**` `tsconfig.base.json` `pnpm-workspace.yaml` `docker/prod/Dockerfile.ms-register` |
 | `ms-admin` | `backend/ms-admin/**` `libs/common/**` `tsconfig.base.json` `pnpm-workspace.yaml` `docker/prod/Dockerfile.ms-admin` |
 | `ms-gamify` | `backend/ms-gamify/**` `libs/common/**` `tsconfig.base.json` `pnpm-workspace.yaml` `docker/prod/Dockerfile.ms-gamify` |
@@ -334,9 +334,12 @@ Watch Paths:
 
 ### Reinicio limpio de base de datos en producción
 
-`pnpm prod:db:fresh` es el equivalente protegido de `php artisan migrate:fresh`.
+`pnpm prod:db:fresh` es el equivalente protegido de `php artisan migrate:fresh` cuando se
+ejecuta desde el checkout raíz del repositorio. La imagen de ejecución de `ms-auth` no incluye
+`pnpm`; dentro de su terminal de Coolify se ejecuta el script con `node`.
 Elimina **todo** el schema `public`, restaura las extensiones y aplica las migraciones; no carga
-usuarios, reportes ni imágenes demo.
+usuarios, reportes ni imágenes demo. El sistema calcula H3 con `h3-js` y almacena las celdas
+como texto; `h3-pg` no es requisito para este reset. PostgreSQL debe tener PostGIS disponible.
 
 Antes de ejecutarlo, activá mantenimiento y verificá un backup restaurable de PostgreSQL. El
 comando exige la base esperada, un identificador de backup y una confirmación explícita:
@@ -345,8 +348,19 @@ comando exige la base esperada, un identificador de backup y una confirmación e
 # Revisión sin cambios
 DATABASE_URL='<url-de-produccion>' pnpm prod:db:fresh -- --database=ojocamba --dry-run
 
-# Ejecución real: sólo desde una terminal de mantenimiento autorizada
+# Ejecución real desde el checkout raíz: sólo desde una terminal de mantenimiento autorizada
 NODE_ENV=production DATABASE_URL='<url-de-produccion>' PROD_DB_BACKUP_ID='<backup-verificado>' PROD_DB_FRESH_CONFIRM=DELETE_ALL_PRODUCTION_DATA pnpm prod:db:fresh -- --database=ojocamba
+```
+
+Después de desplegar la imagen que contiene este cambio, desde la terminal del contenedor
+`ms-auth` en Coolify usá el mismo procedimiento sin `pnpm`:
+
+```bash
+# Revisión sin cambios dentro del contenedor ms-auth
+DATABASE_URL='<url-de-produccion>' node scripts/prod-db-fresh.mjs --database=ojocamba --dry-run
+
+# Ejecución real dentro del contenedor ms-auth
+NODE_ENV=production DATABASE_URL='<url-de-produccion>' PROD_DB_BACKUP_ID='<backup-verificado>' PROD_DB_FRESH_CONFIRM=DELETE_ALL_PRODUCTION_DATA node scripts/prod-db-fresh.mjs --database=ojocamba
 ```
 
 Después del reinicio, creá el administrador inicial sin usar los seeds demo. Cargá las variables
