@@ -7,6 +7,7 @@ import RevisarPage from './pages/RevisarPage';
 import CasosPage from './pages/CasosPage';
 import CasoDetallePage from './pages/CasoDetallePage';
 import UsuariosPage from './pages/UsuariosPage';
+import ConfiguracionIaPage from './pages/ConfiguracionIaPage';
 
 function PlaceholderPage({ title }: { title: string }) {
   return (
@@ -31,6 +32,7 @@ export default function App() {
                   <Route path="/casos/:id" element={<CasoDetallePage />} />
                   <Route path="/grupos/:id" element={<CasoDetallePage />} />
                   <Route path="/usuarios" element={<UsuariosPage />} />
+                  <Route path="/configuracion/ia" element={<ConfiguracionIaPage />} />
                   <Route path="*" element={<PlaceholderPage title="Pagina no encontrada" />} />
                 </Routes>
               </Layout>

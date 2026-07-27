@@ -9,7 +9,6 @@ volumes:
   seaweedfs_data:
 
 services:
-
   # ── Infraestructura ─────────────────────────────────────────
   postgres:
     build:
@@ -25,7 +24,7 @@ services:
     networks:
       - ojo-camba-net
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ojocamba"]
+      test: ['CMD-SHELL', 'pg_isready -U ojocamba']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -36,11 +35,11 @@ services:
     volumes:
       - seaweedfs_data:/data
     ports:
-      - "9010:8333"
+      - '9010:8333'
     networks:
       - ojo-camba-net
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:8333/"]
+      test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1:8333/']
       interval: 15s
       timeout: 5s
       retries: 3
@@ -125,6 +124,29 @@ services:
       postgres:
         condition: service_healthy
 
+  ms-ia:
+    build:
+      context: ../../
+      dockerfile: docker/dev/Dockerfile.ms-ia
+    volumes:
+      - ../../backend/ms-ia/src:/app/backend/ms-ia/src
+      - ../../tsconfig.migration.json:/app/tsconfig.migration.json:ro
+    environment:
+      TCP_PORT: 3006
+      DATABASE_URL: postgresql://ojocamba:ojocamba_secret@postgres:5432/ojocamba
+      MS_ADMIN_HOST: ms-admin
+      MS_ADMIN_PORT: 3003
+      MS_REGISTER_HOST: ms-register
+      MS_REGISTER_PORT: 3002
+      AI_CONFIG_ENCRYPTION_KEY: ${AI_CONFIG_ENCRYPTION_KEY}
+      GROQ_MODEL: ${GROQ_MODEL:-llama-3.3-70b-versatile}
+      GROQ_BASE_URL: ${GROQ_BASE_URL:-https://api.groq.com/openai/v1}
+    networks:
+      - ojo-camba-net
+    depends_on:
+      - ms-admin
+      - ms-register
+
   # ── API Gateways HTTP (exponen puerto al host) ──────────────
   gateway-principal:
     build:
@@ -133,9 +155,9 @@ services:
     volumes:
       - ../../backend/gateway-principal/src:/app/backend/gateway-principal/src
     ports:
-      - "3000:3000"
+      - '${GATEWAY_PRINCIPAL_PORT:-3000}:3000'
     environment:
-      PORT: 3000
+      PORT_GT_P: 3000
       CORS_ORIGIN: http://localhost:5173,http://localhost:5174,http://localhost:5175,http://localhost:5176
       MS_AUTH_HOST: ms-auth
       MS_AUTH_PORT: 3001
@@ -145,6 +167,8 @@ services:
       MS_ADMIN_PORT: 3003
       MS_GAMIFY_HOST: ms-gamify
       MS_GAMIFY_PORT: 3004
+      MS_IA_HOST: ms-ia
+      MS_IA_PORT: 3006
     networks:
       - ojo-camba-net
     depends_on:
@@ -152,6 +176,7 @@ services:
       - ms-register
       - ms-admin
       - ms-gamify
+      - ms-ia
 
   gateway-status:
     build:
@@ -160,9 +185,9 @@ services:
     volumes:
       - ../../backend/gateway-status/src:/app/backend/gateway-status/src
     ports:
-      - "3005:3005"
+      - '3005:3005'
     environment:
-      PORT: 3005
+      PORT_GT_S: 3005
       DATABASE_URL: postgresql://ojocamba:ojocamba_secret@postgres:5432/ojocamba
       MS_AUTH_HOST: ms-auth
       MS_AUTH_PORT: 3001
@@ -172,6 +197,8 @@ services:
       MS_ADMIN_PORT: 3003
       MS_GAMIFY_HOST: ms-gamify
       MS_GAMIFY_PORT: 3004
+      MS_IA_HOST: ms-ia
+      MS_IA_PORT: 3006
     networks:
       - ojo-camba-net
     depends_on:
@@ -185,6 +212,8 @@ services:
         condition: service_started
       ms-gamify:
         condition: service_started
+      ms-ia:
+        condition: service_started
 
   # ── Frontend Vite dev servers ────────────────────────────────
   app-reporte:
@@ -195,7 +224,9 @@ services:
       - ../../frontend/app-reporte/src:/app/frontend/app-reporte/src
       - ../../frontend/app-reporte/public:/app/frontend/app-reporte/public
     ports:
-      - "5173:5173"
+      - '5173:5173'
+    environment:
+      VITE_API_URL: http://localhost:${GATEWAY_PRINCIPAL_PORT:-3000}
     networks:
       - ojo-camba-net
 
@@ -207,7 +238,9 @@ services:
       - ../../frontend/app-backoffice/src:/app/frontend/app-backoffice/src
       - ../../frontend/app-backoffice/public:/app/frontend/app-backoffice/public
     ports:
-      - "5174:5174"
+      - '5174:5174'
+    environment:
+      VITE_API_URL: http://localhost:${GATEWAY_PRINCIPAL_PORT:-3000}
     networks:
       - ojo-camba-net
 
@@ -219,7 +252,9 @@ services:
       - ../../frontend/app-tecnico/src:/app/frontend/app-tecnico/src
       - ../../frontend/app-tecnico/public:/app/frontend/app-tecnico/public
     ports:
-      - "5175:5175"
+      - '5175:5175'
+    environment:
+      VITE_API_URL: http://localhost:${GATEWAY_PRINCIPAL_PORT:-3000}
     networks:
       - ojo-camba-net
 
@@ -231,6 +266,6 @@ services:
       - ../../frontend/app-status/src:/app/frontend/app-status/src
       - ../../frontend/app-status/public:/app/frontend/app-status/public
     ports:
-      - "5176:5176"
+      - '5176:5176'
     networks:
       - ojo-camba-net

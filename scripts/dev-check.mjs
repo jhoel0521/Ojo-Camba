@@ -5,7 +5,7 @@ import { fileURLToPath } from 'url';
 import path from 'path';
 
 const ROOT  = path.resolve(fileURLToPath(import.meta.url), '..', '..');
-const PORTS = [3000, 3001, 3002, 3003, 3004, 3005, 5173, 5174, 5175, 5176];
+const PORTS = [3000, 3001, 3002, 3003, 3004, 3005, 3006, 5173, 5174, 5175, 5176];
 
 function killPorts() {
   for (const port of PORTS) {

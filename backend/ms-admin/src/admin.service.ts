@@ -1,4 +1,11 @@
-import { Injectable, BadRequestException, NotFoundException, Logger, Inject } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  ConflictException,
+  NotFoundException,
+  Logger,
+  Inject,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ClientProxy } from '@nestjs/microservices';
 import { In, Repository } from 'typeorm';
@@ -10,10 +17,21 @@ import {
   GrupoReporte,
   ActualizacionCaso,
   Categoria,
+  Cuadrilla,
+  Especialidad,
   EstadoReporte,
+  Gravedad,
   TCP_PATTERNS,
 } from '@ojo-camba/common';
-import { CreateGroupDto, UpdateCaseDto, AcceptReportDto, BanDeviceDto } from './dto';
+import {
+  CreateGroupDto,
+  UpdateCaseDto,
+  AcceptReportDto,
+  BanDeviceDto,
+  CreateCuadrillaDto,
+  UpdateCuadrillaDto,
+  AsignarCuadrillaDto,
+} from './dto';
 
 export interface DashboardInsight {
   nivel: 'alerta' | 'atencion' | 'positivo';
@@ -38,6 +56,14 @@ const TRANSICIONES_VALIDAS: Record<string, EstadoReporte[]> = {
   [EstadoReporte.EnTrabajo]: [EstadoReporte.Finalizado],
   [EstadoReporte.Finalizado]: [],
 };
+
+// Un caso "ocupa" a su cuadrilla mientras no esté finalizado — es la carga que
+// pondera el motor de recomendación de ms-ia.
+const ESTADOS_ACTIVOS = [
+  EstadoReporte.Aceptado,
+  EstadoReporte.ValidacionEnCampo,
+  EstadoReporte.EnTrabajo,
+];
 
 const isExternalUrl = (url: string | null): boolean => url?.startsWith('http') === true;
 
@@ -64,6 +90,10 @@ export class AdminService {
     private readonly actualizacionRepo: Repository<ActualizacionCaso>,
     @InjectRepository(Categoria)
     private readonly categoriaRepo: Repository<Categoria>,
+    @InjectRepository(Cuadrilla)
+    private readonly cuadrillaRepo: Repository<Cuadrilla>,
+    @InjectRepository(Especialidad)
+    private readonly especialidadRepo: Repository<Especialidad>,
     @Inject('MS_GAMIFY')
     private readonly gamifyClient: ClientProxy,
   ) {
@@ -118,6 +148,16 @@ export class AdminService {
       }
 
       reporte.estado = EstadoReporte.Aceptado;
+
+      // La gravedad solo cambia si el moderador la envio explicitamente; el triaje sugiere,
+      // no decide. El @IsIn del DTO no alcanza: este microservicio no tiene ValidationPipe,
+      // asi que sin esta guarda cualquier string llegaria a la columna.
+      if (dto.gravedad) {
+        if (!Object.values(Gravedad).includes(dto.gravedad as Gravedad)) {
+          throw new BadRequestException(`Gravedad invalida: ${dto.gravedad}`);
+        }
+        reporte.gravedad = dto.gravedad;
+      }
 
       if (dto.grupo_id) {
         const grupo = await manager.findOne(GrupoReporte, { where: { id: dto.grupo_id } });
@@ -366,8 +406,15 @@ export class AdminService {
     if (!grupo) throw new NotFoundException('Caso de Obra no encontrado');
 
     const totalReportes = await this.reporteRepo.count({ where: { grupo_id: grupoId } });
+    const cuadrilla = grupo.cuadrilla_id
+      ? await this.cuadrillaRepo.findOne({ where: { id: grupo.cuadrilla_id } })
+      : null;
 
-    return { ...grupo, total_reportes: totalReportes };
+    return {
+      ...grupo,
+      total_reportes: totalReportes,
+      cuadrilla_nombre: cuadrilla?.nombre ?? null,
+    };
   }
 
   async getGroupsHeatmap(resolution = 8, soloActivos = true) {
@@ -390,7 +437,12 @@ export class AdminService {
     return qb.getRawMany();
   }
 
-  async listGroupsByCell(h3_cell: string, h3_resolution: number, soloActivos = true) {
+  async listGroupsByCell(
+    h3_cell: string,
+    h3_resolution: number,
+    soloActivos = true,
+    categoriaId?: number,
+  ) {
     const col = `r.h3_res_${h3_resolution}`;
     const qb = this.grupoRepo
       .createQueryBuilder('g')
@@ -409,6 +461,10 @@ export class AdminService {
       qb.andWhere('g.estado_actual NOT IN (:...estados)', {
         estados: [EstadoReporte.Rechazado, EstadoReporte.Finalizado],
       });
+    }
+    // Sin esto, un poste de luz a 50m aparecia como "obra cercana" de un bache.
+    if (categoriaId !== undefined) {
+      qb.andWhere('g.categoria_id = :categoriaId', { categoriaId });
     }
     return qb.getRawMany();
   }
@@ -556,10 +612,10 @@ export class AdminService {
     }));
   }
 
-  async listNearbyReports(lat: number, lng: number, radiusM = 100) {
+  async listNearbyReports(lat: number, lng: number, radiusM = 100, categoriaId?: number) {
     // Bounding box approximation: 1° ≈ 111,000m
     const delta = radiusM / 111000;
-    const data = await this.reporteRepo
+    const qb = this.reporteRepo
       .createQueryBuilder('r')
       .where('r.estado = :estado', { estado: EstadoReporte.Reportado })
       .andWhere('CAST(r.lat AS FLOAT) BETWEEN :minLat AND :maxLat', {
@@ -570,8 +626,13 @@ export class AdminService {
         minLng: lng - delta,
         maxLng: lng + delta,
       })
-      .orderBy('r.creado_en', 'DESC')
-      .getMany();
+      .orderBy('r.creado_en', 'DESC');
+
+    // Sin esto, un poste de luz a 50m aparecia como "cercano" de un bache.
+    if (categoriaId !== undefined) {
+      qb.andWhere('r.categoria_id = :categoriaId', { categoriaId });
+    }
+    const data = await qb.getMany();
 
     return data.map((r) => ({
       ...r,
@@ -622,6 +683,159 @@ export class AdminService {
       lat: Number(g.lat),
       lng: Number(g.lng),
     }));
+  }
+
+  // ── CU-15: Cuadrillas, especialidades y asignación ────────
+
+  async listEspecialidades() {
+    return this.especialidadRepo.find({ order: { nombre: 'ASC' } });
+  }
+
+  /**
+   * Cuadrillas con su especialidad resuelta y su carga actual (casos activos
+   * asignados). La carga viaja acá y no en una consulta aparte porque es el
+   * insumo del motor de recomendación de ms-ia, que no toca la base.
+   */
+  async listCuadrillas(soloActivas = false) {
+    const cuadrillas = await this.cuadrillaRepo.find({
+      where: soloActivas ? { activa: true } : {},
+      order: { nombre: 'ASC' },
+    });
+    if (cuadrillas.length === 0) return [];
+
+    const especialidades = await this.especialidadRepo.find();
+    const especialidadPorId = new Map(especialidades.map((e) => [e.id, e]));
+
+    const cargas = await this.grupoRepo
+      .createQueryBuilder('g')
+      .select('g.cuadrilla_id', 'cuadrilla_id')
+      .addSelect('COUNT(*)', 'total')
+      .where('g.cuadrilla_id IN (:...ids)', { ids: cuadrillas.map((c) => c.id) })
+      .andWhere('g.estado_actual IN (:...activos)', { activos: ESTADOS_ACTIVOS })
+      .groupBy('g.cuadrilla_id')
+      .getRawMany<{ cuadrilla_id: number; total: string }>();
+
+    const cargaPorId = new Map(cargas.map((c) => [Number(c.cuadrilla_id), parseInt(c.total, 10)]));
+
+    return cuadrillas.map((c) => {
+      const esp = c.especialidad_id != null ? especialidadPorId.get(c.especialidad_id) : undefined;
+      return {
+        ...c,
+        especialidad_nombre: esp?.nombre ?? null,
+        especialidad_categoria_id: esp?.categoria_id ?? null,
+        casos_activos: cargaPorId.get(c.id) ?? 0,
+      };
+    });
+  }
+
+  async createCuadrilla(dto: CreateCuadrillaDto) {
+    const nombre = dto.nombre.trim();
+    const duplicada = await this.cuadrillaRepo.findOne({ where: { nombre } });
+    // "ya existe" mapea a 409 en sendRpc() del gateway (deuda tecnica TD-04:
+    // el enrutado de errores es por subcadena, no por codigo tipado).
+    if (duplicada) throw new ConflictException(`Una cuadrilla llamada "${nombre}" ya existe.`);
+
+    if (dto.especialidad_id != null) {
+      await this.getEspecialidadOrFail(dto.especialidad_id);
+    }
+
+    const cuadrilla = this.cuadrillaRepo.create({
+      nombre,
+      especialidad_id: dto.especialidad_id ?? null,
+      activa: true,
+    });
+    await this.cuadrillaRepo.save(cuadrilla);
+    this.logger.log(`Cuadrilla creada: ${nombre} (#${cuadrilla.id})`);
+    return cuadrilla;
+  }
+
+  async updateCuadrilla(dto: UpdateCuadrillaDto) {
+    const cuadrilla = await this.cuadrillaRepo.findOne({ where: { id: dto.cuadrilla_id } });
+    if (!cuadrilla) throw new NotFoundException('Cuadrilla no encontrada');
+
+    if (dto.nombre !== undefined) {
+      const nombre = dto.nombre.trim();
+      const duplicada = await this.cuadrillaRepo.findOne({ where: { nombre } });
+      if (duplicada && duplicada.id !== cuadrilla.id) {
+        throw new ConflictException(`Una cuadrilla llamada "${nombre}" ya existe.`);
+      }
+      cuadrilla.nombre = nombre;
+    }
+
+    if (dto.especialidad_id !== undefined) {
+      if (dto.especialidad_id != null) await this.getEspecialidadOrFail(dto.especialidad_id);
+      cuadrilla.especialidad_id = dto.especialidad_id;
+    }
+
+    if (dto.activa !== undefined) cuadrilla.activa = dto.activa;
+
+    await this.cuadrillaRepo.save(cuadrilla);
+    return cuadrilla;
+  }
+
+  /**
+   * Asigna (o desasigna, con cuadrilla_id null) una cuadrilla al Caso de Obra y
+   * deja el movimiento en la bitácora: el historial de reasignaciones se lee del
+   * timeline que ya existe, sin tabla aparte.
+   */
+  async asignarCuadrilla(dto: AsignarCuadrillaDto) {
+    const grupo = await this.grupoRepo.findOne({ where: { id: dto.grupo_id } });
+    if (!grupo) throw new NotFoundException('Caso de Obra no encontrado');
+
+    const anterior = grupo.cuadrilla_id
+      ? await this.cuadrillaRepo.findOne({ where: { id: grupo.cuadrilla_id } })
+      : null;
+
+    let nueva: Cuadrilla | null = null;
+    if (dto.cuadrilla_id != null) {
+      nueva = await this.cuadrillaRepo.findOne({ where: { id: dto.cuadrilla_id } });
+      if (!nueva) throw new NotFoundException('Cuadrilla no encontrada');
+      // "deben" es la subcadena que sendRpc() mapea a 400 (ver updateCase()).
+      if (!nueva.activa) {
+        throw new BadRequestException(
+          `Las cuadrillas asignadas deben estar activas: "${nueva.nombre}" está dada de baja.`,
+        );
+      }
+    }
+
+    grupo.cuadrilla_id = nueva?.id ?? null;
+    await this.grupoRepo.save(grupo);
+
+    const comentario = nueva
+      ? anterior
+        ? `Cuadrilla reasignada: "${anterior.nombre}" → "${nueva.nombre}".`
+        : `Cuadrilla asignada: "${nueva.nombre}".`
+      : `Cuadrilla desasignada${anterior ? ` ("${anterior.nombre}")` : ''}.`;
+
+    const actualizacion = this.actualizacionRepo.create({
+      grupo_id: grupo.id,
+      usuario_id: dto.usuario_id,
+      comentario,
+      estado_anterior: null,
+      estado_nuevo: null,
+      recursos_solicitados: null,
+      fecha_estimada_fin: null,
+      lat_actualizada: null,
+      lng_actualizada: null,
+      url_imagen: null,
+    });
+    await this.actualizacionRepo.save(actualizacion);
+
+    this.logger.log(`Caso ${grupo.codigo_obra}: ${comentario}`);
+
+    return {
+      grupo_id: grupo.id,
+      codigo_obra: grupo.codigo_obra,
+      cuadrilla_id: grupo.cuadrilla_id,
+      cuadrilla_nombre: nueva?.nombre ?? null,
+      actualizacion_id: actualizacion.id,
+    };
+  }
+
+  private async getEspecialidadOrFail(especialidadId: number) {
+    const especialidad = await this.especialidadRepo.findOne({ where: { id: especialidadId } });
+    if (!especialidad) throw new NotFoundException('Especialidad no encontrada');
+    return especialidad;
   }
 
   async unbanDevice(device_id: string) {
@@ -923,8 +1137,13 @@ export class AdminService {
       desdeDate.setHours(0, 0, 0, 0);
     }
 
-    const desdeStr = desde ? desde : desdeDate.toISOString().slice(0, 10);
-    const hastaStr = hasta ? hasta : hastaDate.toISOString().slice(0, 10);
+    // Formateamos con el calendario local: toISOString() convierte a UTC y, en husos
+    // negativos como UTC-4, empuja la hora actual al dia siguiente por la tarde/noche,
+    // rompiendo el span de "ultimos N dias" (30 en vez de 29) segun la hora.
+    const toLocalYmd = (d: Date) =>
+      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const desdeStr = desde ? desde : toLocalYmd(desdeDate);
+    const hastaStr = hasta ? hasta : toLocalYmd(hastaDate);
 
     const catInParam = catIn.length > 0 ? catIn : null;
     const catOutParam = catOut.length > 0 ? catOut : null;

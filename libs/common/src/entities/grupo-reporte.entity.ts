@@ -21,6 +21,10 @@ export class GrupoReporte {
   @Column({ type: 'int', nullable: true })
   categoria_id: number | null;
 
+  /** Cuadrilla asignada al caso. Null mientras nadie lo asigna todavía. */
+  @Column({ type: 'int', nullable: true })
+  cuadrilla_id: number | null;
+
   @CreateDateColumn({ type: 'timestamptz' })
   creado_en: Date;
 }

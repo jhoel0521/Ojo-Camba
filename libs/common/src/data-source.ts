@@ -5,6 +5,8 @@ import { config } from 'dotenv';
 import { Reporte } from './entities/reporte.entity';
 import { GrupoReporte } from './entities/grupo-reporte.entity';
 import { Categoria } from './entities/categoria.entity';
+import { Especialidad } from './entities/especialidad.entity';
+import { Cuadrilla } from './entities/cuadrilla.entity';
 import { Dispositivo } from './entities/dispositivo.entity';
 import { ActualizacionCaso } from './entities/actualizacion-caso.entity';
 import { Usuario } from './entities/usuario.entity';
@@ -14,6 +16,7 @@ import { RefreshToken } from './entities/refresh-token.entity';
 import { Nivel } from './entities/nivel.entity';
 import { HistorialPuntos } from './entities/historial-puntos.entity';
 import { PingLog } from './entities/ping-log.entity';
+import { AiProviderConfig } from './entities/ai-provider-config.entity';
 
 config({ path: './backend/ms-auth/.env' });
 
@@ -32,6 +35,8 @@ export const AppDataSource = new DataSource({
     Reporte,
     GrupoReporte,
     Categoria,
+    Especialidad,
+    Cuadrilla,
     Dispositivo,
     ActualizacionCaso,
     Usuario,
@@ -41,6 +46,7 @@ export const AppDataSource = new DataSource({
     Nivel,
     HistorialPuntos,
     PingLog,
+    AiProviderConfig,
   ],
   migrations,
 });

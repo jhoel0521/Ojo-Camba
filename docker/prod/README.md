@@ -33,34 +33,42 @@ pnpm docker:down
 | 2 | `ms-register` | `docker/prod/Dockerfile.ms-register` | ❌ (TCP :3002) | ❌ |
 | 3 | `ms-admin` | `docker/prod/Dockerfile.ms-admin` | ❌ (TCP :3003) | ❌ |
 | 4 | `ms-gamify` | `docker/prod/Dockerfile.ms-gamify` | ❌ (TCP :3004) | ❌ |
-| 5 | `gateway-principal` | `docker/prod/Dockerfile.gateway-principal` | ✅ (3000) | ✅ |
-| 6 | `gateway-status` | `docker/prod/Dockerfile.gateway-status` | ✅ (3005) | ✅ |
-| 7 | `app-reporte` | `docker/prod/Dockerfile.app-reporte` | ✅ (80) | ✅ |
-| 8 | `app-backoffice` | `docker/prod/Dockerfile.app-backoffice` | ✅ (80) | ✅ |
-| 9 | `app-tecnico` | `docker/prod/Dockerfile.app-tecnico` | ✅ (80) | ✅ |
-| 10 | `app-status` | `docker/prod/Dockerfile.app-status` | ✅ (80) | ✅ |
+| 5 | `ms-ia` | `docker/prod/Dockerfile.ms-ia` | ❌ (TCP :3006) | ❌ |
+| 6 | `gateway-principal` | `docker/prod/Dockerfile.gateway-principal` | ✅ (3000) | ✅ |
+| 7 | `gateway-status` | `docker/prod/Dockerfile.gateway-status` | ✅ (3005) | ✅ |
+| 8 | `app-reporte` | `docker/prod/Dockerfile.app-reporte` | ✅ (80) | ✅ |
+| 9 | `app-backoffice` | `docker/prod/Dockerfile.app-backoffice` | ✅ (80) | ✅ |
+| 10 | `app-tecnico` | `docker/prod/Dockerfile.app-tecnico` | ✅ (80) | ✅ |
+| 11 | `app-status` | `docker/prod/Dockerfile.app-status` | ✅ (80) | ✅ |
 
 ### Variables de entorno — Backend
 
-| Variable | gateway-principal | gateway-status | ms-auth | ms-register | ms-admin | ms-gamify |
-|----------|:---:|:---:|:---:|:---:|:---:|:---:|
-| `PORT` | 3000 | 3005 | — | — | — | — |
-| `TCP_PORT` | — | — | 3001 | 3002 | 3003 | 3004 |
-| `DATABASE_URL` | — | ✅ | ✅ | ✅ | ✅ | ✅ |
-| `JWT_SECRET` | — | — | ✅ | — | — | — |
-| `JWT_EXPIRES_IN` | — | — | ✅ | — | — | — |
-| `MS_AUTH_HOST` | ✅ | ✅ | — | — | — | — |
-| `MS_AUTH_PORT` | ✅ | ✅ | — | — | — | — |
-| `MS_REGISTER_HOST` | ✅ | ✅ | — | — | — | — |
-| `MS_REGISTER_PORT` | ✅ | ✅ | — | — | — | — |
-| `MS_ADMIN_HOST` | ✅ | ✅ | — | — | — | — |
-| `MS_ADMIN_PORT` | ✅ | ✅ | — | — | — | — |
-| `MS_GAMIFY_HOST` | ✅ | ✅ | — | — | — | — |
-| `MS_GAMIFY_PORT` | ✅ | ✅ | — | — | — | — |
-| `S3_ENDPOINT` | — | — | — | ✅ | — | — |
-| `S3_ACCESS_KEY` | — | — | — | ✅ | — | — |
-| `S3_SECRET_KEY` | — | — | — | ✅ | — | — |
-| `S3_BUCKET` | — | — | — | ✅ | — | — |
+| Variable | gateway-principal | gateway-status | ms-auth | ms-register | ms-admin | ms-gamify | ms-ia |
+|----------|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| `PORT_GT_P` | 3000 | — | — | — | — | — | — |
+| `PORT_GT_S` | — | 3005 | — | — | — | — | — |
+| `TCP_PORT` | — | — | 3001 | 3002 | 3003 | 3004 | 3006 |
+| `DATABASE_URL` | — | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| `JWT_SECRET` | — | — | ✅ | — | — | — | — |
+| `JWT_EXPIRES_IN` | — | — | ✅ | — | — | — | — |
+| `MS_AUTH_HOST` | ✅ | ✅ | — | — | — | — | — |
+| `MS_AUTH_PORT` | ✅ | ✅ | — | — | — | — | — |
+| `MS_REGISTER_HOST` | ✅ | ✅ | — | — | — | — | ✅ |
+| `MS_REGISTER_PORT` | ✅ | ✅ | — | — | — | — | ✅ |
+| `MS_ADMIN_HOST` | ✅ | ✅ | — | — | — | — | ✅ |
+| `MS_ADMIN_PORT` | ✅ | ✅ | — | — | — | — | ✅ |
+| `MS_GAMIFY_HOST` | ✅ | ✅ | — | — | — | — | — |
+| `MS_GAMIFY_PORT` | ✅ | ✅ | — | — | — | — | — |
+| `MS_IA_HOST` | ✅ | ✅ | — | — | — | — | — |
+| `MS_IA_PORT` | ✅ | ✅ | — | — | — | — | — |
+| `S3_ENDPOINT` | — | — | — | ✅ | — | — | — |
+| `S3_ACCESS_KEY` | — | — | — | ✅ | — | — | — |
+| `S3_SECRET_KEY` | — | — | — | ✅ | — | — | — |
+| `S3_BUCKET` | — | — | — | ✅ | — | — | — |
+| `GROQ_API_KEY` | — | — | — | — | — | — | ✅ |
+| `GROQ_MODEL` | — | — | — | — | — | — | ✅ |
+| `GROQ_BASE_URL` | — | — | — | — | — | — | ✅ |
+| `AI_CONFIG_ENCRYPTION_KEY` | — | — | — | — | — | — | ✅ |
 
 ### Variables de entorno — Frontend (Build Args)
 
@@ -92,6 +100,7 @@ Si modificás un archivo, Coolify redeploya **solo** los servicios afectados.
 | `ms-register` | `backend/ms-register/**`<br>`libs/**`<br>`package.json`<br>`pnpm-lock.yaml`<br>`tsconfig.base.json`<br>`docker/prod/Dockerfile.ms-register` |
 | `ms-admin` | `backend/ms-admin/**`<br>`libs/**`<br>`package.json`<br>`pnpm-lock.yaml`<br>`tsconfig.base.json`<br>`docker/prod/Dockerfile.ms-admin` |
 | `ms-gamify` | `backend/ms-gamify/**`<br>`libs/**`<br>`package.json`<br>`pnpm-lock.yaml`<br>`tsconfig.base.json`<br>`docker/prod/Dockerfile.ms-gamify` |
+| `ms-ia` | `backend/ms-ia/**`<br>`libs/**`<br>`package.json`<br>`pnpm-lock.yaml`<br>`tsconfig.base.json`<br>`docker/prod/Dockerfile.ms-ia` |
 | `gateway-principal` | `backend/gateway-principal/**`<br>`libs/**`<br>`package.json`<br>`pnpm-lock.yaml`<br>`tsconfig.base.json`<br>`docker/prod/Dockerfile.gateway-principal` |
 | `gateway-status` | `backend/gateway-status/**`<br>`libs/**`<br>`package.json`<br>`pnpm-lock.yaml`<br>`tsconfig.base.json`<br>`docker/prod/Dockerfile.gateway-status` |
 | `app-reporte` | `frontend/app-reporte/**`<br>`package.json`<br>`pnpm-lock.yaml`<br>`docker/prod/Dockerfile.app-reporte` |
@@ -168,6 +177,31 @@ Watch Paths:
   backend/ms-gamify/**  libs/**  package.json  pnpm-lock.yaml  tsconfig.base.json  docker/prod/Dockerfile.ms-gamify
 ```
 
+#### `ms-ia`
+
+```
+Tipo:        Dockerfile
+Dockerfile:  docker/prod/Dockerfile.ms-ia
+Port:        (ninguno — solo TCP)
+Health:      (ninguno — contenedor alive)
+Env vars:
+  TCP_PORT=3006
+  MS_ADMIN_HOST=<ip-o-host-ms-admin>
+  MS_ADMIN_PORT=3003
+  MS_REGISTER_HOST=<ip-o-host-ms-register>
+  MS_REGISTER_PORT=3002
+  DATABASE_URL=postgresql://<usuario>:<clave>@<host>:5432/<base>
+  AI_CONFIG_ENCRYPTION_KEY=<openssl-rand-hex-32>
+  # GROQ_API_KEY es solo compatibilidad inicial; luego las claves se gestionan en Backoffice.
+  GROQ_API_KEY=<clave-groq>
+  GROQ_MODEL=llama-3.3-70b-versatile
+  GROQ_BASE_URL=https://api.groq.com/openai/v1
+Watch Paths:
+  backend/ms-ia/**  libs/**  package.json  pnpm-lock.yaml  tsconfig.base.json  docker/prod/Dockerfile.ms-ia
+```
+
+> `ms-ia` requiere `DATABASE_URL` para leer proveedores, prioridades y credenciales cifradas. Ejecutá `pnpm db:migrate` una vez antes del despliegue para crear `ai_provider_configs`. `AI_CONFIG_ENCRYPTION_KEY` es una clave maestra estable de 32 bytes (generar con `openssl rand -hex 32`): no se cambia desde la UI ni se debe perder.
+
 #### `gateway-principal`
 
 ```
@@ -177,7 +211,7 @@ Port:        3000
 Health:      GET / → 200
 Dominio:     api.ojocamba.com
 Env vars:
-  PORT=3000
+  PORT_GT_P=3000
   MS_AUTH_HOST=<ip-o-host-ms-auth>
   MS_AUTH_PORT=3001
   MS_REGISTER_HOST=<ip-o-host-ms-register>
@@ -186,6 +220,8 @@ Env vars:
   MS_ADMIN_PORT=3003
   MS_GAMIFY_HOST=<ip-o-host-ms-gamify>
   MS_GAMIFY_PORT=3004
+  MS_IA_HOST=<ip-o-host-ms-ia>
+  MS_IA_PORT=3006
 Watch Paths:
   backend/gateway-principal/**  libs/**  package.json  pnpm-lock.yaml  tsconfig.base.json  docker/prod/Dockerfile.gateway-principal
 ```
@@ -199,7 +235,7 @@ Port:        3005
 Health:      GET / → 200
 Dominio:     status-api.ojocamba.com
 Env vars:
-  PORT=3005
+  PORT_GT_S=3005
   DATABASE_URL=postgresql://<user>:<pass>@<host-db>:5432/ojocamba
   MS_AUTH_HOST=<ip-o-host-ms-auth>
   MS_AUTH_PORT=3001
@@ -209,6 +245,8 @@ Env vars:
   MS_ADMIN_PORT=3003
   MS_GAMIFY_HOST=<ip-o-host-ms-gamify>
   MS_GAMIFY_PORT=3004
+  MS_IA_HOST=<ip-o-host-ms-ia>
+  MS_IA_PORT=3006
 Watch Paths:
   backend/gateway-status/**  libs/**  package.json  pnpm-lock.yaml  tsconfig.base.json  docker/prod/Dockerfile.gateway-status
 ```
@@ -278,9 +316,10 @@ Watch Paths:
 3. `ms-register`
 4. `ms-admin`
 5. `ms-gamify`
-6. `gateway-principal`
-7. `gateway-status`
-8. `app-reporte` `app-backoffice` `app-tecnico` `app-status` (cualquier orden)
+6. `ms-ia` (depende de `ms-admin` y `ms-register` ya arriba)
+7. `gateway-principal`
+8. `gateway-status`
+9. `app-reporte` `app-backoffice` `app-tecnico` `app-status` (cualquier orden)
 
 ### Verificación post-deploy
 

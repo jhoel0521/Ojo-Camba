@@ -5,6 +5,8 @@ import {
   Reporte,
   GrupoReporte,
   Categoria,
+  Cuadrilla,
+  Especialidad,
   Dispositivo,
   ActualizacionCaso,
   EstadoReporte,
@@ -18,7 +20,15 @@ const ds = new DataSource({
   url: DATABASE_URL,
   synchronize: false,
   logging: false,
-  entities: [Reporte, GrupoReporte, Categoria, Dispositivo, ActualizacionCaso],
+  entities: [
+    Reporte,
+    GrupoReporte,
+    Categoria,
+    Cuadrilla,
+    Especialidad,
+    Dispositivo,
+    ActualizacionCaso,
+  ],
 });
 
 // Bounding box de Santa Cruz de la Sierra
@@ -67,6 +77,33 @@ const COMENTARIO_POR_ETAPA: Record<string, string> = {
   [EstadoReporte.EnTrabajo]: 'Cuadrilla iniciando los trabajos de reparación.',
   [EstadoReporte.Finalizado]: 'Obra finalizada y verificada.',
 };
+
+// ── Cuadrillas y especialidades (Fase 5) ────────────────────────────────────
+// Una especialidad por categoría de reporte: es lo que le permite al motor de
+// recomendación de ms-ia puntuar el match sin adivinar por nombre.
+const ESPECIALIDADES_SEED: { nombre: string; categoria: string }[] = [
+  { nombre: 'Bacheo y pavimento', categoria: 'bache' },
+  { nombre: 'Alumbrado público', categoria: 'luminaria' },
+  { nombre: 'Recojo de residuos', categoria: 'residuos' },
+  { nombre: 'Drenaje y alcantarillado', categoria: 'alcantarillado' },
+  { nombre: 'Señalización y tráfico', categoria: 'trafico' },
+  { nombre: 'Servicios generales', categoria: 'otro' },
+];
+
+// `especialidad: null` = comodín (puntúa más bajo que un match, más alto que una
+// especialidad ajena). `activa: false` queda para probar que el motor la excluye.
+const CUADRILLAS_SEED: { nombre: string; especialidad: string | null; activa?: boolean }[] = [
+  { nombre: 'Cuadrilla Bacheo Norte', especialidad: 'Bacheo y pavimento' },
+  { nombre: 'Cuadrilla Bacheo Sur', especialidad: 'Bacheo y pavimento' },
+  { nombre: 'Cuadrilla Bacheo Este', especialidad: 'Bacheo y pavimento', activa: false },
+  { nombre: 'Cuadrilla Alumbrado 1', especialidad: 'Alumbrado público' },
+  { nombre: 'Cuadrilla Alumbrado 2', especialidad: 'Alumbrado público' },
+  { nombre: 'Cuadrilla Aseo Urbano', especialidad: 'Recojo de residuos' },
+  { nombre: 'Cuadrilla Drenaje', especialidad: 'Drenaje y alcantarillado' },
+  { nombre: 'Cuadrilla Señalización', especialidad: 'Señalización y tráfico' },
+  { nombre: 'Cuadrilla Polivalente', especialidad: 'Servicios generales' },
+  { nombre: 'Cuadrilla de Apoyo', especialidad: null },
+];
 
 function siguienteEstado(actual: EstadoReporte): EstadoReporte | null {
   const idx = SECUENCIA_ESTADOS.indexOf(actual);
@@ -138,6 +175,57 @@ async function bulkUpdateFechas(tabla: string, pares: { id: number; ms: number }
   );
 }
 
+/**
+ * Reparte las cuadrillas sembradas entre los casos que ya salieron a campo,
+ * respetando la especialidad (una cuadrilla de bacheo solo agarra casos de
+ * bache). Devuelve cuántos casos quedaron asignados.
+ */
+async function asignarCuadrillas(): Promise<number> {
+  const cuadrillas = await ds.getRepository(Cuadrilla).find({ where: { activa: true } });
+  const especialidades = await ds.getRepository(Especialidad).find();
+  const categoriaPorEspecialidad = new Map(especialidades.map((e) => [e.id, e.categoria_id]));
+
+  const cuadrillasPorCategoria = new Map<number, number[]>();
+  for (const c of cuadrillas) {
+    const categoriaId = c.especialidad_id ? categoriaPorEspecialidad.get(c.especialidad_id) : null;
+    if (categoriaId == null) continue;
+    cuadrillasPorCategoria.set(categoriaId, [
+      ...(cuadrillasPorCategoria.get(categoriaId) ?? []),
+      c.id,
+    ]);
+  }
+
+  const grupos: { id: number; categoria_id: number | null }[] = await ds.query(
+    'SELECT id, categoria_id FROM grupos_reportes WHERE estado_actual <> $1',
+    [EstadoReporte.Aceptado],
+  );
+
+  const pares: { id: number; cuadrillaId: number }[] = [];
+  for (const g of grupos) {
+    const candidatas = g.categoria_id != null ? cuadrillasPorCategoria.get(g.categoria_id) : null;
+    if (!candidatas || candidatas.length === 0) continue;
+    pares.push({
+      id: g.id,
+      cuadrillaId: candidatas[Math.floor(Math.random() * candidatas.length)],
+    });
+  }
+
+  // En lotes: un UPDATE con miles de parámetros supera el límite del protocolo.
+  const LOTE = 500;
+  for (let i = 0; i < pares.length; i += LOTE) {
+    const lote = pares.slice(i, i + LOTE);
+    const values = lote.map((_, j) => `($${j * 2 + 1}::int, $${j * 2 + 2}::int)`).join(', ');
+    const params: number[] = [];
+    for (const p of lote) params.push(p.id, p.cuadrillaId);
+    await ds.query(
+      `UPDATE grupos_reportes AS t SET cuadrilla_id = v.cuadrilla_id FROM (VALUES ${values}) AS v(id, cuadrilla_id) WHERE t.id = v.id`,
+      params,
+    );
+  }
+
+  return pares.length;
+}
+
 async function seed() {
   await ds.initialize();
   console.log('Conectado a PostgreSQL\n');
@@ -156,6 +244,39 @@ async function seed() {
     await categoriaRepo.upsert({ nombre }, ['nombre']);
   }
   console.log('Categorías: OK\n');
+
+  // Cuadrillas y especialidades no se truncan (no dependen de la simulación):
+  // se upsertan por nombre, así los ids quedan estables entre corridas.
+  const cuadrillaRepo = ds.getRepository(Cuadrilla);
+  const especialidadRepo = ds.getRepository(Especialidad);
+
+  const categoriaIdPorNombre = new Map(
+    (await categoriaRepo.find()).map((c) => [c.nombre, c.id] as const),
+  );
+  for (const e of ESPECIALIDADES_SEED) {
+    await especialidadRepo.upsert(
+      { nombre: e.nombre, categoria_id: categoriaIdPorNombre.get(e.categoria) ?? null },
+      ['nombre'],
+    );
+  }
+  const especialidadIdPorNombre = new Map(
+    (await especialidadRepo.find()).map((e) => [e.nombre, e.id] as const),
+  );
+  for (const c of CUADRILLAS_SEED) {
+    await cuadrillaRepo.upsert(
+      {
+        nombre: c.nombre,
+        especialidad_id: c.especialidad
+          ? (especialidadIdPorNombre.get(c.especialidad) ?? null)
+          : null,
+        activa: c.activa ?? true,
+      },
+      ['nombre'],
+    );
+  }
+  console.log(
+    `Especialidades: ${ESPECIALIDADES_SEED.length} · Cuadrillas: ${CUADRILLAS_SEED.length}\n`,
+  );
 
   const hoy = new Date();
   hoy.setHours(0, 0, 0, 0);
@@ -404,10 +525,16 @@ async function seed() {
     }
   }
 
+  // ── Asignación de cuadrillas ────────────────────────────────────────────
+  // Solo los casos que ya salieron de "Aceptado": recién cuando el caso sale a
+  // campo hay una cuadrilla trabajándolo. Los "Aceptado" quedan sin asignar, que
+  // es justo el estado que el moderador resuelve desde el backoffice.
+  const totalAsignados = await asignarCuadrillas();
+
   await ds.destroy();
   console.log(
     `\nSeed completado exitosamente: ${totalReportes} reportes, ${totalGrupos} grupos, ` +
-      `${totalActualizaciones} actualizaciones de bitácora`,
+      `${totalActualizaciones} actualizaciones de bitácora, ${totalAsignados} casos con cuadrilla`,
   );
 }
 

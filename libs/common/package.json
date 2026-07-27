@@ -4,6 +4,11 @@
   "private": true,
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" },
+    "./motor/triaje": { "types": "./dist/motor/triaje.d.ts", "default": "./dist/motor/triaje.js" },
+    "./motor/ruta": { "types": "./dist/motor/ruta.d.ts", "default": "./dist/motor/ruta.js" }
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json"
   },

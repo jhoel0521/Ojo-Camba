@@ -29,6 +29,7 @@ import {
 } from '../lib/adminApi';
 import { friendlyError } from '../lib/errors';
 import StatusBadge from '../components/StatusBadge';
+import CuadrillaAsignada from '../components/CuadrillaAsignada';
 import { getImageUrl } from '../lib/api';
 import { CATEGORIA_NAMES } from '../lib/categories';
 
@@ -217,6 +218,32 @@ export default function CasoDetallePage() {
           )}
         </div>
       </div>
+
+      {/* ── CUADRILLA ASIGNADA ──────────────────────────── */}
+      {user && (
+        <CuadrillaAsignada
+          key={grupo.id}
+          grupoId={grupo.id}
+          usuarioId={user.id}
+          cuadrillaIdActual={grupo.cuadrilla_id ?? null}
+          cuadrillaNombreActual={grupo.cuadrilla_nombre ?? null}
+          onAsignada={async (r) => {
+            setGrupo((prev) =>
+              prev
+                ? { ...prev, cuadrilla_id: r.cuadrilla_id, cuadrilla_nombre: r.cuadrilla_nombre }
+                : prev,
+            );
+            // La asignación queda registrada en la bitácora: refrescarla.
+            setTimeline(await getCaseTimeline(grupo.id));
+            setSuccessMsg(
+              r.cuadrilla_nombre
+                ? `Cuadrilla "${r.cuadrilla_nombre}" asignada.`
+                : 'Cuadrilla desasignada.',
+            );
+            setTimeout(() => setSuccessMsg(''), 3000);
+          }}
+        />
+      )}
 
       {/* ── REPORTES AGRUPADOS ──────────────────────────── */}
       {reportes.length > 0 && (

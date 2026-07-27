@@ -26,6 +26,10 @@ export interface GrupoReporte {
   creado_en: string;
   total_reportes?: number;
   preview_imagen?: string;
+  /** Cuadrilla asignada al caso (Fase 5). Null mientras nadie la asigna. */
+  cuadrilla_id?: number | null;
+  /** Solo lo devuelve GET /admin/groups/:id, no el listado. */
+  cuadrilla_nombre?: string | null;
 }
 
 export interface Actualizacion {
@@ -129,16 +133,21 @@ export async function acceptReport(
   moderador_id: number,
   categoria_id?: number,
   grupo_id?: number,
+  gravedad?: string,
 ): Promise<{ id: number; estado: string; grupo_id: number; codigo_obra: string }> {
   return fetchAPI(`/admin/reports/${id}/accept`, {
     method: 'POST',
-    body: JSON.stringify({ moderador_id, categoria_id, grupo_id }),
+    body: JSON.stringify({ moderador_id, categoria_id, grupo_id, gravedad }),
   });
 }
 
-export async function listNearbyGroups(h3_cell: string): Promise<GrupoReporte[]> {
+export async function listNearbyGroups(
+  h3_cell: string,
+  categoriaId?: number,
+): Promise<GrupoReporte[]> {
+  const categoriaQs = categoriaId !== undefined ? `&categoria_id=${categoriaId}` : '';
   const res = await fetchAPI<GrupoReporte[] | { data: GrupoReporte[] }>(
-    `/admin/groups/by-cell?h3_cell=${encodeURIComponent(h3_cell)}&h3_resolution=11`,
+    `/admin/groups/by-cell?h3_cell=${encodeURIComponent(h3_cell)}&h3_resolution=11${categoriaQs}`,
   );
   return Array.isArray(res) ? res : ((res as { data: GrupoReporte[] }).data ?? []);
 }
@@ -235,8 +244,12 @@ export async function listNearbyReports(
   lat: number,
   lng: number,
   radius = 100,
+  categoriaId?: number,
 ): Promise<PendingReport[]> {
-  return fetchAPI<PendingReport[]>(`/admin/reports/nearby?lat=${lat}&lng=${lng}&radius=${radius}`);
+  const categoriaQs = categoriaId !== undefined ? `&categoria_id=${categoriaId}` : '';
+  return fetchAPI<PendingReport[]>(
+    `/admin/reports/nearby?lat=${lat}&lng=${lng}&radius=${radius}${categoriaQs}`,
+  );
 }
 
 export async function listUsers(
