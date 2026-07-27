@@ -42,7 +42,7 @@ WORKDIR /app
 
 COPY --from=builder /app/out ./
 COPY --from=builder /app/libs/common/dist/ ./libs/common/dist/
-COPY scripts/db-migrate.mjs scripts/db-fresh-seed.mjs ./scripts/
+COPY scripts/db-migrate.mjs scripts/prod-db-fresh.mjs ./scripts/
 
 USER node
 

@@ -72,11 +72,9 @@ async function freshProductionDatabase() {
     await pool.query('CREATE SCHEMA public AUTHORIZATION CURRENT_USER');
     await pool.query('GRANT ALL ON SCHEMA public TO CURRENT_USER');
 
-    console.log('Restaurando extensiones requeridas...');
+    console.log('Restaurando extensiones PostGIS requeridas...');
     await pool.query('CREATE EXTENSION IF NOT EXISTS postgis SCHEMA public CASCADE');
     await pool.query('CREATE EXTENSION IF NOT EXISTS postgis_raster SCHEMA public');
-    await pool.query('CREATE EXTENSION IF NOT EXISTS h3 SCHEMA public');
-    await pool.query('CREATE EXTENSION IF NOT EXISTS h3_postgis SCHEMA public');
   } finally {
     await pool.end();
   }
