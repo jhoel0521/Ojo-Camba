@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Sparkles,
   ChevronRight,
@@ -134,6 +134,8 @@ export default function GravedadSugerida({
   const [obraSugerida, setObraSugerida] = useState<{ grupoId: number; codigoObra: string } | null>(
     null,
   );
+  // Se actualiza dentro del mismo clic, antes del siguiente render de React.
+  const analisisEnCursoRef = useRef(false);
 
   useEffect(() => {
     let cancelado = false;
@@ -169,6 +171,8 @@ export default function GravedadSugerida({
   ]);
 
   async function analizarFoto(): Promise<void> {
+    if (analisisEnCursoRef.current) return;
+    analisisEnCursoRef.current = true;
     setAnalizando(true);
     setErrorAnalisis('');
     setNotaIa('');
@@ -194,6 +198,7 @@ export default function GravedadSugerida({
     } catch (e) {
       setErrorAnalisis(friendlyError(e));
     } finally {
+      analisisEnCursoRef.current = false;
       setAnalizando(false);
     }
   }
@@ -244,6 +249,7 @@ export default function GravedadSugerida({
         <button
           onClick={analizarFoto}
           disabled={analizando}
+          aria-busy={analizando}
           data-testid="btn-analizar-foto"
           className="w-full mb-3 flex items-center justify-center gap-2 bg-yeso border border-caoba/40 text-caoba font-semibold text-xs min-h-11 px-4 rounded-3xl-3 hover:bg-arcilla disabled:opacity-60 transition-colors"
         >

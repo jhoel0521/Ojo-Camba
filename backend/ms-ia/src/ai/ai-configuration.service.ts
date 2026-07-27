@@ -22,8 +22,8 @@ const PROVIDER_DEFAULTS: Record<
     enabled: false,
     priority: 20,
     base_url: 'https://generativelanguage.googleapis.com/v1beta',
-    text_model: 'gemini-2.5-flash',
-    vision_model: 'gemini-2.5-flash',
+    text_model: 'gemini-3.5-flash-lite',
+    vision_model: 'gemini-3.5-flash-lite',
   },
   deepseek: {
     provider: 'deepseek',

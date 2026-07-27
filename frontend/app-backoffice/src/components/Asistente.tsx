@@ -23,6 +23,7 @@ export default function Asistente() {
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState('');
   const finRef = useRef<HTMLDivElement>(null);
+  const consultaEnCursoRef = useRef(false);
 
   useEffect(() => {
     finRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -30,8 +31,9 @@ export default function Asistente() {
 
   async function enviar(texto: string): Promise<void> {
     const mensaje = texto.trim();
-    if (!mensaje || enviando) return;
+    if (!mensaje || consultaEnCursoRef.current) return;
 
+    consultaEnCursoRef.current = true;
     const historial = mensajes;
     setMensajes([...historial, { role: 'user', content: mensaje }]);
     setEntrada('');
@@ -45,6 +47,7 @@ export default function Asistente() {
       // Se conserva el mensaje del usuario; se muestra el error sin romper el chat.
       setError(friendlyError(e));
     } finally {
+      consultaEnCursoRef.current = false;
       setEnviando(false);
     }
   }
@@ -97,7 +100,8 @@ export default function Asistente() {
                 <button
                   key={s}
                   onClick={() => enviar(s)}
-                  className="w-full text-left text-[11px] text-tierra bg-lienzo border border-arcilla rounded-2xl px-3 py-2 hover:border-caoba transition-colors"
+                  disabled={enviando}
+                  className="w-full text-left text-[11px] text-tierra bg-lienzo border border-arcilla rounded-2xl px-3 py-2 hover:border-caoba disabled:opacity-60 transition-colors"
                 >
                   {s}
                 </button>

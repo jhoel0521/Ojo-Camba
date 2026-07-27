@@ -19,6 +19,7 @@ import {
   type AiProviderName,
 } from '../lib/aiConfigApi';
 import { friendlyError } from '../lib/errors';
+import { useAuthStore } from '../store/authStore';
 
 const PROVIDER_LABELS: Record<AiProviderName, { label: string; detail: string; vision: boolean }> =
   {
@@ -52,6 +53,7 @@ function toDraft(config: AiProviderConfig) {
 }
 
 export default function ConfiguracionIaPage() {
+  const logout = useAuthStore((state) => state.logout);
   const [configs, setConfigs] = useState<AiProviderConfig[]>([]);
   const [selected, setSelected] = useState<AiProviderName>('groq');
   const [loading, setLoading] = useState(true);
@@ -160,9 +162,36 @@ export default function ConfiguracionIaPage() {
 
   if (!config || !draft) {
     return (
-      <div className="rounded-3xl-3 bg-perla p-6 text-sm text-arena">
-        No hay proveedores configurados.
-      </div>
+      <section className="mx-auto max-w-xl pb-24">
+        {error ? (
+          <div
+            role="alert"
+            className="rounded-3xl-3 border border-red-200 bg-red-50 p-6 text-sm text-red-700"
+          >
+            <div className="flex gap-3">
+              <CircleAlert className="mt-0.5 h-5 w-5 shrink-0" />
+              <div>
+                <h2 className="font-semibold">No se pudo cargar la configuraciÃ³n</h2>
+                <p className="mt-1 leading-relaxed">{error}</p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    logout();
+                    window.location.assign('/login');
+                  }}
+                  className="mt-5 flex min-h-12 items-center justify-center rounded-pill bg-catedral px-6 text-sm font-semibold text-lienzo transition-colors hover:bg-ladrillo"
+                >
+                  Iniciar sesiÃ³n de nuevo
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="rounded-3xl-3 bg-perla p-6 text-sm text-arena">
+            No hay proveedores configurados.
+          </div>
+        )}
+      </section>
     );
   }
 

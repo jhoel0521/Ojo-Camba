@@ -9,7 +9,11 @@ async function bootstrap() {
     new FastifyAdapter({ logger: true, bodyLimit: 10485760 }),
   );
 
-  app.enableCors({ origin: (process.env.CORS_ORIGIN ?? '*').split(',') });
+  app.enableCors({
+    origin: (process.env.CORS_ORIGIN ?? '*').split(','),
+    methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Authorization', 'Content-Type'],
+  });
   app.useWebSocketAdapter(new IoAdapter(app));
 
   const port = parseInt(process.env.PORT_GT_P ?? '3000', 10);
