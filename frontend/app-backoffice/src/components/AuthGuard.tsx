@@ -3,7 +3,7 @@ import { useAuthStore } from '../store/authStore';
 import { useEffect, useState } from 'react';
 import { fetchAPI } from '../lib/api';
 
-const BACKOFFICE_ROLES = ['backoffice', 'moderador'];
+const BACKOFFICE_ROLES = ['backoffice', 'moderador', 'encargado_it', 'admin'];
 
 export default function AuthGuard({ children }: { children: React.ReactNode }) {
   const { user, isLoggedIn, login, logout } = useAuthStore();
