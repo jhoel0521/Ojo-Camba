@@ -8,7 +8,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ClientProxy } from '@nestjs/microservices';
-import { In, Repository } from 'typeorm';
+import { In, Repository, SelectQueryBuilder } from 'typeorm';
 import * as crypto from 'crypto';
 import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
 import {
@@ -46,6 +46,14 @@ interface ImagenResult {
   contentType: string;
 }
 
+export interface FiltrosListaGrupos {
+  estado?: string;
+  ficha?: string;
+  desde?: string;
+  hasta?: string;
+  orden?: 'recientes' | 'antiguos';
+}
+
 // Flujo obligatorio y secuencial de un Caso de Obra (trazabilidad, pedido del
 // docente): desde cada estado solo se permite avanzar al/los siguiente(s)
 // indicado(s). "Rechazado" no aparece aqui porque aplica solo a Reporte
@@ -67,6 +75,19 @@ const ESTADOS_ACTIVOS = [
 ];
 
 const isExternalUrl = (url: string | null): boolean => url?.startsWith('http') === true;
+
+function fechaInicioUtc(fecha?: string): Date | undefined {
+  if (!fecha || !/^\d{4}-\d{2}-\d{2}$/.test(fecha)) return undefined;
+  const valor = new Date(`${fecha}T00:00:00.000Z`);
+  return Number.isNaN(valor.getTime()) ? undefined : valor;
+}
+
+function fechaFinExclusivaUtc(fecha?: string): Date | undefined {
+  const valor = fechaInicioUtc(fecha);
+  if (!valor) return undefined;
+  valor.setUTCDate(valor.getUTCDate() + 1);
+  return valor;
+}
 
 function actualizacionImagePath(a: { id: number; url_imagen: string | null }): string | null {
   if (!a.url_imagen) return null;
@@ -481,25 +502,25 @@ export class AdminService {
     return qb.getRawMany();
   }
 
-  async listGroups(page = 1, limit = 20, estado?: string) {
+  async listGroups(page = 1, limit = 20, filtros: FiltrosListaGrupos = {}) {
+    const pagina = Math.max(1, page);
+    const limite = Math.min(Math.max(1, limit), 100);
+    const orden = filtros.orden === 'antiguos' ? 'ASC' : 'DESC';
+    const totalQb = this.grupoRepo.createQueryBuilder('g');
+    this.aplicarFiltrosListaGrupos(totalQb, filtros);
+    const total = await totalQb.getCount();
+
     const qb = this.grupoRepo
       .createQueryBuilder('g')
       .leftJoin(Reporte, 'r', 'r.grupo_id = g.id')
       .addSelect('COUNT(r.id)', 'total_reportes')
-      .groupBy('g.id')
-      .orderBy('g.creado_en', 'DESC');
-
-    if (estado) {
-      qb.where('g.estado_actual = :estado', { estado });
-    }
-
-    const total = await (estado
-      ? this.grupoRepo.count({ where: { estado_actual: estado } })
-      : this.grupoRepo.count());
+      .groupBy('g.id');
+    this.aplicarFiltrosListaGrupos(qb, filtros);
+    qb.orderBy('g.creado_en', orden);
 
     const rows = await qb
-      .skip((page - 1) * limit)
-      .take(limit)
+      .skip((pagina - 1) * limite)
+      .take(limite)
       .getRawAndEntities();
 
     const data = rows.entities.map((g, i) => ({
@@ -507,7 +528,23 @@ export class AdminService {
       total_reportes: parseInt(rows.raw[i]?.total_reportes ?? '0', 10),
     }));
 
-    return { data, total, page, limit };
+    return { data, total, page: pagina, limit: limite };
+  }
+
+  private aplicarFiltrosListaGrupos(
+    qb: SelectQueryBuilder<GrupoReporte>,
+    filtros: FiltrosListaGrupos,
+  ): void {
+    if (filtros.estado) qb.andWhere('g.estado_actual = :estado', { estado: filtros.estado });
+
+    const ficha = filtros.ficha?.trim();
+    if (ficha) qb.andWhere('g.codigo_obra ILIKE :ficha', { ficha: `%${ficha}%` });
+
+    const desde = fechaInicioUtc(filtros.desde);
+    if (desde) qb.andWhere('g.creado_en >= :desde', { desde });
+
+    const hasta = fechaFinExclusivaUtc(filtros.hasta);
+    if (hasta) qb.andWhere('g.creado_en < :hasta', { hasta });
   }
 
   async getCaseTimeline(grupoId: number) {

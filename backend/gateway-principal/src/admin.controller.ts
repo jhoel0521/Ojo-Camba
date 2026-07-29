@@ -201,12 +201,27 @@ export class AdminController {
   }
 
   @Get('groups')
-  listGroups(@Query() query: { page?: string; limit?: string; estado?: string }) {
+  listGroups(
+    @Query()
+    query: {
+      page?: string;
+      limit?: string;
+      estado?: string;
+      ficha?: string;
+      desde?: string;
+      hasta?: string;
+      orden?: 'recientes' | 'antiguos';
+    },
+  ) {
     return sendRpc(
       this.client.send(TCP_PATTERNS.ADMIN.LIST_GROUPS, {
         page: query.page ? parseInt(query.page, 10) : undefined,
         limit: query.limit ? parseInt(query.limit, 10) : undefined,
         estado: query.estado || undefined,
+        ficha: query.ficha || undefined,
+        desde: query.desde || undefined,
+        hasta: query.hasta || undefined,
+        orden: query.orden === 'antiguos' ? 'antiguos' : 'recientes',
       }),
     );
   }
