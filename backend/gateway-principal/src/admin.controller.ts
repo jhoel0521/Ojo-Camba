@@ -120,7 +120,7 @@ export class AdminController {
   @UseGuards(BackofficeGuard)
   async createGroup(
     @Req() request: { user: { user_id: number } },
-    @Body() dto: { report_ids: number[]; creado_por_usuario_id: number },
+    @Body() dto: { report_ids: number[]; creado_por_usuario_id: number; categoria_id?: number },
   ) {
     const result = await sendRpc(
       this.client.send(TCP_PATTERNS.ADMIN.CREATE_GROUP, {

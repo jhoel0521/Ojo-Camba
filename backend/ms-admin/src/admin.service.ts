@@ -260,6 +260,14 @@ export class AdminService {
       throw new BadRequestException('Solo se pueden agrupar reportes en estado Reportado');
     }
 
+    const categoriasOriginales = new Set(reportes.map((reporte) => reporte.categoria_id));
+    if (categoriasOriginales.size > 1 && !dto.categoria_id) {
+      throw new BadRequestException(
+        'Backoffice debe indicar la categoría final del triaje para agrupar reportes con categorías ciudadanas distintas',
+      );
+    }
+    const categoriaFinal = dto.categoria_id ?? reportes[0].categoria_id;
+
     const year = new Date().getFullYear();
     const count = (await this.grupoRepo.count()) + 1;
     const codigoObra = `O-${String(year).slice(-2)}-${String(count).padStart(7, '0')}`;
@@ -268,12 +276,14 @@ export class AdminService {
       codigo_obra: codigoObra,
       estado_actual: EstadoReporte.Aceptado,
       creado_por_usuario_id: dto.creado_por_usuario_id,
+      categoria_id: categoriaFinal,
     });
     await this.grupoRepo.save(grupo);
 
     await this.reporteRepo.update(dto.report_ids, {
       grupo_id: grupo.id,
       estado: EstadoReporte.Aceptado,
+      categoria_id: categoriaFinal,
     });
 
     this.logger.log(`Caso de Obra creado: ${codigoObra} con ${dto.report_ids.length} reportes`);
