@@ -6,6 +6,8 @@ import {
   GrupoReporte,
   Categoria,
   Cuadrilla,
+  CuadrillaMiembro,
+  Usuario,
   Especialidad,
   Dispositivo,
   ActualizacionCaso,
@@ -25,6 +27,8 @@ const ds = new DataSource({
     GrupoReporte,
     Categoria,
     Cuadrilla,
+    CuadrillaMiembro,
+    Usuario,
     Especialidad,
     Dispositivo,
     ActualizacionCaso,
@@ -277,6 +281,23 @@ async function seed() {
   console.log(
     `Especialidades: ${ESPECIALIDADES_SEED.length} · Cuadrillas: ${CUADRILLAS_SEED.length}\n`,
   );
+
+  // La cuenta multiperfil de demostración (id 1, creada por ms-auth) se
+  // incorpora a todas las cuadrillas para que el recorrido E2E solo vea trabajo
+  // asignado. En producción Encargado IT gestiona estas membresías.
+  const operadorDemo = await ds.getRepository(Usuario).findOne({
+    where: { email: 'admin@ojocamba.bo' },
+  });
+  if (operadorDemo) {
+    const miembroRepo = ds.getRepository(CuadrillaMiembro);
+    for (const cuadrilla of await cuadrillaRepo.find()) {
+      await miembroRepo.update({ cuadrilla_id: cuadrilla.id }, { es_responsable: false });
+      await miembroRepo.upsert(
+        { cuadrilla_id: cuadrilla.id, usuario_id: operadorDemo.id, es_responsable: true },
+        ['cuadrilla_id', 'usuario_id'],
+      );
+    }
+  }
 
   const hoy = new Date();
   hoy.setHours(0, 0, 0, 0);

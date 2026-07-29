@@ -7,7 +7,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
-import { TCP_PATTERNS } from '@ojo-camba/common';
+import { ROLES, tieneAlgunRol, TCP_PATTERNS } from '@ojo-camba/common';
 import { firstValueFrom } from 'rxjs';
 
 interface TokenValidation {
@@ -30,7 +30,7 @@ export class BackofficeGuard implements CanActivate {
       this.auth.send<TokenValidation>(TCP_PATTERNS.AUTH.VALIDATE_TOKEN, { token }),
     );
     if (!validation.valid) throw new UnauthorizedException('Token de acceso inválido o expirado.');
-    if (!validation.roles.some((role) => role === 'moderador' || role === 'admin')) {
+    if (!tieneAlgunRol(validation.roles, [ROLES.BACKOFFICE])) {
       throw new ForbiddenException('Esta función requiere un rol de Backoffice.');
     }
     request.user = validation;
@@ -43,7 +43,7 @@ export class AiConfigurationGuard extends BackofficeGuard {
   async canActivate(context: ExecutionContext): Promise<boolean> {
     await super.canActivate(context);
     const request = context.switchToHttp().getRequest<{ user?: TokenValidation }>();
-    if (!request.user?.roles.includes('admin')) {
+    if (!request.user || !tieneAlgunRol(request.user.roles, [ROLES.ENCARGADO_IT])) {
       throw new ForbiddenException('Solo administradores pueden cambiar proveedores de IA.');
     }
     return true;

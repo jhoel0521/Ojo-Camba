@@ -67,7 +67,7 @@ export async function listGroups(
 ): Promise<PaginatedResponse<GrupoReporte>> {
   const q = new URLSearchParams({ page: String(page), limit: String(limit) });
   if (estado) q.set('estado', estado);
-  return fetchAPI<PaginatedResponse<GrupoReporte>>(`/admin/groups?${q.toString()}`);
+  return fetchAPI<PaginatedResponse<GrupoReporte>>(`/operacion/tecnico/groups?${q.toString()}`);
 }
 
 export async function listGroupsNearby(
@@ -75,11 +75,13 @@ export async function listGroupsNearby(
   lng: number,
   radiusM = 300,
 ): Promise<GrupoReporte[]> {
-  return fetchAPI<GrupoReporte[]>(`/admin/groups/nearby?lat=${lat}&lng=${lng}&radius=${radiusM}`);
+  return fetchAPI<GrupoReporte[]>(
+    `/operacion/tecnico/groups/nearby?lat=${lat}&lng=${lng}&radius=${radiusM}`,
+  );
 }
 
 export async function getGroup(id: number): Promise<GrupoReporte> {
-  return fetchAPI<GrupoReporte>(`/admin/groups/${id}`);
+  return fetchAPI<GrupoReporte>(`/operacion/tecnico/groups/${id}`);
 }
 
 export async function getGroupReports(id: number): Promise<ReporteDeGrupo[]> {
@@ -87,7 +89,7 @@ export async function getGroupReports(id: number): Promise<ReporteDeGrupo[]> {
 }
 
 export async function getCaseTimeline(id: number): Promise<Actualizacion[]> {
-  return fetchAPI<Actualizacion[]>(`/admin/groups/${id}/timeline`);
+  return fetchAPI<Actualizacion[]>(`/operacion/tecnico/groups/${id}/timeline`);
 }
 
 export async function addActualizacion(grupo_id: number, payload: ActualizacionPayload) {
@@ -97,8 +99,18 @@ export async function addActualizacion(grupo_id: number, payload: ActualizacionP
     estado_nuevo: string | null;
     comentario: string;
     creado_en: string;
-  }>(`/admin/groups/${grupo_id}/updates`, {
+  }>(`/operacion/tecnico/groups/${grupo_id}/updates`, {
     method: 'POST',
     body: JSON.stringify(payload),
   });
+}
+
+export async function registrarDerivacion(
+  grupo_id: number,
+  payload: { entidad_destino: string; motivo: string; evidencia_url: string },
+) {
+  return fetchAPI<{ id: number; entidad_destino: string; creado_en: string }>(
+    `/operacion/tecnico/groups/${grupo_id}/derivaciones`,
+    { method: 'POST', body: JSON.stringify(payload) },
+  );
 }

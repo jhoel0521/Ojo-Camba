@@ -236,7 +236,10 @@ test.describe('Asignar reporte a Caso de Obra existente', () => {
     expect(r1.id).toBeTruthy();
 
     const accepted = await apiContext
-      .post(`/admin/reports/${r1.id}/accept`, { data: { moderador_id } })
+      .post(`/admin/reports/${r1.id}/accept`, {
+        data: { moderador_id },
+        headers: { Authorization: `Bearer ${loginRes.access_token}` },
+      })
       .then((r) => r.json());
     const obraId: number = accepted.grupo_id;
     expect(obraId).toBeTruthy();

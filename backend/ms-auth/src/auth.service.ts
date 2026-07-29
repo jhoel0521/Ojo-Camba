@@ -10,7 +10,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { ILike, Repository } from 'typeorm';
 import * as bcrypt from 'bcryptjs';
 import * as crypto from 'crypto';
-import { Usuario, UsuarioRol, Rol, RefreshToken } from '@ojo-camba/common';
+import { Usuario, UsuarioRol, Rol, RefreshToken, ROLES } from '@ojo-camba/common';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 
@@ -220,7 +220,17 @@ export class AuthService implements OnModuleInit {
   }
 
   async onModuleInit() {
-    const roles = ['ciudadano', 'moderador', 'tecnico', 'admin'];
+    const roles = [
+      ROLES.CIUDADANO,
+      ROLES.BACKOFFICE,
+      ROLES.TECNICO,
+      ROLES.COORDINADOR_OPERATIVO,
+      ROLES.ENCARGADO_IT,
+      ROLES.AUTORIDAD_MUNICIPAL,
+      // Compatibilidad transitoria para las cuentas creadas antes de ISSUE-26.
+      'moderador',
+      'admin',
+    ];
     for (const nombre of roles) {
       const exists = await this.rolRepo.findOne({ where: { nombre } });
       if (!exists) {

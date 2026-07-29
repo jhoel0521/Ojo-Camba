@@ -47,6 +47,13 @@ export const TCP_PATTERNS = {
     CREATE_CUADRILLA: 'admin.create_cuadrilla',
     UPDATE_CUADRILLA: 'admin.update_cuadrilla',
     ASIGNAR_CUADRILLA: 'admin.asignar_cuadrilla',
+    LIST_GRUPOS_TECNICO: 'admin.list_grupos_tecnico',
+    GET_GRUPO_TECNICO: 'admin.get_grupo_tecnico',
+    REGISTRAR_DERIVACION: 'admin.registrar_derivacion',
+    GET_CONFIGURACION_OPERATIVA: 'admin.get_configuracion_operativa',
+    UPDATE_CONFIGURACION_OPERATIVA: 'admin.update_configuracion_operativa',
+    ASIGNAR_MIEMBRO_CUADRILLA: 'admin.asignar_miembro_cuadrilla',
+    GET_INDICADORES_CUADRILLA: 'admin.get_indicadores_cuadrilla',
   },
   GAMIFY: {
     PING: 'gamify.ping',

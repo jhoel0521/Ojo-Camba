@@ -27,6 +27,7 @@ async function seedCasoDeObra(): Promise<{ id: number; codigo_obra: string }> {
     .post('/auth/login', { data: { email: TECNICO_EMAIL, password: TECNICO_PASSWORD } })
     .then((r) => r.json());
   const usuarioId = login.user.id;
+  const headers = { Authorization: `Bearer ${login.access_token}` };
 
   const deviceId = `e2e-tecnico-${Date.now()}`;
   const [r1, r2] = await Promise.all([
@@ -57,8 +58,21 @@ async function seedCasoDeObra(): Promise<{ id: number; codigo_obra: string }> {
   const grupo = await api
     .post('/admin/groups', {
       data: { report_ids: [r1.id, r2.id], creado_por_usuario_id: usuarioId },
+      headers,
     })
     .then((r) => r.json());
+
+  // Cuadrilla aislada para que la prueba no dependa de la carga del seed.
+  const cuadrilla = await api
+    .post('/admin/cuadrillas', { data: { nombre: `E2E Técnica ${Date.now()}` } })
+    .then((r) => r.json());
+  await api.post(`/operacion/cuadrillas/${cuadrilla.id}/miembros`, {
+    data: { usuario_id: usuarioId, es_responsable: true },
+    headers,
+  });
+  await api.post(`/admin/groups/${grupo.id}/cuadrilla`, {
+    data: { cuadrilla_id: cuadrilla.id, usuario_id: usuarioId },
+  });
 
   await api.dispose();
   return { id: grupo.id, codigo_obra: grupo.codigo_obra };
@@ -116,7 +130,7 @@ test.describe('App Tecnicos: bitacora diaria y correccion GPS (ISSUE-16 / HU-05)
     // Confirmacion via API: la ultima actualizacion no transiciono el estado
     const api = await playwrightRequest.newContext({ baseURL: API_URL });
     const timelineData = await api.get(`/admin/groups/${caso.id}/timeline`).then((r) => r.json());
-    const ultima = timelineData[0];
+    const ultima = timelineData.at(-1);
     expect(ultima.comentario).toBe(comentario);
     expect(ultima.estado_nuevo).toBeNull();
     expect(ultima.lat_actualizada).not.toBeNull();

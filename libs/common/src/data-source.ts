@@ -7,6 +7,9 @@ import { GrupoReporte } from './entities/grupo-reporte.entity';
 import { Categoria } from './entities/categoria.entity';
 import { Especialidad } from './entities/especialidad.entity';
 import { Cuadrilla } from './entities/cuadrilla.entity';
+import { CuadrillaMiembro } from './entities/cuadrilla-miembro.entity';
+import { ConfiguracionOperativa } from './entities/configuracion-operativa.entity';
+import { DerivacionCaso } from './entities/derivacion-caso.entity';
 import { Dispositivo } from './entities/dispositivo.entity';
 import { ActualizacionCaso } from './entities/actualizacion-caso.entity';
 import { Usuario } from './entities/usuario.entity';
@@ -37,6 +40,9 @@ export const AppDataSource = new DataSource({
     Categoria,
     Especialidad,
     Cuadrilla,
+    CuadrillaMiembro,
+    ConfiguracionOperativa,
+    DerivacionCaso,
     Dispositivo,
     ActualizacionCaso,
     Usuario,
