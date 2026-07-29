@@ -10,6 +10,10 @@ export const TCP_PATTERNS = {
     ADD_POINTS: 'auth.add_points',
     UPDATE_LEVEL: 'auth.update_level',
     LIST_USERS: 'auth.list_users',
+    LIST_CIUDADANOS: 'auth.list_ciudadanos',
+    LIST_ROLES_GESTIONABLES: 'auth.list_roles_gestionables',
+    APLICAR_SOLICITUD_TI: 'auth.aplicar_solicitud_ti',
+    LIST_SOLICITUDES_TI: 'auth.list_solicitudes_ti',
   },
   REGISTER: {
     PING: 'register.ping',

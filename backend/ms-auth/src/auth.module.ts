@@ -3,17 +3,36 @@ import { JwtModule } from '@nestjs/jwt';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
-import { Usuario, Rol, UsuarioRol, RefreshToken } from '@ojo-camba/common';
+import { GestionAccesosService } from './gestion-accesos.service';
+import {
+  Cuadrilla,
+  CuadrillaMiembro,
+  RefreshToken,
+  Rol,
+  SolicitudTi,
+  SolicitudTiUsuario,
+  Usuario,
+  UsuarioRol,
+} from '@ojo-camba/common';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Usuario, Rol, UsuarioRol, RefreshToken]),
+    TypeOrmModule.forFeature([
+      Usuario,
+      Rol,
+      UsuarioRol,
+      RefreshToken,
+      SolicitudTi,
+      SolicitudTiUsuario,
+      Cuadrilla,
+      CuadrillaMiembro,
+    ]),
     JwtModule.register({
       secret: process.env.JWT_SECRET ?? 'dev_jwt_secret_change_in_prod',
       signOptions: { expiresIn: '7d' as const },
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService],
+  providers: [AuthService, GestionAccesosService],
 })
 export class AuthModule {}

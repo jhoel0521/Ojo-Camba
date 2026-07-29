@@ -20,6 +20,8 @@ import { Nivel } from './entities/nivel.entity';
 import { HistorialPuntos } from './entities/historial-puntos.entity';
 import { PingLog } from './entities/ping-log.entity';
 import { AiProviderConfig } from './entities/ai-provider-config.entity';
+import { SolicitudTi } from './entities/solicitud-ti.entity';
+import { SolicitudTiUsuario } from './entities/solicitud-ti-usuario.entity';
 
 config({ path: './backend/ms-auth/.env' });
 
@@ -53,6 +55,8 @@ export const AppDataSource = new DataSource({
     HistorialPuntos,
     PingLog,
     AiProviderConfig,
+    SolicitudTi,
+    SolicitudTiUsuario,
   ],
   migrations,
 });
