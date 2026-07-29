@@ -65,14 +65,14 @@ test.describe('Moderación en tiempo real + claim (ISSUE-23)', () => {
   test('mod A toma un reporte → mod B ve el candado; al aceptar desaparece en ambos', async ({
     browser,
   }) => {
-    const reportId = await crearReporte();
-
     const a = await abrirRevisar(browser, MOD_A);
     const b = await abrirRevisar(browser, MOD_B);
 
-    // Ambos ven el reporte en la bandeja.
-    await a.page.getByTestId('btn-actualizar').click();
-    await b.page.getByTestId('btn-actualizar').click();
+    // Crear el reporte con ambas bandejas conectadas evita depender de la primera
+    // pagina del listado, que puede contener datos historicos ajenos al escenario.
+    const reportId = await crearReporte();
+
+    // Ambos lo reciben mediante report:new, sin depender de paginacion ni recarga.
     await expect(a.page.getByTestId(`report-row-${reportId}`)).toBeVisible({ timeout: 10_000 });
     await expect(b.page.getByTestId(`report-row-${reportId}`)).toBeVisible({ timeout: 10_000 });
 
