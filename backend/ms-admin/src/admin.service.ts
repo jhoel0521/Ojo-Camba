@@ -32,6 +32,7 @@ import {
   UpdateCuadrillaDto,
   AsignarCuadrillaDto,
 } from './dto';
+import { OperacionService } from './operacion.service';
 
 export interface DashboardInsight {
   nivel: 'alerta' | 'atencion' | 'positivo';
@@ -94,6 +95,7 @@ export class AdminService {
     private readonly cuadrillaRepo: Repository<Cuadrilla>,
     @InjectRepository(Especialidad)
     private readonly especialidadRepo: Repository<Especialidad>,
+    private readonly operacionService: OperacionService,
     @Inject('MS_GAMIFY')
     private readonly gamifyClient: ClientProxy,
   ) {
@@ -796,6 +798,30 @@ export class AdminService {
           `Las cuadrillas asignadas deben estar activas: "${nueva.nombre}" está dada de baja.`,
         );
       }
+      if (nueva.id !== anterior?.id) {
+        const capacidad = await this.operacionService.validarCapacidad(nueva.id, grupo.id);
+        if (!capacidad.admite_asignacion) {
+          await this.actualizacionRepo.save(
+            this.actualizacionRepo.create({
+              grupo_id: grupo.id,
+              usuario_id: dto.usuario_id,
+              comentario:
+                `Solicitud de apoyo: "${nueva.nombre}" alcanzaría ${capacidad.proyeccion} ` +
+                `reportes abiertos (máximo ${capacidad.umbral_maximo}).`,
+              estado_anterior: null,
+              estado_nuevo: null,
+              recursos_solicitados: null,
+              fecha_estimada_fin: null,
+              lat_actualizada: null,
+              lng_actualizada: null,
+              url_imagen: null,
+            }),
+          );
+          throw new BadRequestException(
+            `La asignación supera el máximo de ${capacidad.umbral_maximo} reportes abiertos; se registró una solicitud de apoyo.`,
+          );
+        }
+      }
     }
 
     grupo.cuadrilla_id = nueva?.id ?? null;
@@ -829,6 +855,7 @@ export class AdminService {
       cuadrilla_id: grupo.cuadrilla_id,
       cuadrilla_nombre: nueva?.nombre ?? null,
       actualizacion_id: actualizacion.id,
+      capacidad: nueva ? await this.operacionService.validarCapacidad(nueva.id, grupo.id) : null,
     };
   }
 

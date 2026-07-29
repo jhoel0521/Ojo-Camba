@@ -2,6 +2,7 @@ import { Controller } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import { TCP_PATTERNS } from '@ojo-camba/common';
 import { AdminService } from './admin.service';
+import { OperacionService } from './operacion.service';
 import {
   CreateGroupDto,
   UpdateCaseDto,
@@ -14,7 +15,10 @@ import {
 
 @Controller()
 export class AdminController {
-  constructor(private readonly adminService: AdminService) {}
+  constructor(
+    private readonly adminService: AdminService,
+    private readonly operacionService: OperacionService,
+  ) {}
 
   @MessagePattern(TCP_PATTERNS.ADMIN.PING)
   ping() {
@@ -174,5 +178,57 @@ export class AdminController {
   @MessagePattern(TCP_PATTERNS.ADMIN.ASIGNAR_CUADRILLA)
   asignarCuadrilla(@Payload() dto: AsignarCuadrillaDto) {
     return this.adminService.asignarCuadrilla(dto);
+  }
+
+  @MessagePattern(TCP_PATTERNS.ADMIN.LIST_GRUPOS_TECNICO)
+  listGruposTecnico(@Payload() dto: { usuario_id: number; page?: number; limit?: number }) {
+    return this.operacionService.gruposDelTecnico(dto.usuario_id, dto.page, dto.limit);
+  }
+
+  @MessagePattern(TCP_PATTERNS.ADMIN.GET_GRUPO_TECNICO)
+  getGrupoTecnico(@Payload() dto: { grupo_id: number; usuario_id: number }) {
+    return this.operacionService.verificarAsignacionTecnica(dto.grupo_id, dto.usuario_id);
+  }
+
+  @MessagePattern(TCP_PATTERNS.ADMIN.REGISTRAR_DERIVACION)
+  registrarDerivacion(
+    @Payload()
+    dto: {
+      grupo_id: number;
+      entidad_destino: string;
+      motivo: string;
+      evidencia_url: string;
+      usuario_id: number;
+    },
+  ) {
+    return this.operacionService.registrarDerivacion(dto);
+  }
+
+  @MessagePattern(TCP_PATTERNS.ADMIN.GET_CONFIGURACION_OPERATIVA)
+  getConfiguracionOperativa() {
+    return this.operacionService.getConfiguracion();
+  }
+
+  @MessagePattern(TCP_PATTERNS.ADMIN.UPDATE_CONFIGURACION_OPERATIVA)
+  updateConfiguracionOperativa(
+    @Payload() dto: { clave: string; valor: number; usuario_id: number },
+  ) {
+    return this.operacionService.actualizarConfiguracion(dto.clave, dto.valor, dto.usuario_id);
+  }
+
+  @MessagePattern(TCP_PATTERNS.ADMIN.ASIGNAR_MIEMBRO_CUADRILLA)
+  asignarMiembroCuadrilla(
+    @Payload() dto: { cuadrilla_id: number; usuario_id: number; es_responsable?: boolean },
+  ) {
+    return this.operacionService.asignarMiembro(
+      dto.cuadrilla_id,
+      dto.usuario_id,
+      dto.es_responsable,
+    );
+  }
+
+  @MessagePattern(TCP_PATTERNS.ADMIN.GET_INDICADORES_CUADRILLA)
+  indicadoresCuadrilla(@Payload() dto: { cuadrilla_id: number }) {
+    return this.operacionService.indicadoresCuadrilla(dto.cuadrilla_id);
   }
 }

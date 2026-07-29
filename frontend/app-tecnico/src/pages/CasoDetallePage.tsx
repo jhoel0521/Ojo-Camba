@@ -20,6 +20,7 @@ import {
   getGroup,
   getCaseTimeline,
   addActualizacion,
+  registrarDerivacion,
   type GrupoReporte,
   type Actualizacion,
 } from '../lib/tecnicoApi';
@@ -49,6 +50,12 @@ export default function CasoDetallePage() {
   const [sending, setSending] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
   const [imagen, setImagen] = useState<string | null>(null);
+  const [derivacion, setDerivacion] = useState({
+    entidad_destino: '',
+    motivo: '',
+    evidencia_url: '',
+  });
+  const [derivacionEstado, setDerivacionEstado] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const gps = useGeolocation();
@@ -117,6 +124,18 @@ export default function CasoDetallePage() {
       setError(friendlyError(err));
     } finally {
       setSending(false);
+    }
+  };
+
+  const confirmarDerivacion = async () => {
+    if (isNaN(numId)) return;
+    setDerivacionEstado('');
+    try {
+      await registrarDerivacion(numId, derivacion);
+      setDerivacion({ entidad_destino: '', motivo: '', evidencia_url: '' });
+      setDerivacionEstado('Derivación registrada para auditoría.');
+    } catch (err) {
+      setDerivacionEstado(friendlyError(err));
     }
   };
 
@@ -387,6 +406,45 @@ export default function CasoDetallePage() {
           {sending ? 'Registrando...' : 'Registrar avance'}
         </button>
       </form>
+
+      <section className="bg-perla rounded-3xl-3 p-5 mb-8 shadow-sm space-y-3">
+        <div>
+          <h3 className="font-semibold text-sm text-tierra">Confirmar derivación</h3>
+          <p className="text-xs text-arena mt-1">
+            Solo la persona responsable de la cuadrilla puede confirmar este registro.
+          </p>
+        </div>
+        <input
+          value={derivacion.entidad_destino}
+          onChange={(event) =>
+            setDerivacion({ ...derivacion, entidad_destino: event.target.value })
+          }
+          placeholder="Entidad destino (ej. CRE)"
+          className="min-h-12 bg-lienzo border border-arcilla rounded-3xl-3 px-4 py-3 text-sm text-tierra w-full"
+        />
+        <textarea
+          value={derivacion.motivo}
+          onChange={(event) => setDerivacion({ ...derivacion, motivo: event.target.value })}
+          placeholder="Motivo de la derivación"
+          rows={2}
+          className="bg-lienzo border border-arcilla rounded-3xl-3 px-4 py-3 text-sm text-tierra w-full resize-none"
+        />
+        <input
+          value={derivacion.evidencia_url}
+          onChange={(event) => setDerivacion({ ...derivacion, evidencia_url: event.target.value })}
+          placeholder="URL o referencia de evidencia"
+          className="min-h-12 bg-lienzo border border-arcilla rounded-3xl-3 px-4 py-3 text-sm text-tierra w-full"
+        />
+        {derivacionEstado && <p className="text-xs text-ladrillo">{derivacionEstado}</p>}
+        <button
+          type="button"
+          onClick={confirmarDerivacion}
+          disabled={!derivacion.entidad_destino || !derivacion.motivo || !derivacion.evidencia_url}
+          className="w-full min-h-12 bg-catedral text-perla text-sm font-medium rounded-3xl-3 px-6 disabled:opacity-50"
+        >
+          Confirmar derivación
+        </button>
+      </section>
 
       {/* Historial / bitacora */}
       <div>

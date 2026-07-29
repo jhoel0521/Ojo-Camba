@@ -3,10 +3,10 @@ const http = require('http');
 const BASE = 'http://localhost:3000';
 const IMG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
 
-function post(path, body) {
+function post(path, body, headers = {}) {
   return new Promise((resolve, reject) => {
     const data = JSON.stringify(body);
-    const req = http.request(`${BASE}${path}`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Content-Length': data.length } }, (res) => {
+    const req = http.request(`${BASE}${path}`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Content-Length': data.length, ...headers } }, (res) => {
       let out = ''; res.on('data', (c) => out += c);
       res.on('end', () => { try { resolve({ status: res.statusCode, body: JSON.parse(out) }); } catch { resolve({ status: res.statusCode, body: out }); } });
     });
@@ -14,9 +14,9 @@ function post(path, body) {
   });
 }
 
-function get(path) {
+function get(path, headers = {}) {
   return new Promise((resolve, reject) => {
-    http.get(`${BASE}${path}`, (res) => {
+    http.get(`${BASE}${path}`, { headers }, (res) => {
       let out = ''; res.on('data', (c) => out += c);
       res.on('end', () => { try { resolve({ status: res.statusCode, body: JSON.parse(out) }); } catch { resolve({ status: res.statusCode, body: out }); } });
     }).on('error', reject);
@@ -39,7 +39,7 @@ async function test() {
   });
 
   // 2. Auth register
-  let token, refreshToken, userId, email;
+  let token, refreshToken, userId, email, operadorToken;
   await assert('POST /auth/register', async () => {
     const r = await post('/auth/register', { nombre: 'GW Test', email: `gwtest${Date.now()}@test.com`, password: 'test123' });
     if (r.status !== 201 || !r.body.access_token) throw new Error(JSON.stringify(r.body));
@@ -51,6 +51,12 @@ async function test() {
   await assert('POST /auth/login', async () => {
     const r = await post('/auth/login', { email: email, password: 'test123' });
     if (r.status !== 201 || !r.body.access_token) throw new Error(JSON.stringify(r.body));
+  });
+
+  await assert('POST /auth/login operador Backoffice', async () => {
+    const r = await post('/auth/login', { email: 'admin@ojocamba.bo', password: 'admin123' });
+    if (r.status !== 201 || !r.body.access_token) throw new Error(JSON.stringify(r.body));
+    operadorToken = r.body.access_token;
   });
 
   // 4. Create report
@@ -75,7 +81,7 @@ async function test() {
 
   // 7. Admin pending
   await assert('GET /admin/reports/pending', async () => {
-    const r = await get('/admin/reports/pending');
+    const r = await get('/admin/reports/pending', { Authorization: `Bearer ${operadorToken}` });
     if (r.status !== 200 || !Array.isArray(r.body.data)) throw new Error(JSON.stringify(r.body));
   });
 
@@ -87,7 +93,11 @@ async function test() {
     groupIds.push(r.body.id);
   }
   await assert('POST /admin/groups (crear caso de obra)', async () => {
-    const r = await post('/admin/groups', { report_ids: groupIds, creado_por_usuario_id: 1 });
+    const r = await post(
+      '/admin/groups',
+      { report_ids: groupIds, creado_por_usuario_id: 1 },
+      { Authorization: `Bearer ${operadorToken}` },
+    );
     if (r.status !== 201 || !r.body.codigo_obra) throw new Error(JSON.stringify(r.body));
     grupoId = r.body.id;
   });
@@ -99,7 +109,25 @@ async function test() {
     if (r.status !== 200 || r.body.length < 1) throw new Error(JSON.stringify(r.body));
   });
 
-  // 10. Auth logout
+  // 10. ISSUE-26: un ciudadano autenticado no puede consultar trabajo técnico.
+  await assert('GET /operacion/tecnico/groups rechaza ciudadano con 403', async () => {
+    const r = await get('/operacion/tecnico/groups', { Authorization: `Bearer ${token}` });
+    if (r.status !== 403) throw new Error(JSON.stringify(r.body));
+  });
+
+  // 11. ISSUE-26: un técnico autenticado recibe solo su bandeja protegida.
+  await assert('GET /operacion/tecnico/groups permite técnico', async () => {
+    const loginTecnico = await post('/auth/login', {
+      email: 'admin@ojocamba.bo',
+      password: 'admin123',
+    });
+    const r = await get('/operacion/tecnico/groups?limit=2', {
+      Authorization: `Bearer ${loginTecnico.body.access_token}`,
+    });
+    if (r.status !== 200 || !Array.isArray(r.body.data)) throw new Error(JSON.stringify(r.body));
+  });
+
+  // 12. Auth logout
   await assert('POST /auth/logout', async () => {
     const r = await post('/auth/logout', { user_id: userId });
     if (r.status !== 201 || !r.body.ok) throw new Error(JSON.stringify(r.body));

@@ -12,6 +12,7 @@ import {
   EstadoReporte,
 } from '@ojo-camba/common';
 import { AdminService, type DashboardInsight } from './admin.service';
+import { OperacionService } from './operacion.service';
 
 function makeRepoMock() {
   return {
@@ -103,6 +104,16 @@ describe('AdminService', () => {
         { provide: getRepositoryToken(Categoria), useValue: makeRepoMock() },
         { provide: getRepositoryToken(Cuadrilla), useValue: cuadrillaRepo },
         { provide: getRepositoryToken(Especialidad), useValue: especialidadRepo },
+        {
+          provide: OperacionService,
+          useValue: {
+            validarCapacidad: jest.fn().mockResolvedValue({
+              admite_asignacion: true,
+              proyeccion: 0,
+              umbral_maximo: 10,
+            }),
+          },
+        },
         { provide: 'MS_GAMIFY', useValue: gamifyClient },
       ],
     }).compile();

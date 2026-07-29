@@ -42,7 +42,7 @@ export interface GpsFix {
 }
 
 /**
- * Construye el payload para POST /admin/groups/:id/updates a partir del
+ * Construye el payload para POST /operacion/tecnico/groups/:id/updates a partir del
  * formulario, el usuario y (opcionalmente) una correccion GPS y una foto
  * de avance capturada en base64.
  *
@@ -58,6 +58,8 @@ export function buildActualizacionPayload(
   gps?: GpsFix | null,
   imagenBase64?: string | null,
 ): ActualizacionPayload {
+  // El gateway reemplaza este valor por el usuario autenticado. Se conserva en
+  // el tipo temporalmente para no romper integraciones antiguas del cliente.
   const payload: ActualizacionPayload = {
     usuario_id,
     comentario: form.comentario.trim(),

@@ -9,8 +9,10 @@ import { GamifyController } from './gamify.controller';
 import { AsistenteController } from './asistente.controller';
 import { IaController } from './ia.controller';
 import { AiConfigurationController } from './ai-configuration.controller';
+import { OperacionController } from './operacion.controller';
 import { EventsModule } from './events/events.module';
 import { AiConfigurationGuard, BackofficeGuard } from './ai-access.guard';
+import { RolesGuard } from './roles.guard';
 
 @Module({
   imports: [
@@ -68,7 +70,8 @@ import { AiConfigurationGuard, BackofficeGuard } from './ai-access.guard';
     AsistenteController,
     IaController,
     AiConfigurationController,
+    OperacionController,
   ],
-  providers: [BackofficeGuard, AiConfigurationGuard],
+  providers: [BackofficeGuard, AiConfigurationGuard, RolesGuard],
 })
 export class AppModule {}
