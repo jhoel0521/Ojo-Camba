@@ -33,6 +33,7 @@ pids/
 # Coverage
 coverage/
 .nyc_output/
+test-results/
 
 # Editors
 .vscode/
