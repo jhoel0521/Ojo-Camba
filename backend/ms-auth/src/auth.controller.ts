@@ -2,12 +2,16 @@ import { Controller } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import { TCP_PATTERNS } from '@ojo-camba/common';
 import { AuthService } from './auth.service';
+import { AplicarSolicitudTiDto, GestionAccesosService } from './gestion-accesos.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 
 @Controller()
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly gestionAccesosService: GestionAccesosService,
+  ) {}
 
   @MessagePattern(TCP_PATTERNS.AUTH.PING)
   ping() {
@@ -57,5 +61,25 @@ export class AuthController {
   @MessagePattern(TCP_PATTERNS.AUTH.LIST_USERS)
   listUsers(@Payload() dto: { page?: number; limit?: number; q?: string }) {
     return this.authService.listUsers(dto.page, dto.limit, dto.q);
+  }
+
+  @MessagePattern(TCP_PATTERNS.AUTH.LIST_CIUDADANOS)
+  listCiudadanos(@Payload() dto: { page?: number; limit?: number; q?: string }) {
+    return this.gestionAccesosService.listCiudadanos(dto.page, dto.limit, dto.q);
+  }
+
+  @MessagePattern(TCP_PATTERNS.AUTH.LIST_ROLES_GESTIONABLES)
+  listRolesGestionables() {
+    return this.gestionAccesosService.listRolesGestionables();
+  }
+
+  @MessagePattern(TCP_PATTERNS.AUTH.APLICAR_SOLICITUD_TI)
+  aplicarSolicitudTi(@Payload() dto: AplicarSolicitudTiDto) {
+    return this.gestionAccesosService.aplicarSolicitud(dto);
+  }
+
+  @MessagePattern(TCP_PATTERNS.AUTH.LIST_SOLICITUDES_TI)
+  listSolicitudesTi(@Payload() dto: { page?: number; limit?: number }) {
+    return this.gestionAccesosService.listSolicitudes(dto.page, dto.limit);
   }
 }

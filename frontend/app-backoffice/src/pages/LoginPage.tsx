@@ -14,7 +14,7 @@ const loginSchema = z.object({
 
 type LoginForm = z.infer<typeof loginSchema>;
 
-const BACKOFFICE_ROLES = ['backoffice', 'moderador'];
+const BACKOFFICE_ROLES = ['backoffice', 'moderador', 'encargado_it', 'admin'];
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -74,7 +74,9 @@ export default function LoginPage() {
         },
       });
 
-      navigate('/');
+      navigate(
+        userRoles.some((role) => ['encargado_it', 'admin'].includes(role)) ? '/accesos' : '/',
+      );
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Error al iniciar sesion';
       if (msg.includes('401') || msg.includes('Credenciales')) {

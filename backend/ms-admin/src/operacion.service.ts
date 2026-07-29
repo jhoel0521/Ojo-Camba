@@ -8,6 +8,8 @@ import {
   EstadoReporte,
   GrupoReporte,
   Reporte,
+  ROLES,
+  UsuarioRol,
 } from '@ojo-camba/common';
 import { In, Repository } from 'typeorm';
 
@@ -50,6 +52,8 @@ export class OperacionService implements OnModuleInit {
     private readonly reporteRepo: Repository<Reporte>,
     @InjectRepository(ActualizacionCaso)
     private readonly actualizacionRepo: Repository<ActualizacionCaso>,
+    @InjectRepository(UsuarioRol)
+    private readonly usuarioRolRepo: Repository<UsuarioRol>,
   ) {}
 
   async onModuleInit() {
@@ -75,6 +79,13 @@ export class OperacionService implements OnModuleInit {
   }
 
   async asignarMiembro(cuadrillaId: number, usuarioId: number, esResponsable = false) {
+    const roles = await this.usuarioRolRepo.find({
+      where: { usuario_id: usuarioId },
+      relations: ['rol'],
+    });
+    if (!roles.some((relacion) => relacion.rol.nombre === ROLES.TECNICO)) {
+      throw new BadRequestException('El integrante de cuadrilla debe tener el rol tecnico.');
+    }
     if (esResponsable) {
       await this.miembroRepo.update({ cuadrilla_id: cuadrillaId }, { es_responsable: false });
     }

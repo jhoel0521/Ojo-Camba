@@ -13,10 +13,11 @@ import {
 } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
-import { TCP_PATTERNS } from '@ojo-camba/common';
+import { ROLES, TCP_PATTERNS } from '@ojo-camba/common';
 import { sendRpc } from './rpc.helper';
 import { EventsGateway } from './events/events.gateway';
 import { BackofficeGuard } from './ai-access.guard';
+import { RequireRoles, RolesGuard } from './roles.guard';
 import type { FastifyReply } from 'fastify';
 
 @Controller('admin')
@@ -274,11 +275,15 @@ export class AdminController {
   }
 
   @Post('cuadrillas')
+  @UseGuards(RolesGuard)
+  @RequireRoles(ROLES.ENCARGADO_IT)
   createCuadrilla(@Body() dto: { nombre: string; especialidad_id?: number }) {
     return sendRpc(this.client.send(TCP_PATTERNS.ADMIN.CREATE_CUADRILLA, dto));
   }
 
   @Patch('cuadrillas/:id')
+  @UseGuards(RolesGuard)
+  @RequireRoles(ROLES.ENCARGADO_IT)
   updateCuadrilla(
     @Param('id') id: string,
     @Body() dto: { nombre?: string; especialidad_id?: number | null; activa?: boolean },

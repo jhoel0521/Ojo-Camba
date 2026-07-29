@@ -15,7 +15,7 @@ const NAV_ITEMS = [
   { to: '/', icon: Construction, label: 'Dashboard' },
   { to: '/revisar', icon: ClipboardList, label: 'Revisar' },
   { to: '/casos', icon: FolderOpen, label: 'Casos' },
-  { to: '/usuarios', icon: Users, label: 'Usuarios' },
+  { to: '/accesos', icon: Users, label: 'Accesos y cuadrillas', itOnly: true },
   { to: '/configuracion/ia', icon: Settings2, label: 'IA y respaldos', adminOnly: true },
 ];
 
@@ -54,24 +54,30 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             (item) =>
               !item.adminOnly ||
               user?.roles.some((role) => ['encargado_it', 'admin'].includes(role)),
-          ).map(({ to, icon: Icon, label }) => {
-            const active =
-              location.pathname === to || (to !== '/' && location.pathname.startsWith(to));
-            return (
-              <NavLink
-                key={to}
-                to={to}
-                className={`flex min-h-11 items-center gap-3 px-3 py-2.5 rounded-3xl-2 text-sm font-medium transition-colors ${
-                  active
-                    ? 'bg-ladrillo/40 text-lienzo'
-                    : 'text-arena hover:text-lienzo hover:bg-ladrillo/20'
-                }`}
-              >
-                <Icon className="w-4.5 h-4.5" />
-                {label}
-              </NavLink>
-            );
-          })}
+          )
+            .filter(
+              (item) =>
+                !item.itOnly ||
+                user?.roles.some((role) => ['encargado_it', 'admin'].includes(role)),
+            )
+            .map(({ to, icon: Icon, label }) => {
+              const active =
+                location.pathname === to || (to !== '/' && location.pathname.startsWith(to));
+              return (
+                <NavLink
+                  key={to}
+                  to={to}
+                  className={`flex min-h-11 items-center gap-3 px-3 py-2.5 rounded-3xl-2 text-sm font-medium transition-colors ${
+                    active
+                      ? 'bg-ladrillo/40 text-lienzo'
+                      : 'text-arena hover:text-lienzo hover:bg-ladrillo/20'
+                  }`}
+                >
+                  <Icon className="w-4.5 h-4.5" />
+                  {label}
+                </NavLink>
+              );
+            })}
         </nav>
 
         <div className="px-3 py-4 border-t border-ladrillo/30 space-y-1">

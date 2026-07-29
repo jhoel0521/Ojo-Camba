@@ -7,6 +7,8 @@ export { Cuadrilla } from './cuadrilla.entity';
 export { CuadrillaMiembro } from './cuadrilla-miembro.entity';
 export { ConfiguracionOperativa } from './configuracion-operativa.entity';
 export { DerivacionCaso } from './derivacion-caso.entity';
+export { SolicitudTi } from './solicitud-ti.entity';
+export { SolicitudTiUsuario } from './solicitud-ti-usuario.entity';
 export { ActualizacionCaso } from './actualizacion-caso.entity';
 export { Usuario } from './usuario.entity';
 export { Rol } from './rol.entity';
