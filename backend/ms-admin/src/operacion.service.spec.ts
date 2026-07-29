@@ -7,6 +7,7 @@ import {
   ActualizacionCaso,
   GrupoReporte,
   Reporte,
+  UsuarioRol,
 } from '@ojo-camba/common';
 import { OperacionService, UMBRALES_OPERATIVOS } from './operacion.service';
 
@@ -30,6 +31,7 @@ describe('OperacionService', () => {
   let derivacionRepo: ReturnType<typeof repoMock>;
   let miembroRepo: ReturnType<typeof repoMock>;
   let actualizacionRepo: ReturnType<typeof repoMock>;
+  let usuarioRolRepo: ReturnType<typeof repoMock>;
 
   beforeEach(async () => {
     configRepo = repoMock();
@@ -37,6 +39,7 @@ describe('OperacionService', () => {
     derivacionRepo = repoMock();
     miembroRepo = repoMock();
     actualizacionRepo = repoMock();
+    usuarioRolRepo = repoMock();
     const grupoRepo = repoMock();
     const modulo = await Test.createTestingModule({
       providers: [
@@ -47,6 +50,7 @@ describe('OperacionService', () => {
         { provide: getRepositoryToken(GrupoReporte), useValue: grupoRepo },
         { provide: getRepositoryToken(Reporte), useValue: reporteRepo },
         { provide: getRepositoryToken(ActualizacionCaso), useValue: actualizacionRepo },
+        { provide: getRepositoryToken(UsuarioRol), useValue: usuarioRolRepo },
       ],
     }).compile();
     service = modulo.get(OperacionService);
@@ -105,5 +109,11 @@ describe('OperacionService', () => {
       page: 1,
       limit: 20,
     });
+  });
+
+  it('no permite agregar a una cuadrilla a una persona sin el rol tecnico', async () => {
+    usuarioRolRepo.find.mockResolvedValue([{ rol: { nombre: 'ciudadano' } }]);
+
+    await expect(service.asignarMiembro(1, 9)).rejects.toThrow('debe tener el rol tecnico');
   });
 });

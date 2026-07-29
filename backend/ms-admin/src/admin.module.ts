@@ -12,6 +12,7 @@ import {
   CuadrillaMiembro,
   ConfiguracionOperativa,
   DerivacionCaso,
+  UsuarioRol,
 } from '@ojo-camba/common';
 import { AdminController } from './admin.controller';
 import { AdminService } from './admin.service';
@@ -30,6 +31,7 @@ import { OperacionService } from './operacion.service';
       CuadrillaMiembro,
       ConfiguracionOperativa,
       DerivacionCaso,
+      UsuarioRol,
     ]),
     ClientsModule.register([
       {
