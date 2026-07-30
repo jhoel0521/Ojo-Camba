@@ -1,6 +1,21 @@
 import { cargarConfiguracion, esBaseSegura, parsearFlags } from './config';
 
 describe('protección de base de datos del simulador', () => {
+  const entornoOriginal = {
+    apiUrl: process.env.SIMULADOR_API_URL,
+    databaseUrl: process.env.SIMULADOR_DATABASE_URL,
+  };
+
+  beforeEach(() => {
+    process.env.SIMULADOR_API_URL = 'http://localhost:3000';
+    process.env.SIMULADOR_DATABASE_URL = 'postgresql://localhost/ojo_camba_demo';
+  });
+
+  afterEach(() => {
+    restaurarVariable('SIMULADOR_API_URL', entornoOriginal.apiUrl);
+    restaurarVariable('SIMULADOR_DATABASE_URL', entornoOriginal.databaseUrl);
+  });
+
   it('acepta bases demo/test por defecto', () => {
     expect(esBaseSegura('postgresql://localhost/ojo_camba_demo')).toBe(true);
     expect(esBaseSegura('postgresql://localhost/ojo_camba_test')).toBe(true);
@@ -33,3 +48,8 @@ describe('protección de base de datos del simulador', () => {
     );
   });
 });
+
+function restaurarVariable(nombre: string, valorOriginal: string | undefined): void {
+  if (valorOriginal === undefined) delete process.env[nombre];
+  else process.env[nombre] = valorOriginal;
+}
