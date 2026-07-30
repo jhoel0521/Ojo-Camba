@@ -28,6 +28,8 @@ describe('protección de base de datos del simulador', () => {
       '--permitir-base-local',
     ]);
 
-    expect(configuracion.checkpointPath).toMatch(/var[\\/]simulador[\\/]checkpoints[\\/]feria-2026\.json$/);
+    expect(configuracion.checkpointPath).toMatch(
+      /var[\\/]simulador[\\/]checkpoints[\\/]feria-2026\.json$/,
+    );
   });
 });
