@@ -15,6 +15,8 @@ import {
   UsuarioRol,
   Usuario,
   Rol,
+  VisitaCaso,
+  PropuestaVisita,
 } from '@ojo-camba/common';
 import { AdminController } from './admin.controller';
 import { AdminService } from './admin.service';
@@ -36,6 +38,8 @@ import { OperacionService } from './operacion.service';
       UsuarioRol,
       Usuario,
       Rol,
+      VisitaCaso,
+      PropuestaVisita,
     ]),
     ClientsModule.register([
       {

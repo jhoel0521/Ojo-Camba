@@ -19,9 +19,12 @@ import {
   Categoria,
   Cuadrilla,
   Especialidad,
+  EstadoCaso,
   EstadoReporte,
   Gravedad,
   TCP_PATTERNS,
+  puedeTransicionarCaso,
+  TRANSICIONES_CASO,
 } from '@ojo-camba/common';
 import {
   CreateGroupDto,
@@ -54,25 +57,21 @@ export interface FiltrosListaGrupos {
   orden?: 'recientes' | 'antiguos';
 }
 
-// Flujo obligatorio y secuencial de un Caso de Obra (trazabilidad, pedido del
-// docente): desde cada estado solo se permite avanzar al/los siguiente(s)
-// indicado(s). "Rechazado" no aparece aqui porque aplica solo a Reporte
-// individuales antes de agruparse (ver rejectReport()), nunca a un
-// GrupoReporte ya en curso.
-const TRANSICIONES_VALIDAS: Record<string, EstadoReporte[]> = {
-  [EstadoReporte.Aceptado]: [EstadoReporte.ValidacionEnCampo],
-  [EstadoReporte.ValidacionEnCampo]: [EstadoReporte.EnTrabajo],
-  [EstadoReporte.EnTrabajo]: [EstadoReporte.Finalizado],
-  [EstadoReporte.Finalizado]: [],
-};
-
 // Un caso "ocupa" a su cuadrilla mientras no esté finalizado — es la carga que
 // pondera el motor de recomendación de ms-ia.
 const ESTADOS_ACTIVOS = [
-  EstadoReporte.Aceptado,
-  EstadoReporte.ValidacionEnCampo,
-  EstadoReporte.EnTrabajo,
+  EstadoCaso.PendienteAsignacion,
+  EstadoCaso.PlanificadoVisita,
+  EstadoCaso.ValidacionCampo,
+  EstadoCaso.Reencolado,
+  EstadoCaso.EnTrabajo,
 ];
+
+function estadoReporteDesdeCaso(estado: EstadoCaso): EstadoReporte {
+  if (estado === EstadoCaso.Finalizado) return EstadoReporte.Finalizado;
+  if (estado === EstadoCaso.RechazadoCampo) return EstadoReporte.Rechazado;
+  return EstadoReporte.Aceptado;
+}
 
 const isExternalUrl = (url: string | null): boolean => url?.startsWith('http') === true;
 
@@ -201,7 +200,7 @@ export class AdminService {
       const grupo = await manager.save(
         manager.create(GrupoReporte, {
           codigo_obra: codigoObra,
-          estado_actual: EstadoReporte.Aceptado,
+          estado_actual: EstadoCaso.PendienteAsignacion,
           creado_por_usuario_id: dto.moderador_id,
           categoria_id: dto.categoria_id ?? reporte.categoria_id,
         }),
@@ -295,7 +294,7 @@ export class AdminService {
 
     const grupo = this.grupoRepo.create({
       codigo_obra: codigoObra,
-      estado_actual: EstadoReporte.Aceptado,
+      estado_actual: EstadoCaso.PendienteAsignacion,
       creado_por_usuario_id: dto.creado_por_usuario_id,
       categoria_id: categoriaFinal,
     });
@@ -332,8 +331,8 @@ export class AdminService {
     // validacion que lo use termina devolviendo 401 en vez de 400. Se usa
     // "deben" a proposito porque solo matchea la rama de BadRequestException.
     if (dto.estado_nuevo) {
-      const validos = Object.values(EstadoReporte);
-      if (!validos.includes(dto.estado_nuevo as EstadoReporte)) {
+      const validos = Object.values(EstadoCaso);
+      if (!validos.includes(dto.estado_nuevo as EstadoCaso)) {
         throw new BadRequestException(
           `Los valores de estado deben ser uno de: ${validos.join(', ')}.`,
         );
@@ -341,8 +340,10 @@ export class AdminService {
 
       // Flujo secuencial obligatorio: no basta con que el valor exista en el
       // enum, tiene que ser una transicion legal desde el estado actual.
-      const siguientesValidos = TRANSICIONES_VALIDAS[grupo.estado_actual] ?? [];
-      if (!siguientesValidos.includes(dto.estado_nuevo as EstadoReporte)) {
+      const estadoActual = grupo.estado_actual as EstadoCaso;
+      const estadoNuevo = dto.estado_nuevo as EstadoCaso;
+      const siguientesValidos = TRANSICIONES_CASO[estadoActual] ?? [];
+      if (!puedeTransicionarCaso(estadoActual, estadoNuevo)) {
         throw new BadRequestException(
           `Los cambios de estado deben seguir el flujo secuencial: no se puede pasar de "${grupo.estado_actual}" a "${dto.estado_nuevo}". ` +
             (siguientesValidos.length
@@ -394,7 +395,10 @@ export class AdminService {
       }
       await this.grupoRepo.save(grupo);
 
-      await this.reporteRepo.update({ grupo_id: dto.grupo_id }, { estado: dto.estado_nuevo });
+      await this.reporteRepo.update(
+        { grupo_id: dto.grupo_id },
+        { estado: estadoReporteDesdeCaso(dto.estado_nuevo as EstadoCaso) },
+      );
     }
 
     return {
@@ -871,8 +875,13 @@ export class AdminService {
       }
     }
 
+    const estadoAnterior = grupo.estado_actual;
     grupo.cuadrilla_id = nueva?.id ?? null;
+    if (nueva && grupo.estado_actual === EstadoCaso.PendienteAsignacion) {
+      grupo.estado_actual = EstadoCaso.PlanificadoVisita;
+    }
     await this.grupoRepo.save(grupo);
+    if (nueva) await this.operacionService.crearVisitaAlAsignarCuadrilla(grupo.id, nueva.id);
 
     const comentario = nueva
       ? anterior
@@ -884,8 +893,8 @@ export class AdminService {
       grupo_id: grupo.id,
       usuario_id: dto.usuario_id,
       comentario,
-      estado_anterior: null,
-      estado_nuevo: null,
+      estado_anterior: estadoAnterior !== grupo.estado_actual ? estadoAnterior : null,
+      estado_nuevo: estadoAnterior !== grupo.estado_actual ? grupo.estado_actual : null,
       recursos_solicitados: null,
       fecha_estimada_fin: null,
       lat_actualizada: null,
