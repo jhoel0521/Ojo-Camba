@@ -85,7 +85,7 @@ export function cargarConfiguracion(argv = process.argv.slice(2)): Configuracion
       opciones.get('manifest') ?? 'assets/simulador-historico/imagenes/manifest-images.json',
     ),
     checkpointPath: resolve(
-      opciones.get('checkpoint') ?? `.simulador-checkpoint-${identificador(semilla)}.json`,
+      opciones.get('checkpoint') ?? `var/simulador/checkpoints/${identificador(semilla)}.json`,
     ),
   };
 }

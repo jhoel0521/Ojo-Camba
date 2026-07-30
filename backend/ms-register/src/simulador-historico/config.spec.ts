@@ -17,7 +17,7 @@ describe('protección de base de datos del simulador', () => {
     expect(flags.get('permitir-imagenes-pendientes')).toBe('true');
   });
 
-  it('genera un checkpoint independiente por semilla', () => {
+  it('guarda el checkpoint de cada semilla en la carpeta ignorada del simulador', () => {
     const configuracion = cargarConfiguracion([
       '--seed',
       'feria-2026',
@@ -28,6 +28,6 @@ describe('protección de base de datos del simulador', () => {
       '--permitir-base-local',
     ]);
 
-    expect(configuracion.checkpointPath).toMatch(/\.simulador-checkpoint-feria-2026\.json$/);
+    expect(configuracion.checkpointPath).toMatch(/var[\\/]simulador[\\/]checkpoints[\\/]feria-2026\.json$/);
   });
 });

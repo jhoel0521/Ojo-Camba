@@ -25,3 +25,10 @@ Crear `.env.simulador` desde `.env.simulador.example`; contiene únicamente:
 SIMULADOR_API_URL=http://localhost:3000
 SIMULADOR_DATABASE_URL=postgresql://.../ojo_camba_demo
 ```
+
+## Salida y reanudación
+
+El comando no genera reportes JSON. Al terminar —o si falla— informa el resultado
+en consola. Para poder reanudar una corrida extensa, guarda únicamente un
+checkpoint en `var/simulador/checkpoints/`. Esa carpeta está ignorada por Git y
+solo conserva su `.gitignore`.

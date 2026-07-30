@@ -4,8 +4,6 @@ import { ApiOjoCamba } from './api';
 import { Historiador } from './historiador';
 import { cargarManifest } from './manifest';
 import { SimuladorHistorico } from './simulador';
-import { writeFile } from 'node:fs/promises';
-import { dirname, resolve } from 'node:path';
 
 async function main(): Promise<void> {
   const configuracion = cargarConfiguracion();
@@ -39,13 +37,17 @@ async function main(): Promise<void> {
     });
     const resumen = await simulador.ejecutar(checkpoint);
     const reporte = await historiador.generarReporte(corridaId);
-    const rutaReporte = resolve(
-      dirname(configuracion.checkpointPath),
-      `simulacion-${corridaId}.json`,
-    );
-    await writeFile(rutaReporte, `${JSON.stringify({ resumen, ...reporte }, null, 2)}\n`, 'utf8');
-    console.log(`Simulación ${corridaId} completada:`, resumen);
-    console.log(`Reporte de validación: ${rutaReporte}`);
+    console.log(`Simulación ${corridaId} completada.`);
+    console.table([
+      { métrica: 'Reportes creados', total: resumen.reportes },
+      { métrica: 'Casos de obra', total: resumen.grupos },
+      { métrica: 'Casos finalizados', total: resumen.finalizados },
+      { métrica: 'Casos derivados', total: resumen.derivados },
+      { métrica: 'Reportes rechazados', total: resumen.rechazados },
+      { métrica: 'Alertas de capacidad', total: reporte.alertasCapacidad },
+    ]);
+    console.table(reporte.porEstado);
+    console.log(`Checkpoint de reanudación: ${configuracion.checkpointPath}`);
   } catch (error) {
     if (!checkpoint) {
       await historiador.limpiarCorrida(`sim-${corridaId}-`);

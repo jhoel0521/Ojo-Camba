@@ -1,5 +1,6 @@
-import { readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
+import { dirname } from 'node:path';
 
 export interface CasoEnCola {
   grupoId: number;
@@ -34,6 +35,7 @@ export async function leerCheckpoint(ruta: string): Promise<Checkpoint | null> {
   return JSON.parse(await readFile(ruta, 'utf8')) as Checkpoint;
 }
 
-export function guardarCheckpoint(ruta: string, checkpoint: Checkpoint): Promise<void> {
+export async function guardarCheckpoint(ruta: string, checkpoint: Checkpoint): Promise<void> {
+  await mkdir(dirname(ruta), { recursive: true });
   return writeFile(ruta, `${JSON.stringify(checkpoint, null, 2)}\n`, 'utf8');
 }
