@@ -21,7 +21,7 @@
     "lint": "pnpm run lint:backend && pnpm run lint:frontend",
     "format": "prettier --write \"backend/**/*.ts\" \"libs/**/*.ts\" \"frontend/**/*.tsx\" \"frontend/**/*.ts\"",
     "test": "pnpm run build:libs && pnpm -r --if-present --filter \"./backend/**\" run test",
-    "typeorm": "ts-node -P tsconfig.migration.json node_modules/typeorm/cli",
+    "typeorm": "node scripts/typeorm.mjs",
     "migration:generate": "pnpm typeorm migration:generate -d libs/common/src/data-source.ts",
     "migration:run": "pnpm typeorm migration:run -d libs/common/src/data-source.ts",
     "migration:revert": "pnpm typeorm migration:revert -d libs/common/src/data-source.ts",
