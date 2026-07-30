@@ -8,7 +8,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ClientProxy } from '@nestjs/microservices';
-import { In, Repository } from 'typeorm';
+import { In, Repository, SelectQueryBuilder } from 'typeorm';
 import * as crypto from 'crypto';
 import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
 import {
@@ -32,6 +32,7 @@ import {
   UpdateCuadrillaDto,
   AsignarCuadrillaDto,
 } from './dto';
+import { OperacionService } from './operacion.service';
 
 export interface DashboardInsight {
   nivel: 'alerta' | 'atencion' | 'positivo';
@@ -43,6 +44,14 @@ export interface DashboardInsight {
 interface ImagenResult {
   buffer: Buffer;
   contentType: string;
+}
+
+export interface FiltrosListaGrupos {
+  estado?: string;
+  ficha?: string;
+  desde?: string;
+  hasta?: string;
+  orden?: 'recientes' | 'antiguos';
 }
 
 // Flujo obligatorio y secuencial de un Caso de Obra (trazabilidad, pedido del
@@ -66,6 +75,19 @@ const ESTADOS_ACTIVOS = [
 ];
 
 const isExternalUrl = (url: string | null): boolean => url?.startsWith('http') === true;
+
+function fechaInicioUtc(fecha?: string): Date | undefined {
+  if (!fecha || !/^\d{4}-\d{2}-\d{2}$/.test(fecha)) return undefined;
+  const valor = new Date(`${fecha}T00:00:00.000Z`);
+  return Number.isNaN(valor.getTime()) ? undefined : valor;
+}
+
+function fechaFinExclusivaUtc(fecha?: string): Date | undefined {
+  const valor = fechaInicioUtc(fecha);
+  if (!valor) return undefined;
+  valor.setUTCDate(valor.getUTCDate() + 1);
+  return valor;
+}
 
 function actualizacionImagePath(a: { id: number; url_imagen: string | null }): string | null {
   if (!a.url_imagen) return null;
@@ -94,6 +116,7 @@ export class AdminService {
     private readonly cuadrillaRepo: Repository<Cuadrilla>,
     @InjectRepository(Especialidad)
     private readonly especialidadRepo: Repository<Especialidad>,
+    private readonly operacionService: OperacionService,
     @Inject('MS_GAMIFY')
     private readonly gamifyClient: ClientProxy,
   ) {
@@ -258,6 +281,14 @@ export class AdminService {
       throw new BadRequestException('Solo se pueden agrupar reportes en estado Reportado');
     }
 
+    const categoriasOriginales = new Set(reportes.map((reporte) => reporte.categoria_id));
+    if (categoriasOriginales.size > 1 && !dto.categoria_id) {
+      throw new BadRequestException(
+        'Backoffice debe indicar la categoría final del triaje para agrupar reportes con categorías ciudadanas distintas',
+      );
+    }
+    const categoriaFinal = dto.categoria_id ?? reportes[0].categoria_id;
+
     const year = new Date().getFullYear();
     const count = (await this.grupoRepo.count()) + 1;
     const codigoObra = `O-${String(year).slice(-2)}-${String(count).padStart(7, '0')}`;
@@ -266,12 +297,14 @@ export class AdminService {
       codigo_obra: codigoObra,
       estado_actual: EstadoReporte.Aceptado,
       creado_por_usuario_id: dto.creado_por_usuario_id,
+      categoria_id: categoriaFinal,
     });
     await this.grupoRepo.save(grupo);
 
     await this.reporteRepo.update(dto.report_ids, {
       grupo_id: grupo.id,
       estado: EstadoReporte.Aceptado,
+      categoria_id: categoriaFinal,
     });
 
     this.logger.log(`Caso de Obra creado: ${codigoObra} con ${dto.report_ids.length} reportes`);
@@ -469,25 +502,25 @@ export class AdminService {
     return qb.getRawMany();
   }
 
-  async listGroups(page = 1, limit = 20, estado?: string) {
+  async listGroups(page = 1, limit = 20, filtros: FiltrosListaGrupos = {}) {
+    const pagina = Math.max(1, page);
+    const limite = Math.min(Math.max(1, limit), 100);
+    const orden = filtros.orden === 'antiguos' ? 'ASC' : 'DESC';
+    const totalQb = this.grupoRepo.createQueryBuilder('g');
+    this.aplicarFiltrosListaGrupos(totalQb, filtros);
+    const total = await totalQb.getCount();
+
     const qb = this.grupoRepo
       .createQueryBuilder('g')
       .leftJoin(Reporte, 'r', 'r.grupo_id = g.id')
       .addSelect('COUNT(r.id)', 'total_reportes')
-      .groupBy('g.id')
-      .orderBy('g.creado_en', 'DESC');
-
-    if (estado) {
-      qb.where('g.estado_actual = :estado', { estado });
-    }
-
-    const total = await (estado
-      ? this.grupoRepo.count({ where: { estado_actual: estado } })
-      : this.grupoRepo.count());
+      .groupBy('g.id');
+    this.aplicarFiltrosListaGrupos(qb, filtros);
+    qb.orderBy('g.creado_en', orden);
 
     const rows = await qb
-      .skip((page - 1) * limit)
-      .take(limit)
+      .skip((pagina - 1) * limite)
+      .take(limite)
       .getRawAndEntities();
 
     const data = rows.entities.map((g, i) => ({
@@ -495,7 +528,23 @@ export class AdminService {
       total_reportes: parseInt(rows.raw[i]?.total_reportes ?? '0', 10),
     }));
 
-    return { data, total, page, limit };
+    return { data, total, page: pagina, limit: limite };
+  }
+
+  private aplicarFiltrosListaGrupos(
+    qb: SelectQueryBuilder<GrupoReporte>,
+    filtros: FiltrosListaGrupos,
+  ): void {
+    if (filtros.estado) qb.andWhere('g.estado_actual = :estado', { estado: filtros.estado });
+
+    const ficha = filtros.ficha?.trim();
+    if (ficha) qb.andWhere('g.codigo_obra ILIKE :ficha', { ficha: `%${ficha}%` });
+
+    const desde = fechaInicioUtc(filtros.desde);
+    if (desde) qb.andWhere('g.creado_en >= :desde', { desde });
+
+    const hasta = fechaFinExclusivaUtc(filtros.hasta);
+    if (hasta) qb.andWhere('g.creado_en < :hasta', { hasta });
   }
 
   async getCaseTimeline(grupoId: number) {
@@ -796,6 +845,30 @@ export class AdminService {
           `Las cuadrillas asignadas deben estar activas: "${nueva.nombre}" está dada de baja.`,
         );
       }
+      if (nueva.id !== anterior?.id) {
+        const capacidad = await this.operacionService.validarCapacidad(nueva.id, grupo.id);
+        if (!capacidad.admite_asignacion) {
+          await this.actualizacionRepo.save(
+            this.actualizacionRepo.create({
+              grupo_id: grupo.id,
+              usuario_id: dto.usuario_id,
+              comentario:
+                `Solicitud de apoyo: "${nueva.nombre}" alcanzaría ${capacidad.proyeccion} ` +
+                `reportes abiertos (máximo ${capacidad.umbral_maximo}).`,
+              estado_anterior: null,
+              estado_nuevo: null,
+              recursos_solicitados: null,
+              fecha_estimada_fin: null,
+              lat_actualizada: null,
+              lng_actualizada: null,
+              url_imagen: null,
+            }),
+          );
+          throw new BadRequestException(
+            `La asignación supera el máximo de ${capacidad.umbral_maximo} reportes abiertos; se registró una solicitud de apoyo.`,
+          );
+        }
+      }
     }
 
     grupo.cuadrilla_id = nueva?.id ?? null;
@@ -829,6 +902,7 @@ export class AdminService {
       cuadrilla_id: grupo.cuadrilla_id,
       cuadrilla_nombre: nueva?.nombre ?? null,
       actualizacion_id: actualizacion.id,
+      capacidad: nueva ? await this.operacionService.validarCapacidad(nueva.id, grupo.id) : null,
     };
   }
 

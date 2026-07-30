@@ -7,6 +7,7 @@ import RevisarPage from './pages/RevisarPage';
 import CasosPage from './pages/CasosPage';
 import CasoDetallePage from './pages/CasoDetallePage';
 import UsuariosPage from './pages/UsuariosPage';
+import GestionAccesosPage from './pages/GestionAccesosPage';
 import ConfiguracionIaPage from './pages/ConfiguracionIaPage';
 
 function PlaceholderPage({ title }: { title: string }) {
@@ -17,7 +18,7 @@ function PlaceholderPage({ title }: { title: string }) {
 
 export default function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route
@@ -32,6 +33,7 @@ export default function App() {
                   <Route path="/casos/:id" element={<CasoDetallePage />} />
                   <Route path="/grupos/:id" element={<CasoDetallePage />} />
                   <Route path="/usuarios" element={<UsuariosPage />} />
+                  <Route path="/accesos" element={<GestionAccesosPage />} />
                   <Route path="/configuracion/ia" element={<ConfiguracionIaPage />} />
                   <Route path="*" element={<PlaceholderPage title="Pagina no encontrada" />} />
                 </Routes>

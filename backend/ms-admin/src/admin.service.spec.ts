@@ -12,6 +12,7 @@ import {
   EstadoReporte,
 } from '@ojo-camba/common';
 import { AdminService, type DashboardInsight } from './admin.service';
+import { OperacionService } from './operacion.service';
 
 function makeRepoMock() {
   return {
@@ -103,6 +104,16 @@ describe('AdminService', () => {
         { provide: getRepositoryToken(Categoria), useValue: makeRepoMock() },
         { provide: getRepositoryToken(Cuadrilla), useValue: cuadrillaRepo },
         { provide: getRepositoryToken(Especialidad), useValue: especialidadRepo },
+        {
+          provide: OperacionService,
+          useValue: {
+            validarCapacidad: jest.fn().mockResolvedValue({
+              admite_asignacion: true,
+              proyeccion: 0,
+              umbral_maximo: 10,
+            }),
+          },
+        },
         { provide: 'MS_GAMIFY', useValue: gamifyClient },
       ],
     }).compile();
@@ -129,8 +140,8 @@ describe('AdminService', () => {
 
     it('createGroup genera el mismo formato O-YY-NNNNNNN', async () => {
       reporteRepo.find.mockResolvedValue([
-        { id: 1, estado: EstadoReporte.Reportado },
-        { id: 2, estado: EstadoReporte.Reportado },
+        { id: 1, estado: EstadoReporte.Reportado, categoria_id: 1 },
+        { id: 2, estado: EstadoReporte.Reportado, categoria_id: 1 },
       ]);
       grupoRepo.count.mockResolvedValue(4);
 
@@ -146,8 +157,8 @@ describe('AdminService', () => {
       // Los dos reportes simulan celdas H3 distintas: el servicio no las compara,
       // solo valida existencia + estado "Reportado". El backoffice decide la cercania.
       reporteRepo.find.mockResolvedValue([
-        { id: 1, estado: EstadoReporte.Reportado, h3_res_11: 'cellA' },
-        { id: 2, estado: EstadoReporte.Reportado, h3_res_11: 'cellB' },
+        { id: 1, estado: EstadoReporte.Reportado, categoria_id: 1, h3_res_11: 'cellA' },
+        { id: 2, estado: EstadoReporte.Reportado, categoria_id: 1, h3_res_11: 'cellB' },
       ]);
       grupoRepo.count.mockResolvedValue(0);
 
@@ -164,12 +175,39 @@ describe('AdminService', () => {
 
     it('rechaza si algun reporte no esta en estado Reportado', async () => {
       reporteRepo.find.mockResolvedValue([
-        { id: 1, estado: EstadoReporte.Reportado },
-        { id: 2, estado: EstadoReporte.Aceptado },
+        { id: 1, estado: EstadoReporte.Reportado, categoria_id: 1 },
+        { id: 2, estado: EstadoReporte.Aceptado, categoria_id: 1 },
       ]);
       await expect(
         service.createGroup({ report_ids: [1, 2], creado_por_usuario_id: 1 }),
       ).rejects.toThrow(BadRequestException);
+    });
+
+    it('permite corregir categorías ciudadanas distintas con el triaje de Backoffice', async () => {
+      reporteRepo.find.mockResolvedValue([
+        { id: 1, estado: EstadoReporte.Reportado, categoria_id: 1 },
+        { id: 2, estado: EstadoReporte.Reportado, categoria_id: 2 },
+      ]);
+      grupoRepo.count.mockResolvedValue(0);
+
+      await expect(
+        service.createGroup({ report_ids: [1, 2], creado_por_usuario_id: 1, categoria_id: 1 }),
+      ).resolves.toMatchObject({ reportes_agrupados: 2 });
+      expect(reporteRepo.update).toHaveBeenCalledWith(
+        [1, 2],
+        expect.objectContaining({ categoria_id: 1 }),
+      );
+    });
+
+    it('pide el triaje final cuando las categorías ciudadanas son distintas', async () => {
+      reporteRepo.find.mockResolvedValue([
+        { id: 1, estado: EstadoReporte.Reportado, categoria_id: 1 },
+        { id: 2, estado: EstadoReporte.Reportado, categoria_id: 2 },
+      ]);
+
+      await expect(
+        service.createGroup({ report_ids: [1, 2], creado_por_usuario_id: 1 }),
+      ).rejects.toThrow('categoría final del triaje');
     });
   });
 

@@ -14,7 +14,7 @@ const loginSchema = z.object({
 
 type LoginForm = z.infer<typeof loginSchema>;
 
-const MODERATOR_ROLES = ['moderador', 'admin'];
+const BACKOFFICE_ROLES = ['backoffice', 'moderador', 'encargado_it', 'admin'];
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -58,8 +58,8 @@ export default function LoginPage() {
       }
 
       const userRoles = validateRes.roles ?? [];
-      if (!userRoles.some((r) => MODERATOR_ROLES.includes(r))) {
-        setError('No tienes permisos de moderador o administrador.');
+      if (!userRoles.some((r) => BACKOFFICE_ROLES.includes(r))) {
+        setError('No tienes permisos de Backoffice.');
         return;
       }
 
@@ -74,7 +74,9 @@ export default function LoginPage() {
         },
       });
 
-      navigate('/');
+      navigate(
+        userRoles.some((role) => ['encargado_it', 'admin'].includes(role)) ? '/accesos' : '/',
+      );
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Error al iniciar sesion';
       if (msg.includes('401') || msg.includes('Credenciales')) {

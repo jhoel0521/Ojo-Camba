@@ -15,7 +15,7 @@ const NAV_ITEMS = [
   { to: '/', icon: Construction, label: 'Dashboard' },
   { to: '/revisar', icon: ClipboardList, label: 'Revisar' },
   { to: '/casos', icon: FolderOpen, label: 'Casos' },
-  { to: '/usuarios', icon: Users, label: 'Usuarios' },
+  { to: '/accesos', icon: Users, label: 'Accesos y cuadrillas', itOnly: true },
   { to: '/configuracion/ia', icon: Settings2, label: 'IA y respaldos', adminOnly: true },
 ];
 
@@ -50,8 +50,17 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         </div>
 
         <nav className="flex-1 px-3 py-4 space-y-1">
-          {NAV_ITEMS.filter((item) => !item.adminOnly || user?.roles.includes('admin')).map(
-            ({ to, icon: Icon, label }) => {
+          {NAV_ITEMS.filter(
+            (item) =>
+              !item.adminOnly ||
+              user?.roles.some((role) => ['encargado_it', 'admin'].includes(role)),
+          )
+            .filter(
+              (item) =>
+                !item.itOnly ||
+                user?.roles.some((role) => ['encargado_it', 'admin'].includes(role)),
+            )
+            .map(({ to, icon: Icon, label }) => {
               const active =
                 location.pathname === to || (to !== '/' && location.pathname.startsWith(to));
               return (
@@ -68,8 +77,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   {label}
                 </NavLink>
               );
-            },
-          )}
+            })}
         </nav>
 
         <div className="px-3 py-4 border-t border-ladrillo/30 space-y-1">

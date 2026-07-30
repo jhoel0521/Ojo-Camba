@@ -1,9 +1,23 @@
-import { Controller, Post, Get, Patch, Body, Param, Inject, Query, Res } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Get,
+  Patch,
+  Body,
+  Param,
+  Inject,
+  Query,
+  Res,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
-import { TCP_PATTERNS } from '@ojo-camba/common';
+import { ROLES, TCP_PATTERNS } from '@ojo-camba/common';
 import { sendRpc } from './rpc.helper';
 import { EventsGateway } from './events/events.gateway';
+import { BackofficeGuard } from './ai-access.guard';
+import { RequireRoles, RolesGuard } from './roles.guard';
 import type { FastifyReply } from 'fastify';
 
 @Controller('admin')
@@ -58,6 +72,7 @@ export class AdminController {
   }
 
   @Get('reports/pending')
+  @UseGuards(BackofficeGuard)
   listPending(@Query() query: { page?: string; limit?: string }) {
     return sendRpc(
       this.client.send(TCP_PATTERNS.ADMIN.LIST_PENDING, {
@@ -68,15 +83,17 @@ export class AdminController {
   }
 
   @Post('reports/:id/accept')
+  @UseGuards(BackofficeGuard)
   async acceptReport(
     @Param('id') id: string,
+    @Req() request: { user: { user_id: number } },
     @Body()
     dto: { moderador_id: number; categoria_id?: number; grupo_id?: number; gravedad?: string },
   ) {
     const result = await sendRpc(
       this.client.send(TCP_PATTERNS.ADMIN.ACCEPT_REPORT, {
         report_id: parseInt(id, 10),
-        moderador_id: dto.moderador_id,
+        moderador_id: request.user.user_id,
         categoria_id: dto.categoria_id,
         grupo_id: dto.grupo_id,
         gravedad: dto.gravedad,
@@ -89,6 +106,7 @@ export class AdminController {
   }
 
   @Post('reports/:id/reject')
+  @UseGuards(BackofficeGuard)
   async rejectReport(@Param('id') id: string) {
     const result = await sendRpc(
       this.client.send(TCP_PATTERNS.ADMIN.REJECT_REPORT, { report_id: parseInt(id, 10) }),
@@ -99,8 +117,17 @@ export class AdminController {
   }
 
   @Post('groups')
-  async createGroup(@Body() dto: { report_ids: number[]; creado_por_usuario_id: number }) {
-    const result = await sendRpc(this.client.send(TCP_PATTERNS.ADMIN.CREATE_GROUP, dto));
+  @UseGuards(BackofficeGuard)
+  async createGroup(
+    @Req() request: { user: { user_id: number } },
+    @Body() dto: { report_ids: number[]; creado_por_usuario_id: number; categoria_id?: number },
+  ) {
+    const result = await sendRpc(
+      this.client.send(TCP_PATTERNS.ADMIN.CREATE_GROUP, {
+        ...dto,
+        creado_por_usuario_id: request.user.user_id,
+      }),
+    );
     // Cada reporte agrupado sale de las bandejas de todos los moderadores.
     dto.report_ids.forEach((rid) => this.events.emitReportResolved(rid));
     this.events.emitStatsUpdate(null);
@@ -174,12 +201,27 @@ export class AdminController {
   }
 
   @Get('groups')
-  listGroups(@Query() query: { page?: string; limit?: string; estado?: string }) {
+  listGroups(
+    @Query()
+    query: {
+      page?: string;
+      limit?: string;
+      estado?: string;
+      ficha?: string;
+      desde?: string;
+      hasta?: string;
+      orden?: 'recientes' | 'antiguos';
+    },
+  ) {
     return sendRpc(
       this.client.send(TCP_PATTERNS.ADMIN.LIST_GROUPS, {
         page: query.page ? parseInt(query.page, 10) : undefined,
         limit: query.limit ? parseInt(query.limit, 10) : undefined,
         estado: query.estado || undefined,
+        ficha: query.ficha || undefined,
+        desde: query.desde || undefined,
+        hasta: query.hasta || undefined,
+        orden: query.orden === 'antiguos' ? 'antiguos' : 'recientes',
       }),
     );
   }
@@ -248,11 +290,15 @@ export class AdminController {
   }
 
   @Post('cuadrillas')
+  @UseGuards(RolesGuard)
+  @RequireRoles(ROLES.ENCARGADO_IT)
   createCuadrilla(@Body() dto: { nombre: string; especialidad_id?: number }) {
     return sendRpc(this.client.send(TCP_PATTERNS.ADMIN.CREATE_CUADRILLA, dto));
   }
 
   @Patch('cuadrillas/:id')
+  @UseGuards(RolesGuard)
+  @RequireRoles(ROLES.ENCARGADO_IT)
   updateCuadrilla(
     @Param('id') id: string,
     @Body() dto: { nombre?: string; especialidad_id?: number | null; activa?: boolean },

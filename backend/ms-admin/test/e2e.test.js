@@ -132,6 +132,12 @@ async function test() {
   });
 
   console.log('\n=== FASE 12.7: CU-14 Cambiar estado del Caso ===');
+  await assert('update_case a ValidacionEnCampo', async () => {
+    const r = await firstValueFrom(admin.send('admin.update_case', {
+      grupo_id: grupoId, usuario_id: 2, estado_nuevo: 'ValidacionEnCampo', comentario: 'Validando en terreno',
+    }).pipe(timeout(5000)));
+    if (r.estado_nuevo !== 'ValidacionEnCampo') throw new Error(r.estado_nuevo);
+  });
   await assert('update_case a EnTrabajo', async () => {
     const r = await firstValueFrom(admin.send('admin.update_case', {
       grupo_id: grupoId, usuario_id: 2, estado_nuevo: 'EnTrabajo', comentario: 'Iniciando reparacion',
@@ -162,7 +168,10 @@ async function test() {
   });
   await assert('get_case_timeline devuelve cronologico', async () => {
     const r = await firstValueFrom(admin.send('admin.get_case_timeline', { grupo_id: grupoId }).pipe(timeout(5000)));
-    if (r.length < 4) throw new Error(`solo ${r.length} actualizaciones`);
+    if (r.length < 6) throw new Error(`solo ${r.length} actualizaciones`);
+    if (r.some((actualizacion, index) => index > 0 && actualizacion.creado_en < r[index - 1].creado_en)) {
+      throw new Error('las actualizaciones no estan ordenadas cronologicamente');
+    }
   });
   await assert('get_group no existente lanza error', async () => {
     const r = await firstValueFrom(admin.send('admin.get_group', { grupo_id: 99999 }).pipe(timeout(5000)));

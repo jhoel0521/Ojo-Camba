@@ -42,8 +42,9 @@ export interface Actualizacion {
   url_imagen: string | null;
   recursos_solicitados: string | null;
   fecha_estimada_fin: string | null;
-  lat_actualizada: number | null;
-  lng_actualizada: number | null;
+  /** PostgreSQL devuelve columnas numeric como cadenas en algunas respuestas HTTP. */
+  lat_actualizada: number | string | null;
+  lng_actualizada: number | string | null;
   creado_en: string;
 }
 
@@ -169,10 +170,20 @@ export async function createGroup(report_ids: number[], creado_por_usuario_id: n
 export async function listGroups(
   page = 1,
   limit = 20,
-  estado?: string,
+  filtros: {
+    estado?: string;
+    ficha?: string;
+    desde?: string;
+    hasta?: string;
+    orden?: 'recientes' | 'antiguos';
+  } = {},
 ): Promise<PaginatedResponse<GrupoReporte>> {
   const q = new URLSearchParams({ page: String(page), limit: String(limit) });
-  if (estado) q.set('estado', estado);
+  if (filtros.estado) q.set('estado', filtros.estado);
+  if (filtros.ficha) q.set('ficha', filtros.ficha);
+  if (filtros.desde) q.set('desde', filtros.desde);
+  if (filtros.hasta) q.set('hasta', filtros.hasta);
+  if (filtros.orden === 'antiguos') q.set('orden', filtros.orden);
   return fetchAPI<PaginatedResponse<GrupoReporte>>(`/admin/groups?${q.toString()}`);
 }
 

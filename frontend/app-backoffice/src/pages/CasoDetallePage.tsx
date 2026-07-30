@@ -42,6 +42,20 @@ const updateSchema = z.object({
 
 type UpdateForm = z.infer<typeof updateSchema>;
 
+function formatUpdatedCoordinates(
+  lat: Actualizacion['lat_actualizada'],
+  lng: Actualizacion['lng_actualizada'],
+): string {
+  const latNumber = Number(lat);
+  const lngNumber = Number(lng);
+
+  if (!Number.isFinite(latNumber) || !Number.isFinite(lngNumber)) {
+    return 'Coordenadas no disponibles';
+  }
+
+  return `${latNumber.toFixed(5)}, ${lngNumber.toFixed(5)}`;
+}
+
 // Flujo secuencial obligatorio — debe coincidir con TRANSICIONES_VALIDAS en
 // backend/ms-admin/src/admin.service.ts. Copia local porque el frontend no
 // importa @ojo-camba/common (arrastraria dependencias de TypeORM al bundle).
@@ -348,8 +362,8 @@ export default function CasoDetallePage() {
                     {(a.lat_actualizada != null || a.lng_actualizada != null) && (
                       <p className="text-xs text-arena mt-0.5 flex items-center gap-1">
                         <MapPin className="w-3 h-3 shrink-0" />
-                        GPS actualizado: {a.lat_actualizada?.toFixed(5)},{' '}
-                        {a.lng_actualizada?.toFixed(5)}
+                        GPS actualizado:{' '}
+                        {formatUpdatedCoordinates(a.lat_actualizada, a.lng_actualizada)}
                       </p>
                     )}
                     <p className="text-[10px] text-arena mt-1.5">

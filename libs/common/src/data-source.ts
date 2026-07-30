@@ -7,6 +7,9 @@ import { GrupoReporte } from './entities/grupo-reporte.entity';
 import { Categoria } from './entities/categoria.entity';
 import { Especialidad } from './entities/especialidad.entity';
 import { Cuadrilla } from './entities/cuadrilla.entity';
+import { CuadrillaMiembro } from './entities/cuadrilla-miembro.entity';
+import { ConfiguracionOperativa } from './entities/configuracion-operativa.entity';
+import { DerivacionCaso } from './entities/derivacion-caso.entity';
 import { Dispositivo } from './entities/dispositivo.entity';
 import { ActualizacionCaso } from './entities/actualizacion-caso.entity';
 import { Usuario } from './entities/usuario.entity';
@@ -17,6 +20,8 @@ import { Nivel } from './entities/nivel.entity';
 import { HistorialPuntos } from './entities/historial-puntos.entity';
 import { PingLog } from './entities/ping-log.entity';
 import { AiProviderConfig } from './entities/ai-provider-config.entity';
+import { SolicitudTi } from './entities/solicitud-ti.entity';
+import { SolicitudTiUsuario } from './entities/solicitud-ti-usuario.entity';
 
 config({ path: './backend/ms-auth/.env' });
 
@@ -37,6 +42,9 @@ export const AppDataSource = new DataSource({
     Categoria,
     Especialidad,
     Cuadrilla,
+    CuadrillaMiembro,
+    ConfiguracionOperativa,
+    DerivacionCaso,
     Dispositivo,
     ActualizacionCaso,
     Usuario,
@@ -47,6 +55,8 @@ export const AppDataSource = new DataSource({
     HistorialPuntos,
     PingLog,
     AiProviderConfig,
+    SolicitudTi,
+    SolicitudTiUsuario,
   ],
   migrations,
 });

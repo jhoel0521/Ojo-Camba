@@ -9,9 +9,16 @@ import {
   Categoria,
   Cuadrilla,
   Especialidad,
+  CuadrillaMiembro,
+  ConfiguracionOperativa,
+  DerivacionCaso,
+  UsuarioRol,
+  Usuario,
+  Rol,
 } from '@ojo-camba/common';
 import { AdminController } from './admin.controller';
 import { AdminService } from './admin.service';
+import { OperacionService } from './operacion.service';
 
 @Module({
   imports: [
@@ -23,6 +30,12 @@ import { AdminService } from './admin.service';
       Categoria,
       Cuadrilla,
       Especialidad,
+      CuadrillaMiembro,
+      ConfiguracionOperativa,
+      DerivacionCaso,
+      UsuarioRol,
+      Usuario,
+      Rol,
     ]),
     ClientsModule.register([
       {
@@ -36,6 +49,6 @@ import { AdminService } from './admin.service';
     ]),
   ],
   controllers: [AdminController],
-  providers: [AdminService],
+  providers: [AdminService, OperacionService],
 })
 export class AdminModule {}

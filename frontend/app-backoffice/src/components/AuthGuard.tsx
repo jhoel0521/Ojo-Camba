@@ -3,7 +3,7 @@ import { useAuthStore } from '../store/authStore';
 import { useEffect, useState } from 'react';
 import { fetchAPI } from '../lib/api';
 
-const MODERATOR_ROLES = ['moderador', 'admin'];
+const BACKOFFICE_ROLES = ['backoffice', 'moderador', 'encargado_it', 'admin'];
 
 export default function AuthGuard({ children }: { children: React.ReactNode }) {
   const { user, isLoggedIn, login, logout } = useAuthStore();
@@ -25,7 +25,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
       .then((res) => {
         if (res.valid) {
           const userRoles = res.roles ?? [];
-          if (userRoles.some((r) => MODERATOR_ROLES.includes(r))) {
+          if (userRoles.some((r) => BACKOFFICE_ROLES.includes(r))) {
             login({
               access_token: token,
               refresh_token: localStorage.getItem('ojo_camba_admin_refresh') ?? '',
@@ -59,13 +59,13 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  if (denied || (user?.roles && !user.roles.some((r) => MODERATOR_ROLES.includes(r)))) {
+  if (denied || (user?.roles && !user.roles.some((r) => BACKOFFICE_ROLES.includes(r)))) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-lienzo font-pirai p-4">
         <div className="text-center max-w-sm">
           <h1 className="text-xl font-semibold text-tierra mb-2">Acceso denegado</h1>
           <p className="text-sm text-arena mb-6">
-            Esta aplicacion requiere permisos de moderador o administrador.
+            Esta aplicacion requiere permisos de Backoffice.
           </p>
           <button
             onClick={() => {

@@ -80,10 +80,12 @@ async function test() {
     if (!r[0].h3_cell || !r[0].count) throw new Error('formato invalido');
   });
 
-  // 7. Imagen en MinIO
-  await assert('Imagen accesible via MinIO', () => {
+  // 7. Imagen gestionada por MinIO y expuesta por el Gateway HTTP.
+  // El contrato TCP devuelve una ruta relativa; solo el gateway conoce el origen HTTP.
+  await assert('Imagen accesible via Gateway', () => {
     return new Promise((resolve, reject) => {
-      http.get(report.url_imagen, (res) => {
+      const imageUrl = new URL(report.url_imagen, 'http://localhost:3000');
+      http.get(imageUrl, (res) => {
         if (res.statusCode !== 200) reject(new Error('HTTP ' + res.statusCode));
         else resolve();
       }).on('error', reject);

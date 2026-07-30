@@ -13,6 +13,10 @@ async function assert(desc, fn) {
 const send = (client, pattern, payload) =>
   firstValueFrom(client.send(pattern, payload).pipe(timeout(5000)));
 
+// premio_reporte.report_id es global. El rango se mantiene dentro de int32 y
+// evita que ejecuciones consecutivas reutilicen los mismos premios.
+const reportIdBase = (Date.now() % 20_000_000) * 100;
+
 async function registrarUsuario() {
   const email = `gamify-${Date.now()}-${Math.random().toString(36).slice(2)}@test.com`;
   const reg = await send(auth, 'auth.register', { nombre: 'Tester Gamify', email, password: 'secret123' });
@@ -44,14 +48,16 @@ async function test() {
 
   console.log('\n=== FASE G.2: Otorgar puntos sin cruzar umbral ===');
   const userA = await registrarUsuario();
+  const reportA1 = reportIdBase + 1;
+  const reportA2 = reportIdBase + 2;
   await assert('award_points otorga puntos (null -> nivel base Bronce)', async () => {
-    const r = await send(gamify, 'gamify.award_points', { user_id: userA, report_id: 1001 });
+    const r = await send(gamify, 'gamify.award_points', { user_id: userA, report_id: reportA1 });
     if (r.ya_otorgado !== false || r.puntos !== 10 || !r.nivel || r.nivel.nombre !== 'Bronce') {
       throw new Error(JSON.stringify(r));
     }
   });
   await assert('award_points NO sube de nivel por debajo del umbral (20 < 50)', async () => {
-    const r = await send(gamify, 'gamify.award_points', { user_id: userA, report_id: 1002 });
+    const r = await send(gamify, 'gamify.award_points', { user_id: userA, report_id: reportA2 });
     if (r.puntos !== 20 || r.subio_de_nivel !== false || r.nivel.nombre !== 'Bronce') {
       throw new Error(JSON.stringify(r));
     }
@@ -59,7 +65,7 @@ async function test() {
 
   console.log('\n=== FASE G.3: Idempotencia ===');
   await assert('mismo report_id no suma dos veces (conserva puntos)', async () => {
-    const r = await send(gamify, 'gamify.award_points', { user_id: userA, report_id: 1001 });
+    const r = await send(gamify, 'gamify.award_points', { user_id: userA, report_id: reportA1 });
     if (r.ya_otorgado !== true || r.puntos !== 20) throw new Error(JSON.stringify(r));
   });
 
@@ -81,7 +87,7 @@ async function test() {
   console.log('\n=== FASE G.6: Salto de varios niveles de golpe ===');
   const userB = await registrarUsuario();
   await assert('award_points salta de Bronce directo a Oro (>=200)', async () => {
-    const r = await send(gamify, 'gamify.award_points', { user_id: userB, puntos: 250, report_id: 2001 });
+    const r = await send(gamify, 'gamify.award_points', { user_id: userB, puntos: 250, report_id: reportIdBase + 3 });
     if (r.puntos !== 250 || r.subio_de_nivel !== true || r.nivel.nombre !== 'Oro') throw new Error(JSON.stringify(r));
   });
   await assert('get_user_stats en nivel maximo: sin siguiente, 100%', async () => {
