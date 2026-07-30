@@ -120,7 +120,24 @@ function siguienteEstado(actual: EstadoReporte): EstadoReporte | null {
 // El estado final de cada Caso de Obra emerge de la cadena de eventos — nunca
 // se decide de antemano (a diferencia del seed anterior, que elegía el estado
 // final primero y backdateaba una cadena retroactiva para que "cupiera").
-const DIAS_SIMULACION = 700;
+const DIAS_SIMULACION_POR_DEFECTO = 700;
+const DIAS_SIMULACION_MAXIMOS = 3650;
+
+function resolverDiasSimulacion(): number {
+  const indice = process.argv.indexOf('--days');
+  const valor = indice >= 0 ? process.argv[indice + 1] : DIAS_SIMULACION_POR_DEFECTO;
+  const dias = Number(valor);
+
+  if (!Number.isInteger(dias) || dias < 1 || dias > DIAS_SIMULACION_MAXIMOS) {
+    throw new Error(
+      `--days debe ser un entero entre 1 y ${DIAS_SIMULACION_MAXIMOS}; recibido: ${valor ?? '(sin valor)'}`,
+    );
+  }
+
+  return dias;
+}
+
+const DIAS_SIMULACION = resolverDiasSimulacion();
 const P_REVISION_DIARIA = 0.35; // ~2.9 dias de espera promedio para revisar un Reportado
 const TASA_ACEPTACION = 0.85;
 const TASA_AGRUPAMIENTO = 0.8; // del resto queda Aceptado suelto, permanentemente

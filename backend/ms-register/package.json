@@ -7,6 +7,7 @@
     "build": "nest build",
     "start": "node dist/main",
     "seed": "ts-node src/seed.ts",
+    "seed:historical": "ts-node src/seed.ts --days 2190",
     "sync": "ts-node src/sync.ts",
     "lint": "eslint \"{src,test}/**/*.ts\" --ext .ts",
     "test": "jest"
