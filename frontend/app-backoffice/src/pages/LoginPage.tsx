@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { MapPin, Mail, Lock, LogIn, AlertTriangle } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { fetchAPI } from '../lib/api';
+import { rutaInicial, tieneAccesoAlBackoffice } from '../lib/areas';
 
 const loginSchema = z.object({
   email: z.string().email('Email invalido'),
@@ -13,8 +14,6 @@ const loginSchema = z.object({
 });
 
 type LoginForm = z.infer<typeof loginSchema>;
-
-const BACKOFFICE_ROLES = ['backoffice', 'moderador', 'encargado_it', 'admin'];
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -58,8 +57,8 @@ export default function LoginPage() {
       }
 
       const userRoles = validateRes.roles ?? [];
-      if (!userRoles.some((r) => BACKOFFICE_ROLES.includes(r))) {
-        setError('No tienes permisos de Backoffice.');
+      if (!tieneAccesoAlBackoffice(userRoles)) {
+        setError('Tu cuenta no tiene un area asignada en el BackOffice.');
         return;
       }
 
@@ -74,9 +73,9 @@ export default function LoginPage() {
         },
       });
 
-      navigate(
-        userRoles.some((role) => ['encargado_it', 'admin'].includes(role)) ? '/accesos' : '/',
-      );
+      // Cada perfil aterriza en su area; con varios roles y sin eleccion
+      // previa, rutaInicial() devuelve /areas para que elija (ISSUE-30).
+      navigate(rutaInicial(userRoles), { replace: true });
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Error al iniciar sesion';
       if (msg.includes('401') || msg.includes('Credenciales')) {

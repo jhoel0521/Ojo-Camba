@@ -7,16 +7,21 @@ import {
   LogOut,
   Construction,
   Settings2,
+  Repeat,
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
+import { areasDisponibles, olvidarArea, puedeEntrar } from '../lib/areas';
 import Asistente from './Asistente';
 
+// Que rol ve cada entrada lo decide lib/areas.ts (misma matriz que usa el
+// guard de rutas), no banderas sueltas por item: antes el menu y AuthGuard
+// tenian listas de roles distintas y se desincronizaron (ISSUE-30).
 const NAV_ITEMS = [
-  { to: '/', icon: Construction, label: 'Dashboard' },
-  { to: '/revisar', icon: ClipboardList, label: 'Revisar' },
+  { to: '/', icon: Construction, label: 'Panel estrategico' },
+  { to: '/revisar', icon: ClipboardList, label: 'Bandeja' },
   { to: '/casos', icon: FolderOpen, label: 'Casos' },
-  { to: '/accesos', icon: Users, label: 'Accesos y cuadrillas', itOnly: true },
-  { to: '/configuracion/ia', icon: Settings2, label: 'IA y respaldos', adminOnly: true },
+  { to: '/accesos', icon: Users, label: 'Accesos y cuadrillas' },
+  { to: '/configuracion/ia', icon: Settings2, label: 'IA y respaldos' },
 ];
 
 export default function Layout({ children }: { children: React.ReactNode }) {
@@ -24,7 +29,11 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
 
+  const itemsVisibles = NAV_ITEMS.filter((item) => puedeEntrar(item.to, user?.roles));
+  const puedeCambiarArea = areasDisponibles(user?.roles).length > 1;
+
   const handleLogout = () => {
+    olvidarArea();
     logout();
     navigate('/login');
   };
@@ -50,34 +59,24 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         </div>
 
         <nav className="flex-1 px-3 py-4 space-y-1">
-          {NAV_ITEMS.filter(
-            (item) =>
-              !item.adminOnly ||
-              user?.roles.some((role) => ['encargado_it', 'admin'].includes(role)),
-          )
-            .filter(
-              (item) =>
-                !item.itOnly ||
-                user?.roles.some((role) => ['encargado_it', 'admin'].includes(role)),
-            )
-            .map(({ to, icon: Icon, label }) => {
-              const active =
-                location.pathname === to || (to !== '/' && location.pathname.startsWith(to));
-              return (
-                <NavLink
-                  key={to}
-                  to={to}
-                  className={`flex min-h-11 items-center gap-3 px-3 py-2.5 rounded-3xl-2 text-sm font-medium transition-colors ${
-                    active
-                      ? 'bg-ladrillo/40 text-lienzo'
-                      : 'text-arena hover:text-lienzo hover:bg-ladrillo/20'
-                  }`}
-                >
-                  <Icon className="w-4.5 h-4.5" />
-                  {label}
-                </NavLink>
-              );
-            })}
+          {itemsVisibles.map(({ to, icon: Icon, label }) => {
+            const active =
+              location.pathname === to || (to !== '/' && location.pathname.startsWith(to));
+            return (
+              <NavLink
+                key={to}
+                to={to}
+                className={`flex min-h-11 items-center gap-3 px-3 py-2.5 rounded-3xl-2 text-sm font-medium transition-colors ${
+                  active
+                    ? 'bg-ladrillo/40 text-lienzo'
+                    : 'text-arena hover:text-lienzo hover:bg-ladrillo/20'
+                }`}
+              >
+                <Icon className="w-4.5 h-4.5" />
+                {label}
+              </NavLink>
+            );
+          })}
         </nav>
 
         <div className="px-3 py-4 border-t border-ladrillo/30 space-y-1">
@@ -86,6 +85,15 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               <p className="text-lienzo font-medium truncate">{user.nombre}</p>
               <p className="truncate">{user.email}</p>
             </div>
+          )}
+          {puedeCambiarArea && (
+            <NavLink
+              to="/areas"
+              className="flex min-h-11 w-full items-center gap-3 px-3 py-2.5 rounded-3xl-2 text-sm font-medium text-arena transition-colors hover:bg-ladrillo/20 hover:text-lienzo"
+            >
+              <Repeat className="w-4.5 h-4.5" />
+              Cambiar de area
+            </NavLink>
           )}
           <button
             onClick={handleLogout}
