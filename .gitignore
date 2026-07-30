@@ -12,6 +12,11 @@ build/
 .env
 .env.local
 .env.*.local
+backend/ms-register/.env.simulador
+
+# Estado y resultados locales del simulador histórico
+backend/ms-register/.simulador-checkpoint*.json
+backend/ms-register/simulacion-*.json
 
 # Logs
 *.log
@@ -28,6 +33,7 @@ pids/
 # Coverage
 coverage/
 .nyc_output/
+test-results/
 
 # Editors
 .vscode/

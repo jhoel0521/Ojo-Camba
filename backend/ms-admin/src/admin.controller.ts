@@ -61,8 +61,19 @@ export class AdminController {
   }
 
   @MessagePattern(TCP_PATTERNS.ADMIN.LIST_GROUPS)
-  listGroups(@Payload() dto: { page?: number; limit?: number; estado?: string }) {
-    return this.adminService.listGroups(dto.page, dto.limit, dto.estado);
+  listGroups(
+    @Payload()
+    dto: {
+      page?: number;
+      limit?: number;
+      estado?: string;
+      ficha?: string;
+      desde?: string;
+      hasta?: string;
+      orden?: 'recientes' | 'antiguos';
+    },
+  ) {
+    return this.adminService.listGroups(dto.page, dto.limit, dto);
   }
 
   @MessagePattern(TCP_PATTERNS.ADMIN.GET_CASE_TIMELINE)

@@ -1,0 +1,163 @@
+{
+  "version": 1,
+  "contexto": {
+    "ciudad": "Santa Cruz de la Sierra",
+    "meses_lluviosos": [11, 12, 1, 2, 3],
+    "regla": "Una imagen con temporada.solo_lluviosa=true no puede ser seleccionada fuera de los meses_lluviosos."
+  },
+  "imagenes": [
+    {
+      "id": "alcantarillado-01",
+      "archivo": "alcantarillado/1.jpg",
+      "categoria": "alcantarillado",
+      "triaje": { "gravedad": "Alta", "resultado": "aceptar", "destino": "empresa_agua", "motivo": "Desborde de agua desde una tapa de alcantarilla." },
+      "temporada": { "solo_lluviosa": true },
+      "origen": "Pendiente de documentar por el equipo",
+      "estado_autorizacion": "pendiente"
+    },
+    {
+      "id": "alcantarillado-02",
+      "archivo": "alcantarillado/2.jpg",
+      "categoria": "alcantarillado",
+      "triaje": { "gravedad": "Alta", "resultado": "aceptar", "destino": "cuadrilla_alcantarillado", "motivo": "Boca de inspección abierta, obstruida y sin protección segura." },
+      "temporada": { "solo_lluviosa": false },
+      "origen": "Pendiente de documentar por el equipo",
+      "estado_autorizacion": "pendiente"
+    },
+    {
+      "id": "alcantarillado-03",
+      "archivo": "alcantarillado/3.jpg",
+      "categoria": "alcantarillado",
+      "triaje": { "gravedad": "Alta", "resultado": "aceptar", "destino": "cuadrilla_alcantarillado", "motivo": "Sumidero o cámara colapsada en vía no pavimentada." },
+      "temporada": { "solo_lluviosa": false },
+      "origen": "Pendiente de documentar por el equipo",
+      "estado_autorizacion": "pendiente"
+    },
+    {
+      "id": "bache-01",
+      "archivo": "bache/1.jpg",
+      "categoria": "bache",
+      "triaje": { "gravedad": "Alta", "resultado": "aceptar", "destino": "cuadrilla_bacheo", "motivo": "Bache profundo con agua acumulada en vía de circulación." },
+      "temporada": { "solo_lluviosa": true },
+      "origen": "Pendiente de documentar por el equipo",
+      "estado_autorizacion": "pendiente"
+    },
+    {
+      "id": "bache-02",
+      "archivo": "bache/2.jpg",
+      "categoria": "bache",
+      "triaje": { "gravedad": "Alta", "resultado": "aceptar", "destino": "cuadrilla_bacheo", "motivo": "Bache profundo e inundado en avenida." },
+      "temporada": { "solo_lluviosa": true },
+      "origen": "Pendiente de documentar por el equipo",
+      "estado_autorizacion": "pendiente"
+    },
+    {
+      "id": "bache-03",
+      "archivo": "bache/3.jpg",
+      "categoria": "bache",
+      "triaje": { "gravedad": "Media", "resultado": "aceptar", "destino": "cuadrilla_bacheo", "motivo": "Deterioro y parche provisorio sobre el carril." },
+      "temporada": { "solo_lluviosa": false },
+      "origen": "Pendiente de documentar por el equipo",
+      "estado_autorizacion": "pendiente"
+    },
+    {
+      "id": "bache-04",
+      "archivo": "bache/4.jpg",
+      "categoria": "bache",
+      "triaje": { "gravedad": "Media", "resultado": "aceptar", "destino": "cuadrilla_bacheo", "motivo": "Pavimento erosionado con varios baches y superficie húmeda." },
+      "temporada": { "solo_lluviosa": true },
+      "origen": "Pendiente de documentar por el equipo",
+      "estado_autorizacion": "pendiente"
+    },
+    {
+      "id": "luminaria-01",
+      "archivo": "luminaria/1.jpg",
+      "categoria": "luminaria",
+      "triaje": { "gravedad": "Baja", "resultado": "rechazar", "destino": null, "motivo": "La fotografía nocturna no permite comprobar una falla de alumbrado." },
+      "temporada": { "solo_lluviosa": false },
+      "origen": "Pendiente de documentar por el equipo",
+      "estado_autorizacion": "pendiente"
+    },
+    {
+      "id": "luminaria-02",
+      "archivo": "luminaria/2.jpg",
+      "categoria": "luminaria",
+      "triaje": { "gravedad": "Alta", "resultado": "aceptar", "destino": "CREE", "motivo": "Luminaria y cableado expuestos en poste de red eléctrica." },
+      "temporada": { "solo_lluviosa": false },
+      "origen": "Pendiente de documentar por el equipo",
+      "estado_autorizacion": "pendiente"
+    },
+    {
+      "id": "luminaria-03",
+      "archivo": "luminaria/3.jpg",
+      "categoria": "luminaria",
+      "triaje": { "gravedad": "Media", "resultado": "aceptar", "destino": "CREE", "motivo": "Nido y cableado suelto dentro de luminaria pública." },
+      "temporada": { "solo_lluviosa": false },
+      "origen": "Pendiente de documentar por el equipo",
+      "estado_autorizacion": "pendiente"
+    },
+    {
+      "id": "trafico-01",
+      "archivo": "luminaria/4.jpg",
+      "categoria": "trafico",
+      "triaje": { "gravedad": "Alta", "resultado": "derivar", "destino": "transito_y_CREE", "motivo": "Choque con poste de alumbrado derribado que obstruye la calzada." },
+      "temporada": { "solo_lluviosa": false },
+      "origen": "Pendiente de documentar por el equipo",
+      "estado_autorizacion": "pendiente"
+    },
+    {
+      "id": "emergencia-01",
+      "archivo": "otro/1.jpg",
+      "categoria": "otro",
+      "triaje": { "gravedad": "Emergencia", "resultado": "derivar", "destino": "bomberos", "motivo": "Incendio activo: requiere atención de emergencia, no una cuadrilla municipal." },
+      "temporada": { "solo_lluviosa": false },
+      "origen": "Pendiente de documentar por el equipo",
+      "estado_autorizacion": "pendiente"
+    },
+    {
+      "id": "trafico-02",
+      "archivo": "otro/2.jpg",
+      "categoria": "trafico",
+      "triaje": { "gravedad": "Alta", "resultado": "derivar", "destino": "transito", "motivo": "Siniestro vehicular que requiere control de tránsito y seguridad vial." },
+      "temporada": { "solo_lluviosa": false },
+      "origen": "Pendiente de documentar por el equipo",
+      "estado_autorizacion": "pendiente"
+    },
+    {
+      "id": "residuos-01",
+      "archivo": "residuos/1.jpg",
+      "categoria": "residuos",
+      "triaje": { "gravedad": "Media", "resultado": "aceptar", "destino": "aseo_urbano", "motivo": "Microbasural con neumáticos y residuos dispersos." },
+      "temporada": { "solo_lluviosa": false },
+      "origen": "Pendiente de documentar por el equipo",
+      "estado_autorizacion": "pendiente"
+    },
+    {
+      "id": "residuos-02",
+      "archivo": "residuos/2.jpg",
+      "categoria": "residuos",
+      "triaje": { "gravedad": "Media", "resultado": "aceptar", "destino": "aseo_urbano", "motivo": "Contenedor desbordado y residuos fuera del punto de recojo." },
+      "temporada": { "solo_lluviosa": false },
+      "origen": "Pendiente de documentar por el equipo",
+      "estado_autorizacion": "pendiente"
+    },
+    {
+      "id": "residuos-03",
+      "archivo": "residuos/3.jpg",
+      "categoria": "residuos",
+      "triaje": { "gravedad": "Alta", "resultado": "aceptar", "destino": "aseo_urbano", "motivo": "Basura acumulada que bloquea una rejilla de drenaje durante lluvia." },
+      "temporada": { "solo_lluviosa": true },
+      "origen": "Pendiente de documentar por el equipo",
+      "estado_autorizacion": "pendiente"
+    },
+    {
+      "id": "residuos-04",
+      "archivo": "residuos/4.jpg",
+      "categoria": "residuos",
+      "triaje": { "gravedad": "Alta", "resultado": "aceptar", "destino": "aseo_urbano", "motivo": "Residuos sobre rejillas de drenaje con riesgo de anegamiento." },
+      "temporada": { "solo_lluviosa": true },
+      "origen": "Pendiente de documentar por el equipo",
+      "estado_autorizacion": "pendiente"
+    }
+  ]
+}

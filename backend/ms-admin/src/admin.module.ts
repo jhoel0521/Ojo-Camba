@@ -13,6 +13,8 @@ import {
   ConfiguracionOperativa,
   DerivacionCaso,
   UsuarioRol,
+  Usuario,
+  Rol,
 } from '@ojo-camba/common';
 import { AdminController } from './admin.controller';
 import { AdminService } from './admin.service';
@@ -32,6 +34,8 @@ import { OperacionService } from './operacion.service';
       ConfiguracionOperativa,
       DerivacionCaso,
       UsuarioRol,
+      Usuario,
+      Rol,
     ]),
     ClientsModule.register([
       {

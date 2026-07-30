@@ -19,6 +19,12 @@ export class CreateGroupDto {
 
   @IsInt()
   creado_por_usuario_id: number;
+
+  // Categoría final determinada por Backoffice/IA. Permite corregir una
+  // selección equivocada del ciudadano antes de consolidar el Caso de Obra.
+  @IsOptional()
+  @IsInt()
+  categoria_id?: number;
 }
 
 export class UpdateCaseDto {

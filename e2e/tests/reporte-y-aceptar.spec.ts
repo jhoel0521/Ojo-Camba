@@ -204,6 +204,61 @@ test.describe('Agrupación de reportes cercanos', () => {
     // Col 2 vuelve al estado vacío
     await expect(page.getByText('Inspección del Reporte')).not.toBeVisible({ timeout: 3_000 });
   });
+
+  test('Backoffice corrige categorías ciudadanas distintas y las agrupa en una obra', async () => {
+    const api = await playwrightRequest.newContext({ baseURL: API_URL });
+    const sufijo = Date.now();
+    const ubicacion = { lat: -17.7833, lng: -63.1821 };
+
+    // Dos ciudadanos anónimos reportan el mismo problema desde dispositivos
+    // distintos. Uno lo clasifica como bache y otro erróneamente como "otro".
+    const reporteBache = await api.post('/reportes', {
+      data: {
+        device_id: `e2e-triaje-bache-${sufijo}`,
+        lat: ubicacion.lat,
+        lng: ubicacion.lng,
+        categoria_id: 1,
+        imagen_base64: TINY_PNG_DATA_URL,
+      },
+    });
+    const reporteOtro = await api.post('/reportes', {
+      data: {
+        device_id: `e2e-triaje-otro-${sufijo}`,
+        lat: ubicacion.lat,
+        lng: ubicacion.lng,
+        categoria_id: 6,
+        imagen_base64: TINY_PNG_DATA_URL,
+      },
+    });
+    expect(reporteBache.ok()).toBeTruthy();
+    expect(reporteOtro.ok()).toBeTruthy();
+    const bache = await reporteBache.json();
+    const otro = await reporteOtro.json();
+
+    // El actor Backoffice fija la categoría final del triaje antes de agrupar.
+    const login = await api.post('/auth/login', {
+      data: { email: MODERATOR_EMAIL, password: MODERATOR_PASSWORD },
+    });
+    expect(login.ok()).toBeTruthy();
+    const sesion = await login.json();
+    const grupoRespuesta = await api.post('/admin/groups', {
+      headers: { Authorization: `Bearer ${sesion.access_token}` },
+      data: { report_ids: [bache.id, otro.id], categoria_id: 1 },
+    });
+    expect(grupoRespuesta.ok()).toBeTruthy();
+    const grupo = await grupoRespuesta.json();
+
+    const [bacheFinal, otroFinal, obraFinal] = await Promise.all([
+      api.get(`/reportes/${bache.id}`).then((respuesta) => respuesta.json()),
+      api.get(`/reportes/${otro.id}`).then((respuesta) => respuesta.json()),
+      api.get(`/admin/groups/${grupo.id}`).then((respuesta) => respuesta.json()),
+    ]);
+
+    expect(bacheFinal).toMatchObject({ grupo_id: grupo.id, categoria_id: 1, estado: 'Aceptado' });
+    expect(otroFinal).toMatchObject({ grupo_id: grupo.id, categoria_id: 1, estado: 'Aceptado' });
+    expect(obraFinal).toMatchObject({ id: grupo.id, categoria_id: 1, total_reportes: 2 });
+    await api.dispose();
+  });
 });
 
 test.describe('Asignar reporte a Caso de Obra existente', () => {
