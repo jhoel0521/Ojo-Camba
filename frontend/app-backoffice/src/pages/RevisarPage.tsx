@@ -17,6 +17,7 @@ import {
   Lock,
   Wifi,
   WifiOff,
+  ArrowLeft,
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { useModeration } from '../hooks/useModeration';
@@ -253,9 +254,15 @@ export default function RevisarPage() {
   );
 
   return (
-    <div className="-m-6 h-full overflow-hidden flex">
+    // En movil las tres columnas no entran (256+300+300): se muestra una por
+    // vez, bandeja -> detalle a pantalla completa (ISSUE-30).
+    <div className="-m-4 lg:-m-6 h-full overflow-hidden flex">
       {/* ── COL 1: Bandeja de entrada ── */}
-      <section className="w-[300px] shrink-0 bg-perla border-r border-arcilla flex flex-col shadow-[2px_0_8px_rgba(27,20,16,0.05)]">
+      <section
+        className={`w-full lg:w-[300px] shrink-0 bg-perla border-r border-arcilla flex-col shadow-[2px_0_8px_rgba(27,20,16,0.05)] ${
+          selectedReport ? 'hidden lg:flex' : 'flex'
+        }`}
+      >
         <div className="px-4 py-3 border-b border-arcilla flex items-center justify-between bg-lienzo/60">
           <h2 className="font-semibold text-tierra text-sm flex items-center gap-2">
             <List className="w-4 h-4 text-caoba" />
@@ -358,7 +365,11 @@ export default function RevisarPage() {
       </section>
 
       {/* ── COL 2: Detalle del reporte ── */}
-      <section className="flex-1 bg-lienzo/40 border-r border-arcilla flex flex-col overflow-y-auto">
+      <section
+        className={`flex-1 w-full min-w-0 bg-lienzo/40 border-r border-arcilla flex-col overflow-y-auto ${
+          selectedReport ? 'flex' : 'hidden lg:flex'
+        }`}
+      >
         {!selectedReport ? (
           <div className="flex-1 flex flex-col items-center justify-center gap-3 text-center p-8">
             <Inbox className="w-10 h-10 text-arcilla" />
@@ -367,7 +378,18 @@ export default function RevisarPage() {
             </p>
           </div>
         ) : (
-          <div className="p-5 space-y-4">
+          <div className="p-4 lg:p-5 space-y-4">
+            <button
+              type="button"
+              onClick={() => {
+                release(selectedReport.id);
+                setSelectedReport(null);
+              }}
+              className="flex min-h-11 items-center gap-2 text-sm font-medium text-caoba lg:hidden"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Volver a la bandeja
+            </button>
             <div className="flex items-center gap-3">
               <span className="bg-yeso text-ladrillo px-3 py-1 rounded-xl text-xs font-mono font-bold border border-arcilla">
                 #{selectedReport.id}
@@ -511,7 +533,9 @@ export default function RevisarPage() {
       </section>
 
       {/* ── COL 3: Contexto espacial (obras + reportes cercanos) ── */}
-      <section className="w-[300px] shrink-0 bg-perla flex flex-col">
+      {/* Contexto espacial: acompana a la inspeccion, en movil no hay ancho
+          para una tercera columna. */}
+      <section className="w-[300px] shrink-0 bg-perla hidden lg:flex flex-col">
         <div className="px-4 py-3 border-b border-arcilla bg-lienzo/60">
           <h2 className="font-semibold text-tierra text-sm flex items-center gap-2">
             <MapPin className="w-4 h-4 text-caoba" />
