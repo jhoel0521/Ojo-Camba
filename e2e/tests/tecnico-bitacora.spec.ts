@@ -1,140 +1,120 @@
-import { test, expect, request as playwrightRequest } from '@playwright/test';
+import { expect, request as playwrightRequest, test, type APIRequestContext } from '@playwright/test';
 
 const TECNICO_URL = process.env.TECNICO_URL ?? 'http://localhost:5175';
 const API_URL = process.env.API_URL ?? 'http://localhost:3000';
-
-const TECNICO_EMAIL = 'admin@ojocamba.bo';
-const TECNICO_PASSWORD = 'admin123';
-
-// Santa Cruz de la Sierra (origen del caso)
-const ORIGEN = { lat: -17.7833, lng: -63.1821 };
-// Coordenada "real" capturada en terreno por el tecnico (corregida ~120 m)
-const CORRECCION = { latitude: -17.7844, longitude: -63.1825, accuracy: 8 };
-
+const ADMIN = { email: 'admin@ojocamba.bo', password: 'admin123' };
+const RESPONSABLE = { email: 'jefe.cuadrilla@ojocamba.bo', password: 'cuadrilla123' };
+const TECNICO = { email: 'tecnico.1@ojocamba.bo', password: 'cuadrilla123' };
+const UBICACION = { lat: -17.7833, lng: -63.1821 };
 const TINY_PNG_DATA_URL =
   'data:image/png;base64,' +
   'iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAAFklEQVR42mP8' +
   'z8BQDwADhQGAWjR9awAAAABJRU5ErkJggg==';
 
-/**
- * Crea un Caso de Obra (grupo) via API para que el tecnico tenga algo
- * sobre lo que registrar avances. Devuelve { id, codigo_obra }.
- */
-async function seedCasoDeObra(): Promise<{ id: number; codigo_obra: string }> {
-  const api = await playwrightRequest.newContext({ baseURL: API_URL });
-
-  const login = await api
-    .post('/auth/login', { data: { email: TECNICO_EMAIL, password: TECNICO_PASSWORD } })
-    .then((r) => r.json());
-  const usuarioId = login.user.id;
-  const headers = { Authorization: `Bearer ${login.access_token}` };
-
-  const deviceId = `e2e-tecnico-${Date.now()}`;
-  const [r1, r2] = await Promise.all([
-    api
-      .post('/reportes', {
-        data: {
-          device_id: deviceId,
-          lat: ORIGEN.lat,
-          lng: ORIGEN.lng,
-          categoria_id: 1,
-          imagen_base64: TINY_PNG_DATA_URL,
-        },
-      })
-      .then((r) => r.json()),
-    api
-      .post('/reportes', {
-        data: {
-          device_id: deviceId,
-          lat: ORIGEN.lat - 0.0001,
-          lng: ORIGEN.lng,
-          categoria_id: 1,
-          imagen_base64: TINY_PNG_DATA_URL,
-        },
-      })
-      .then((r) => r.json()),
-  ]);
-
-  const grupo = await api
-    .post('/admin/groups', {
-      data: { report_ids: [r1.id, r2.id], creado_por_usuario_id: usuarioId },
-      headers,
-    })
-    .then((r) => r.json());
-
-  // Cuadrilla aislada para que la prueba no dependa de la carga del seed.
-  const cuadrilla = await api
-    .post('/admin/cuadrillas', { data: { nombre: `E2E Técnica ${Date.now()}` } })
-    .then((r) => r.json());
-  await api.post(`/operacion/cuadrillas/${cuadrilla.id}/miembros`, {
-    data: { usuario_id: usuarioId, es_responsable: true },
-    headers,
-  });
-  await api.post(`/admin/groups/${grupo.id}/cuadrilla`, {
-    data: { cuadrilla_id: cuadrilla.id, usuario_id: usuarioId },
-  });
-
-  await api.dispose();
-  return { id: grupo.id, codigo_obra: grupo.codigo_obra };
+async function loginApi(api: APIRequestContext, cred: { email: string; password: string }) {
+  const respuesta = await api.post('/auth/login', { data: cred });
+  expect(respuesta.ok()).toBeTruthy();
+  return respuesta.json();
 }
 
-test.describe('App Tecnicos: bitacora diaria y correccion GPS (ISSUE-16 / HU-05)', () => {
-  test('el tecnico registra un avance con GPS sin cambiar el estado del caso', async ({
+/** Prepara el recorrido real: responsable distribuye una visita a un técnico. */
+async function prepararVisitaAsignada() {
+  const api = await playwrightRequest.newContext({ baseURL: API_URL });
+  const admin = await loginApi(api, ADMIN);
+  const headersAdmin = { Authorization: `Bearer ${admin.access_token}` };
+  const sufijo = Date.now();
+  const reportes = await Promise.all(
+    [0, -0.0001].map(async (delta, indice) => {
+      const respuesta = await api.post('/reportes', {
+        data: {
+          device_id: `e2e-visita-${sufijo}-${indice}`,
+          lat: UBICACION.lat + delta,
+          lng: UBICACION.lng,
+          categoria_id: 1,
+          imagen_base64: TINY_PNG_DATA_URL,
+        },
+      });
+      expect(respuesta.ok()).toBeTruthy();
+      return respuesta.json();
+    }),
+  );
+  const grupoRespuesta = await api.post('/admin/groups', {
+    headers: headersAdmin,
+    data: { report_ids: reportes.map((reporte) => reporte.id), creado_por_usuario_id: admin.user.id },
+  });
+  expect(grupoRespuesta.ok()).toBeTruthy();
+  const grupo = await grupoRespuesta.json();
+
+  const cuadrillaRespuesta = await api.post('/admin/cuadrillas', {
+    headers: headersAdmin,
+    data: { nombre: `E2E Ruta ${sufijo}` },
+  });
+  expect(cuadrillaRespuesta.ok()).toBeTruthy();
+  const cuadrilla = await cuadrillaRespuesta.json();
+
+  const responsable = await loginApi(api, RESPONSABLE);
+  const tecnico = await loginApi(api, TECNICO);
+  for (const [usuario, es_responsable] of [
+    [responsable.user, true],
+    [tecnico.user, false],
+  ] as const) {
+    const miembro = await api.post(`/operacion/cuadrillas/${cuadrilla.id}/miembros`, {
+      headers: headersAdmin,
+      data: { usuario_id: usuario.id, es_responsable },
+    });
+    expect(miembro.ok()).toBeTruthy();
+  }
+  const asignacionCuadrilla = await api.post(`/admin/groups/${grupo.id}/cuadrilla`, {
+    headers: headersAdmin,
+    data: { cuadrilla_id: cuadrilla.id, usuario_id: admin.user.id },
+  });
+  expect(asignacionCuadrilla.ok()).toBeTruthy();
+
+  const pendientes = await api.get('/operacion/mi-cuadrilla/visitas?limit=100', {
+    headers: { Authorization: `Bearer ${responsable.access_token}` },
+  });
+  expect(pendientes.ok()).toBeTruthy();
+  const visita = (await pendientes.json()).data.find((item: { grupo_id: number }) => item.grupo_id === grupo.id);
+  expect(visita).toBeTruthy();
+  const fecha = new Date().toISOString().slice(0, 10);
+  const distribucion = await api.put(`/operacion/mi-cuadrilla/visitas/${visita.id}/asignacion`, {
+    headers: { Authorization: `Bearer ${responsable.access_token}` },
+    data: { tecnico_id: tecnico.user.id, fecha_planificada: fecha, orden_ruta: 1 },
+  });
+  expect(distribucion.ok()).toBeTruthy();
+  await api.dispose();
+  return { codigoObra: grupo.codigo_obra, visitaId: visita.id };
+}
+
+test.describe('App técnica: recorrido asignado (ISSUE-29)', () => {
+  test('responsable asigna una parada, el técnico ve la agrupación y registra su llegada GPS', async ({
     page,
     context,
   }) => {
-    const caso = await seedCasoDeObra();
-
+    const visita = await prepararVisitaAsignada();
     await context.grantPermissions(['geolocation']);
-    await context.setGeolocation(CORRECCION);
+    await context.setGeolocation({ latitude: -17.7844, longitude: -63.1825, accuracy: 8 });
 
-    // ── Login ────────────────────────────────────────────────────────────────
     await page.goto(`${TECNICO_URL}/login`);
-    await page.getByPlaceholder('tecnico@ojocamba.bo').fill(TECNICO_EMAIL);
-    await page.getByPlaceholder('********').fill(TECNICO_PASSWORD);
+    await page.getByPlaceholder('tecnico@ojocamba.bo').fill(TECNICO.email);
+    await page.getByPlaceholder('********').fill(TECNICO.password);
     await page.getByRole('button', { name: 'Ingresar' }).click();
-
-    // ── Lista de casos → abrir el caso sembrado ──────────────────────────────
     await expect(page).toHaveURL(`${TECNICO_URL}/`, { timeout: 10_000 });
-    await page.getByText(caso.codigo_obra).click();
 
-    await expect(page.getByTestId('caso-detalle')).toBeVisible({ timeout: 10_000 });
-    await expect(page.getByTestId('codigo-obra')).toHaveText(caso.codigo_obra);
+    await page.goto(`${TECNICO_URL}/mi-ruta`);
+    await page.getByRole('link', { name: new RegExp(visita.codigoObra) }).click();
+    await expect(page.getByText('2 reportes ciudadanos agrupados')).toBeVisible();
+    await page.getByRole('button', { name: 'Registrar llegada' }).click();
+    await expect(page.getByRole('button', { name: 'Llegada registrada' })).toBeVisible({
+      timeout: 10_000,
+    });
 
-    // Estado inicial del caso = "Aceptado" (lo deja createGroup)
-    await expect(page.getByText('Aceptado').first()).toBeVisible();
-
-    // ── Registrar avance diario ──────────────────────────────────────────────
-    const comentario = `Avance de obra E2E ${Date.now()}`;
-    await page.locator('#comentario').fill(comentario);
-    await page.locator('#recursos_solicitados').fill('Cemento y 2 obreros');
-
-    // ── Captura GPS (correccion en terreno) ──────────────────────────────────
-    await page.getByTestId('btn-gps').click();
-    await expect(page.getByTestId('gps-fix')).toBeVisible({ timeout: 10_000 });
-    await expect(page.getByTestId('gps-fix')).toContainText('-17.78');
-
-    // ── Enviar ───────────────────────────────────────────────────────────────
-    await page.getByTestId('btn-enviar').click();
-    await expect(page.getByTestId('success-msg')).toBeVisible({ timeout: 10_000 });
-
-    // ── Verificar que aparece en la bitacora ─────────────────────────────────
-    const timeline = page.getByTestId('timeline');
-    await expect(timeline).toBeVisible();
-    await expect(timeline.getByText(comentario)).toBeVisible();
-    await expect(timeline.getByText('Cemento y 2 obreros')).toBeVisible();
-
-    // ── El estado del caso NO cambio (sigue "Aceptado") ──────────────────────
-    await expect(page.getByText('Aceptado').first()).toBeVisible();
-
-    // Confirmacion via API: la ultima actualizacion no transiciono el estado
     const api = await playwrightRequest.newContext({ baseURL: API_URL });
-    const timelineData = await api.get(`/admin/groups/${caso.id}/timeline`).then((r) => r.json());
-    const ultima = timelineData.at(-1);
-    expect(ultima.comentario).toBe(comentario);
-    expect(ultima.estado_nuevo).toBeNull();
-    expect(ultima.lat_actualizada).not.toBeNull();
-    expect(ultima.lng_actualizada).not.toBeNull();
+    const tecnico = await loginApi(api, TECNICO);
+    const detalle = await api.get(`/operacion/visitas/${visita.visitaId}`, {
+      headers: { Authorization: `Bearer ${tecnico.access_token}` },
+    });
+    expect((await detalle.json()).visita.llegada_en).toBeTruthy();
     await api.dispose();
   });
 });
