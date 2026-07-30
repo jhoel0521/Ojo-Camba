@@ -1,7 +1,8 @@
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { fetchAPI } from '../lib/api';
+import { getUser } from '../lib/auth';
 import { areasDisponibles, olvidarArea, tieneAccesoAlBackoffice } from '../lib/areas';
 
 /**
@@ -16,8 +17,15 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
   const [checking, setChecking] = useState(true);
   const [denied, setDenied] = useState(false);
   const location = useLocation();
+  const validado = useRef(false);
 
   useEffect(() => {
+    // Una sola validacion por sesion de pagina: el efecto se remonta con las
+    // rutas anidadas (y StrictMode lo duplica en dev), y cada montaje disparaba
+    // su propio POST /auth/validate.
+    if (validado.current) return;
+    validado.current = true;
+
     const token = localStorage.getItem('ojo_camba_admin_token');
     if (!token) {
       setChecking(false);
@@ -53,7 +61,19 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
         setChecking(false);
       })
       .catch(() => {
-        logout();
+        // Un fallo de red (o una respuesta vacia bajo carga) no es motivo para
+        // cerrar la sesion: se sigue con lo guardado y el backend igual rechaza
+        // con 401/403 lo que no corresponda. Antes cualquier hipo deslogueaba.
+        const guardado = getUser();
+        if (guardado && tieneAccesoAlBackoffice(guardado.roles)) {
+          login({
+            access_token: token,
+            refresh_token: localStorage.getItem('ojo_camba_admin_refresh') ?? '',
+            user: guardado,
+          });
+        } else {
+          logout();
+        }
         setChecking(false);
       });
   }, [login, logout]);
