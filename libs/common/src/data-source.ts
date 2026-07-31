@@ -12,6 +12,7 @@ import { VisitaCaso } from './entities/visita-caso.entity';
 import { PropuestaVisita } from './entities/propuesta-visita.entity';
 import { ConfiguracionOperativa } from './entities/configuracion-operativa.entity';
 import { DerivacionCaso } from './entities/derivacion-caso.entity';
+import { DecisionRecomendacion } from './entities/decision-recomendacion.entity';
 import { Dispositivo } from './entities/dispositivo.entity';
 import { ActualizacionCaso } from './entities/actualizacion-caso.entity';
 import { Usuario } from './entities/usuario.entity';
@@ -49,6 +50,7 @@ export const AppDataSource = new DataSource({
     PropuestaVisita,
     ConfiguracionOperativa,
     DerivacionCaso,
+    DecisionRecomendacion,
     Dispositivo,
     ActualizacionCaso,
     Usuario,

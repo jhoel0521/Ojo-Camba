@@ -39,38 +39,45 @@ pnpm ping
 | 3 | `ms-admin` | `docker/prod/Dockerfile.ms-admin` | ❌ (TCP) | ❌ |
 | 4 | `ms-gamify` | `docker/prod/Dockerfile.ms-gamify` | ❌ (TCP) | ❌ |
 | 5 | `ms-ia` | `docker/prod/Dockerfile.ms-ia` | ❌ (TCP) | ❌ |
-| 6 | `gateway-principal` | `docker/prod/Dockerfile.gateway-principal` | ✅ (3000) | ✅ |
-| 7 | `gateway-status` | `docker/prod/Dockerfile.gateway-status` | ✅ (3005) | ✅ |
-| 8 | `app-reporte` | `docker/prod/Dockerfile.app-reporte` | ✅ (80) | ✅ |
-| 9 | `app-backoffice` | `docker/prod/Dockerfile.app-backoffice` | ✅ (80) | ✅ |
-| 10 | `app-tecnico` | `docker/prod/Dockerfile.app-tecnico` | ✅ (80) | ✅ |
-| 11 | `app-status` | `docker/prod/Dockerfile.app-status` | ✅ (80) | ✅ |
+| 6 | `ms-prediccion` | `docker/prod/Dockerfile.ms-prediccion` | ❌ (HTTP interno) | ❌ |
+| 7 | `gateway-principal` | `docker/prod/Dockerfile.gateway-principal` | ✅ (3000) | ✅ |
+| 8 | `gateway-status` | `docker/prod/Dockerfile.gateway-status` | ✅ (3005) | ✅ |
+| 9 | `app-reporte` | `docker/prod/Dockerfile.app-reporte` | ✅ (80) | ✅ |
+| 10 | `app-backoffice` | `docker/prod/Dockerfile.app-backoffice` | ✅ (80) | ✅ |
+| 11 | `app-tecnico` | `docker/prod/Dockerfile.app-tecnico` | ✅ (80) | ✅ |
+| 12 | `app-status` | `docker/prod/Dockerfile.app-status` | ✅ (80) | ✅ |
+
+`ms-prediccion` (ISSUE-31) habla HTTP y no el TCP de Nest —es Python, el pipeline de Machine Learning vive en pandas y scikit-learn—, pero **no lleva dominio público**: se llega sólo desde `gateway-principal`, que es donde se comprueban los roles. Necesita dos volúmenes persistentes, `/app/modelos` y `/app/datos`: sin ellos cada redeploy borra el modelo entrenado y el servicio responde 409 hasta que IT vuelva a entrenar a mano. El entrenamiento **no** corre al arrancar, a propósito (ver `backend/ms-prediccion/README.md`).
 
 ### Variables de entorno por servicio — Backend
 
-| Variable | gw-principal | gw-status | ms-auth | ms-register | ms-admin | ms-gamify | ms-ia |
-|---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-| `PORT` | ✅ (3000) | ✅ (3005) | — | — | — | — | — |
-| `TCP_PORT` | — | — | ✅ (3001) | ✅ (3002) | ✅ (3003) | ✅ (3004) | ✅ (3006) |
-| `MS_AUTH_HOST` | ✅ | ✅ | — | — | — | ✅ | — |
-| `MS_AUTH_PORT` | ✅ | ✅ | — | — | — | ✅ | — |
-| `MS_REGISTER_HOST` | ✅ | ✅ | — | — | — | — | ✅ |
-| `MS_REGISTER_PORT` | ✅ | ✅ | — | — | — | — | ✅ |
-| `MS_ADMIN_HOST` | ✅ | ✅ | — | — | — | — | ✅ |
-| `MS_ADMIN_PORT` | ✅ | ✅ | — | — | — | — | ✅ |
-| `MS_GAMIFY_HOST` | ✅ | ✅ | — | — | ✅ | — | — |
-| `MS_GAMIFY_PORT` | ✅ | ✅ | — | — | ✅ | — | — |
-| `MS_IA_HOST` | ✅ | ✅ | — | — | — | — | — |
-| `MS_IA_PORT` | ✅ | ✅ | — | — | — | — | — |
-| `DATABASE_URL` | — | — | ✅ | ✅ | ✅ | ✅ | ✅ |
-| `JWT_SECRET` | — | — | ✅ | — | — | — | — |
-| `JWT_EXPIRES_IN` | — | — | ✅ | — | — | — | — |
-| `S3_ENDPOINT` | — | — | — | ✅ | ✅ | — | — |
-| `S3_ACCESS_KEY` | — | — | — | ✅ | ✅ | — | — |
-| `S3_SECRET_KEY` | — | — | — | ✅ | ✅ | — | — |
-| `S3_BUCKET` | — | — | — | ✅ | ✅ | — | — |
-| `PUNTOS_POR_REPORTE_ACEPTADO` | — | — | — | — | — | ✅ (def. 10) | — |
-| `AI_CONFIG_ENCRYPTION_KEY` | — | — | — | — | — | — | ✅ |
+| Variable | gw-principal | gw-status | ms-auth | ms-register | ms-admin | ms-gamify | ms-ia | ms-prediccion |
+|---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| `PORT` | ✅ (3000) | ✅ (3005) | — | — | — | — | — | — |
+| `TCP_PORT` | — | — | ✅ (3001) | ✅ (3002) | ✅ (3003) | ✅ (3004) | ✅ (3006) | — |
+| `MS_AUTH_HOST` | ✅ | ✅ | — | — | — | ✅ | — | — |
+| `MS_AUTH_PORT` | ✅ | ✅ | — | — | — | ✅ | — | — |
+| `MS_REGISTER_HOST` | ✅ | ✅ | — | — | — | — | ✅ | — |
+| `MS_REGISTER_PORT` | ✅ | ✅ | — | — | — | — | ✅ | — |
+| `MS_ADMIN_HOST` | ✅ | ✅ | — | — | — | — | ✅ | — |
+| `MS_ADMIN_PORT` | ✅ | ✅ | — | — | — | — | ✅ | — |
+| `MS_GAMIFY_HOST` | ✅ | ✅ | — | — | ✅ | — | — | — |
+| `MS_GAMIFY_PORT` | ✅ | ✅ | — | — | ✅ | — | — | — |
+| `MS_IA_HOST` | ✅ | ✅ | — | — | — | — | — | — |
+| `MS_IA_PORT` | ✅ | ✅ | — | — | — | — | — | — |
+| `MS_PREDICCION_HOST` | ✅ | — | — | — | — | — | — | — |
+| `MS_PREDICCION_PORT` | ✅ | — | — | — | — | — | — | — |
+| `DATABASE_URL` | — | — | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ (psycopg) |
+| `JWT_SECRET` | — | — | ✅ | — | — | — | — | — |
+| `JWT_EXPIRES_IN` | — | — | ✅ | — | — | — | — | — |
+| `S3_ENDPOINT` | — | — | — | ✅ | ✅ | — | — | — |
+| `S3_ACCESS_KEY` | — | — | — | ✅ | ✅ | — | — | — |
+| `S3_SECRET_KEY` | — | — | — | ✅ | ✅ | — | — | — |
+| `S3_BUCKET` | — | — | — | ✅ | ✅ | — | — | — |
+| `PUNTOS_POR_REPORTE_ACEPTADO` | — | — | — | — | — | ✅ (def. 10) | — | — |
+| `AI_CONFIG_ENCRYPTION_KEY` | — | — | — | — | — | — | ✅ | — |
+
+`MS_PREDICCION_HOST`/`MS_PREDICCION_PORT` siguen el mismo par que el resto de los microservicios; el gateway construye la URL interna (`http://ms-prediccion:3007` en Coolify) porque `ms-prediccion` es el único que habla HTTP en vez de TCP. El `DATABASE_URL` de `ms-prediccion` lleva el driver en el esquema porque lo consume SQLAlchemy: `postgresql+psycopg://usuario:clave@host:5432/ojocamba`.
 
 `AI_CONFIG_ENCRYPTION_KEY` es una clave maestra estable de 32 bytes para cifrar las credenciales configurables de Groq, Gemini, DeepSeek y OpenAI. Generarla una sola vez con `openssl rand -hex 32`, guardarla como secreto del servicio `ms-ia` y ejecutar `pnpm db:migrate` antes de desplegar esta versión.
 
@@ -93,6 +100,7 @@ pnpm ping
    - Gateways: `GET /health` → espera 200
    - Frontends: `GET /` → espera 200
    - Microservicios TCP: sin health check HTTP (Coolify usa container alive)
+   - `ms-prediccion`: `GET /health` → espera 200. Devuelve `modelo_entrenado: false` mientras nadie haya entrenado, y eso **no** es un fallo: el servicio está sano, sólo todavía no puede pronosticar.
 
 ### Watch Paths — Redeploy automático
 
@@ -105,6 +113,7 @@ Coolify redeploya **solo** los servicios cuyos archivos cambiaron.
 | `ms-admin` | `backend/ms-admin/**` `libs/common/**` `tsconfig.base.json` `pnpm-workspace.yaml` `docker/prod/Dockerfile.ms-admin` |
 | `ms-gamify` | `backend/ms-gamify/**` `libs/common/**` `tsconfig.base.json` `pnpm-workspace.yaml` `docker/prod/Dockerfile.ms-gamify` |
 | `ms-ia` | `backend/ms-ia/**` `libs/common/**` `tsconfig.base.json` `pnpm-workspace.yaml` `docker/prod/Dockerfile.ms-ia` |
+| `ms-prediccion` | `backend/ms-prediccion/**` `docker/prod/Dockerfile.ms-prediccion` |
 | `gateway-principal` | `backend/gateway-principal/**` `libs/common/**` `tsconfig.base.json` `pnpm-workspace.yaml` `docker/prod/Dockerfile.gateway-principal` |
 | `gateway-status` | `backend/gateway-status/**` `libs/common/**` `tsconfig.base.json` `pnpm-workspace.yaml` `docker/prod/Dockerfile.gateway-status` |
 | `app-reporte` | `frontend/app-reporte/**` `pnpm-workspace.yaml` `docker/prod/Dockerfile.app-reporte` `docker/prod/nginx.conf` |

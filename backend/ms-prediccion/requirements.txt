@@ -1,0 +1,14 @@
+# ms-prediccion (ISSUE-31) — pronostico semanal de Casos de Obra.
+# Se fija la version menor para que el modelo entrenado localmente y el que
+# corre en el servidor produzcan exactamente los mismos numeros.
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+pydantic==2.10.4
+pydantic-settings==2.7.0
+pandas==2.2.3
+numpy==2.2.1
+scikit-learn==1.6.0
+joblib==1.4.2
+SQLAlchemy==2.0.36
+psycopg[binary]==3.2.3
+httpx==0.28.1

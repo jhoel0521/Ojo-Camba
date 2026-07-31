@@ -31,6 +31,9 @@ export default defineConfig({
         manualChunks(id) {
           if (!id.includes('node_modules')) return;
           if (id.includes('recharts') || id.includes('d3-')) return 'charts';
+          // Mapa H3 del panel de decision (ISSUE-32): solo lo cargan quienes
+          // entran a /prediccion, no toda la sesion del backoffice.
+          if (id.includes('leaflet') || id.includes('h3-js')) return 'mapa';
           if (id.includes('react-dom') || id.includes('react-router') || id.includes('/react/')) {
             return 'react-vendor';
           }

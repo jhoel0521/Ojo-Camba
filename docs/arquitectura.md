@@ -30,10 +30,15 @@ graph TD
         MS_Gamify[MS Gamificación & Logros]
     end
 
+    subgraph Microservicio Python
+        MS_Prediccion[MS Predicción ML]
+    end
+
     GW_Principal -.->|TCP| MS_Auth
     GW_Principal -.->|TCP| MS_Register
     GW_Principal -.->|TCP| MS_Admin
     GW_Principal -.->|TCP| MS_Gamify
+    GW_Principal -->|HTTP interno| MS_Prediccion
     
     GW_Status -.->|Ping TCP| MS_Auth
     GW_Status -.->|Ping TCP| MS_Register
@@ -50,7 +55,13 @@ graph TD
     MS_Auth --> DB
     MS_Admin --> DB
     MS_Gamify --> DB
+    MS_Prediccion -->|Lectura para entrenar| DB
 ```
+
+**Por qué `ms-prediccion` habla HTTP y no TCP.** Es el único microservicio en
+Python: el pipeline de Machine Learning vive en pandas y scikit-learn, y FastAPI
+no habla el protocolo TCP de NestJS. No se publica con dominio propio — se llega
+sólo por `gateway-principal`, que es donde se comprueban los roles.
 
 ## Endpoints HTTP — Gateway Principal (puerto 3000)
 
@@ -86,3 +97,49 @@ graph TD
 | `GET`  | `/gamify/stats/:id` | ms-gamify | `gamify.get_user_stats` |
 | `GET`  | `/gamify/levels` | ms-gamify | `gamify.get_levels` |
 | `GET`  | `/health` | — | — |
+
+### Predicción (ISSUE-31)
+
+Estas rutas no tienen patrón TCP: el gateway hace de proxy HTTP hacia
+`ms-prediccion` (`MS_PREDICCION_HOST`/`MS_PREDICCION_PORT`, por defecto
+`http://localhost:3007`). El control de acceso es del gateway.
+
+| Método | Ruta | Rol requerido | Qué devuelve |
+|--------|------|---------------|--------------|
+| `GET`  | `/prediccion/modelo` | coordinador, autoridad, IT | Métricas comparadas de los tres modelos, procedencia y limitaciones |
+| `GET`  | `/prediccion/pronostico` | coordinador, autoridad | Casos esperados por zona H3 y categoría a 7 días, con confianza y margen de error. Filtros: `zona`, `categoria_id` |
+| `GET`  | `/prediccion/alertas` | coordinador | Alertas de capacidad al 80% y 100% con recomendación explicable. Filtro: `solo_criticas` (por defecto `true`) |
+| `POST` | `/prediccion/entrenar` | IT | Reentrena y vuelve a comparar. Parámetro: `semanas_prueba` (4–26) |
+
+### Panel de decisión (ISSUE-32)
+
+El panel del Backoffice (`/prediccion`) se arma con estas rutas. Las dos
+primeras las sirve `ms-admin` por TCP —una decisión es un hecho operativo, no
+una salida del modelo—; el gateway compone la comparativa.
+
+| Método | Ruta | Rol requerido | Qué devuelve |
+|--------|------|---------------|--------------|
+| `GET`  | `/prediccion/comparativa` | coordinador, autoridad | Lo observado y lo estimado **por separado**, cada uno con su origen y su período, más el alineado por zona H3 con la diferencia. Filtros: `desde`, `hasta`, `categoria_id`, `estado` |
+| `POST` | `/prediccion/decisiones` | coordinador | Registra aceptar, modificar o descartar una recomendación. Motivo obligatorio |
+| `GET`  | `/prediccion/decisiones` | coordinador, autoridad | Historial con precisión retrospectiva: pronóstico, Casos observados y error |
+
+- La comparativa **nunca funde** las dos fuentes en un solo número: si hiciera
+  falta la diferencia, viaja aparte con los dos originales al lado.
+- Sin modelo entrenado la comparativa igual responde: `estimado` viene en `null`
+  con el motivo, y el lado observado se muestra completo. La operación real no
+  depende de que alguien haya entrenado.
+- La decisión se atribuye al usuario del token, nunca a un id del navegador, y
+  guarda una **copia** de la recomendación: se recalcula en cada reentrenamiento
+  y para auditar hace falta lo que el coordinador tenía a la vista.
+- La autoridad municipal consulta comparativa e historial —son agregados, sin
+  fotos ni reportes individuales— pero no llega a `/alertas` ni puede decidir.
+
+Notas de contrato:
+
+- Mientras nadie haya entrenado, las tres rutas de lectura responden **409**, no
+  500: es un estado esperado de un despliegue nuevo.
+- Si `ms-prediccion` no responde, el gateway devuelve **503** con el motivo.
+- Todo pronóstico viaja con `origen: "estimacion"` y la versión de modelo y
+  dataset. Una estimación nunca se presenta como observación (ISSUE-32).
+- Las alertas son sólo para el coordinador: la autoridad municipal consulta el
+  agregado, no las recomendaciones sobre las que se opera.

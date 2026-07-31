@@ -12,6 +12,7 @@ import {
   CuadrillaMiembro,
   ConfiguracionOperativa,
   DerivacionCaso,
+  DecisionRecomendacion,
   UsuarioRol,
   Usuario,
   Rol,
@@ -21,6 +22,7 @@ import {
 import { AdminController } from './admin.controller';
 import { AdminService } from './admin.service';
 import { OperacionService } from './operacion.service';
+import { PrediccionDecisionesService } from './prediccion-decisiones.service';
 
 @Module({
   imports: [
@@ -35,6 +37,7 @@ import { OperacionService } from './operacion.service';
       CuadrillaMiembro,
       ConfiguracionOperativa,
       DerivacionCaso,
+      DecisionRecomendacion,
       UsuarioRol,
       Usuario,
       Rol,
@@ -53,6 +56,6 @@ import { OperacionService } from './operacion.service';
     ]),
   ],
   controllers: [AdminController],
-  providers: [AdminService, OperacionService],
+  providers: [AdminService, OperacionService, PrediccionDecisionesService],
 })
 export class AdminModule {}
