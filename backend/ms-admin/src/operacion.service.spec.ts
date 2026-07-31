@@ -268,6 +268,35 @@ describe('OperacionService', () => {
     );
   });
 
+  it('solo Coordinación confirma RechazadoCampo y deja categoría para el indicador de calidad', async () => {
+    propuestaRepo.findOne.mockResolvedValue({
+      id: 22,
+      visita_id: 8,
+      estado_propuesto: EstadoCaso.RechazadoCampo,
+      categoria_rechazo_id: 4,
+      decision: 'Pendiente',
+    });
+    visitaRepo.findOne.mockResolvedValue({
+      id: 8,
+      grupo_id: 14,
+      cuadrilla_id: 3,
+      cerrada_en: null,
+    });
+    grupoRepo.findOne.mockResolvedValue({ id: 14, estado_actual: EstadoCaso.ValidacionCampo });
+    usuarioRolRepo.find.mockResolvedValue([{ rol: { nombre: 'coordinador_operativo' } }]);
+
+    await service.confirmarPropuestaVisita({ propuesta_id: 22, usuario_id: 5 });
+
+    expect(grupoRepo.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        estado_actual: EstadoCaso.RechazadoCampo,
+        categoria_rechazo_campo_id: 4,
+        rechazado_campo_por_usuario_id: 5,
+        rechazado_campo_en: expect.any(Date),
+      }),
+    );
+  });
+
   it('el responsable ve solamente visitas abiertas de su propia cuadrilla', async () => {
     miembroRepo.find.mockResolvedValue([{ cuadrilla_id: 3, usuario_id: 4, es_responsable: true }]);
     visitaRepo.findAndCount.mockResolvedValue([
