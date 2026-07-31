@@ -10,6 +10,14 @@ import {
 import { Type } from 'class-transformer';
 import { Gravedad } from '@ojo-camba/common';
 
+export const MOTIVOS_DESCARTE_DIGITAL = [
+  'evidencia_insuficiente',
+  'imagen_no_corresponde',
+  'contenido_duplicado_sin_aporte',
+  'contenido_inapropiado',
+] as const;
+export type MotivoDescarteDigital = (typeof MOTIVOS_DESCARTE_DIGITAL)[number];
+
 export class CreateGroupDto {
   @IsArray()
   @ArrayMinSize(2)
@@ -69,6 +77,12 @@ export class AcceptReportDto {
 export class RejectReportDto {
   @IsInt()
   report_id: number;
+
+  @IsInt()
+  moderador_id: number;
+
+  @IsIn(MOTIVOS_DESCARTE_DIGITAL)
+  motivo: MotivoDescarteDigital;
 }
 
 export class CreateCuadrillaDto {

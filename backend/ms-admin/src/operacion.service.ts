@@ -535,6 +535,11 @@ export class OperacionService implements OnModuleInit {
     }
 
     grupo.estado_actual = propuesta.estado_propuesto;
+    if (propuesta.estado_propuesto === EstadoCaso.RechazadoCampo) {
+      grupo.categoria_rechazo_campo_id = propuesta.categoria_rechazo_id;
+      grupo.rechazado_campo_por_usuario_id = dto.usuario_id;
+      grupo.rechazado_campo_en = new Date();
+    }
     await this.grupoRepo.save(grupo);
     await this.reporteRepo.update(
       { grupo_id: grupo.id },

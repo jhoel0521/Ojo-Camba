@@ -30,6 +30,7 @@ import {
   CreateGroupDto,
   UpdateCaseDto,
   AcceptReportDto,
+  RejectReportDto,
   BanDeviceDto,
   CreateCuadrillaDto,
   UpdateCuadrillaDto,
@@ -170,6 +171,9 @@ export class AdminService {
       }
 
       reporte.estado = EstadoReporte.Aceptado;
+      reporte.categoria_id = dto.categoria_id ?? reporte.categoria_id;
+      reporte.admitido_por_usuario_id = dto.moderador_id;
+      reporte.admitido_en = new Date();
 
       // La gravedad solo cambia si el moderador la envio explicitamente; el triaje sugiere,
       // no decide. El @IsIn del DTO no alcanza: este microservicio no tiene ValidationPipe,
@@ -181,8 +185,24 @@ export class AdminService {
         reporte.gravedad = dto.gravedad;
       }
 
-      if (dto.grupo_id) {
-        const grupo = await manager.findOne(GrupoReporte, { where: { id: dto.grupo_id } });
+      let grupoId = dto.grupo_id;
+      if (!grupoId) {
+        // La unidad de coincidencia es la celda H3 del reporte y la categoría
+        // final del triaje. Así un reporte ciudadano mal categorizado puede
+        // corregirse antes de vincularlo, sin crear casos virales duplicados.
+        const candidato = await manager
+          .createQueryBuilder(GrupoReporte, 'g')
+          .innerJoin(Reporte, 'r', 'r.grupo_id = g.id')
+          .where('g.estado_actual IN (:...estadosActivos)', { estadosActivos: ESTADOS_ACTIVOS })
+          .andWhere('g.categoria_id = :categoriaId', { categoriaId: reporte.categoria_id })
+          .andWhere('r.h3_res_11 = :h3', { h3: reporte.h3_res_11 })
+          .orderBy('g.creado_en', 'ASC')
+          .getOne();
+        grupoId = candidato?.id;
+      }
+
+      if (grupoId) {
+        const grupo = await manager.findOne(GrupoReporte, { where: { id: grupoId } });
         if (!grupo) throw new NotFoundException('Caso de Obra no encontrado');
         reporte.grupo_id = grupo.id;
         await manager.save(reporte);
@@ -235,17 +255,135 @@ export class AdminService {
     };
   }
 
-  async rejectReport(reportId: number) {
-    const reporte = await this.reporteRepo.findOne({ where: { id: reportId } });
+  async rejectReport(dto: RejectReportDto) {
+    const reporte = await this.reporteRepo.findOne({ where: { id: dto.report_id } });
     if (!reporte) throw new NotFoundException('Reporte no encontrado');
     if (reporte.estado !== EstadoReporte.Reportado) {
       throw new BadRequestException('Solo se pueden rechazar reportes en estado Reportado');
     }
 
     reporte.estado = EstadoReporte.Rechazado;
+    reporte.motivo_descarte_digital = dto.motivo;
+    reporte.descartado_por_usuario_id = dto.moderador_id;
+    reporte.descartado_en = new Date();
     await this.reporteRepo.save(reporte);
 
-    return { id: reporte.id, estado: reporte.estado };
+    return { id: reporte.id, estado: reporte.estado, motivo: reporte.motivo_descarte_digital };
+  }
+
+  /** Alertas accionables de la bandeja; no asignan trabajo de cuadrillas. */
+  async listReviewAlerts() {
+    const [virales, espera, reincidencias] = await Promise.all([
+      this.reporteRepo
+        .createQueryBuilder('r')
+        .select('r.h3_res_11', 'zona')
+        .addSelect('COUNT(r.id)', 'total')
+        .where('r.estado = :estado', { estado: EstadoReporte.Reportado })
+        .groupBy('r.h3_res_11')
+        .having('COUNT(r.id) >= 3')
+        .orderBy('COUNT(r.id)', 'DESC')
+        .take(10)
+        .getRawMany(),
+      this.reporteRepo
+        .createQueryBuilder('r')
+        .select('r.id', 'reporte_id')
+        .addSelect('r.creado_en', 'creado_en')
+        .where('r.estado = :estado', { estado: EstadoReporte.Reportado })
+        .andWhere("r.creado_en < NOW() - INTERVAL '24 hours'")
+        .orderBy('r.creado_en', 'ASC')
+        .take(10)
+        .getRawMany(),
+      this.reporteRepo
+        .createQueryBuilder('r')
+        .innerJoin(Reporte, 'anterior', 'anterior.h3_res_11 = r.h3_res_11')
+        .innerJoin(GrupoReporte, 'g', 'g.id = anterior.grupo_id')
+        .select('r.id', 'reporte_id')
+        .addSelect('g.codigo_obra', 'codigo_obra')
+        .where('r.estado = :estado', { estado: EstadoReporte.Reportado })
+        .andWhere('g.estado_actual = :finalizado', { finalizado: EstadoCaso.Finalizado })
+        .distinct(true)
+        .take(10)
+        .getRawMany(),
+    ]);
+
+    return [
+      ...virales.map((fila) => ({
+        tipo: 'reporte_viral',
+        titulo: 'Reportes concentrados en una zona',
+        detalle: `${fila.total} reportes pendientes en la misma zona.`,
+        zona: fila.zona,
+      })),
+      ...espera.map((fila) => ({
+        tipo: 'espera_excesiva',
+        titulo: 'Reporte sin revisar por más de 24 horas',
+        detalle: `Reporte #${fila.reporte_id} requiere revisión prioritaria.`,
+        reporte_id: Number(fila.reporte_id),
+      })),
+      ...reincidencias.map((fila) => ({
+        tipo: 'posible_reincidencia',
+        titulo: 'Posible reincidencia de una obra cerrada',
+        detalle: `El reporte #${fila.reporte_id} coincide con ${fila.codigo_obra}.`,
+        reporte_id: Number(fila.reporte_id),
+        codigo_obra: fila.codigo_obra,
+      })),
+    ];
+  }
+
+  async listReviewHistory(page = 1, limit = 20) {
+    const [data, total] = await this.reporteRepo.findAndCount({
+      where: { estado: In([EstadoReporte.Aceptado, EstadoReporte.Rechazado]) },
+      order: { creado_en: 'DESC' },
+      skip: (Math.max(1, page) - 1) * Math.min(Math.max(1, limit), 100),
+      take: Math.min(Math.max(1, limit), 100),
+    });
+    return { data, total, page: Math.max(1, page), limit: Math.min(Math.max(1, limit), 100) };
+  }
+
+  async getRejectionQuality(desde?: string, hasta?: string) {
+    const admisiones = this.reporteRepo
+      .createQueryBuilder('r')
+      .where('r.admitido_por_usuario_id IS NOT NULL');
+    const rechazos = this.reporteRepo
+      .createQueryBuilder('r')
+      .innerJoin(GrupoReporte, 'g', 'g.id = r.grupo_id')
+      .leftJoin(Categoria, 'c', 'c.id = g.categoria_rechazo_campo_id')
+      .select('g.categoria_rechazo_campo_id', 'categoria_id')
+      .addSelect("COALESCE(c.nombre, 'Sin categoría')", 'categoria')
+      .addSelect('COUNT(r.id)', 'total')
+      .where('r.admitido_por_usuario_id IS NOT NULL')
+      .andWhere('g.estado_actual = :estado', { estado: EstadoCaso.RechazadoCampo })
+      .groupBy('g.categoria_rechazo_campo_id')
+      .addGroupBy('c.nombre');
+
+    const inicio = fechaInicioUtc(desde);
+    const fin = fechaFinExclusivaUtc(hasta);
+    for (const qb of [admisiones, rechazos]) {
+      if (inicio) qb.andWhere('r.admitido_en >= :inicio', { inicio });
+      if (fin) qb.andWhere('r.admitido_en < :fin', { fin });
+    }
+    const [totalAdmisiones, filas] = await Promise.all([
+      admisiones.getCount(),
+      rechazos.getRawMany(),
+    ]);
+    const porCategoria = filas.map((fila) => {
+      const total = Number(fila.total);
+      return {
+        categoria_id: fila.categoria_id == null ? null : Number(fila.categoria_id),
+        categoria: fila.categoria,
+        total,
+        proporcion: totalAdmisiones ? Number(((total / totalAdmisiones) * 100).toFixed(1)) : 0,
+      };
+    });
+    const totalRechazos = porCategoria.reduce((suma, fila) => suma + fila.total, 0);
+    return {
+      rango_aplicado: { desde: desde ?? null, hasta: hasta ?? null },
+      total_admisiones: totalAdmisiones,
+      total_rechazos_campo: totalRechazos,
+      proporcion_rechazo: totalAdmisiones
+        ? Number(((totalRechazos / totalAdmisiones) * 100).toFixed(1))
+        : 0,
+      por_categoria: porCategoria,
+    };
   }
 
   // ── CU-09: Banear dispositivo ─────────────────────────────
@@ -304,6 +442,8 @@ export class AdminService {
       grupo_id: grupo.id,
       estado: EstadoReporte.Aceptado,
       categoria_id: categoriaFinal,
+      admitido_por_usuario_id: dto.creado_por_usuario_id,
+      admitido_en: new Date(),
     });
 
     this.logger.log(`Caso de Obra creado: ${codigoObra} con ${dto.report_ids.length} reportes`);
