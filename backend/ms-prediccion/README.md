@@ -37,6 +37,19 @@ docker run -d -p 3007:3007 ... ojo-camba/ms-prediccion:dev
 desatendido compite por memoria con el resto de la plataforma. Se dispara a
 mano: `POST /prediccion/entrenar` o el CLI.
 
+## Documentos que acompañan al modelo
+
+| Documento | Contenido | Cómo se mantiene |
+|---|---|---|
+| [`docs/ISSUE-31-eda.md`](../../docs/ISSUE-31-eda.md) | Análisis exploratorio: cobertura, distribuciones, nulos, atípicos, estacionalidad y correlaciones | Generado con `python -m app.eda_cli` — **no editar a mano** |
+| [`docs/ISSUE-31-sesgos.md`](../../docs/ISSUE-31-sesgos.md) | Auditoría de sesgos geográficos, temporales y de cobertura; límites de uso y bitácora | A mano, revisando contra el EDA |
+
+```bash
+docker run --rm -v "$PWD:/repo" -w /repo/backend/ms-prediccion \
+  -e DATABASE_URL="postgresql+psycopg://ojocamba:ojocamba_secret@host.docker.internal:5432/ojocamba" \
+  ojo-camba/ms-prediccion:dev python -m app.eda_cli --salida ../../docs/ISSUE-31-eda.md
+```
+
 ## Diccionario de datos
 
 Una fila del dataset = **(semana, zona H3 res-8, categoría)**.
@@ -101,6 +114,12 @@ bosque agrega varianza sin aportar señal.
   acotado). Un R² alto mediría que el modelo aprendió esas reglas, no que
   anticipe la operación municipal real.
 - La única variable observada del dataset es el clima.
+- **Tres variables predictoras están muertas en este dataset:**
+  `casos_abiertos_inicio` y `carga_por_cuadrilla` son constantes en cero, y
+  `cuadrillas_activas` sólo cambia en la última semana. La causa y el
+  anacronismo que la esconde están en la sección 4 de
+  [`ISSUE-31-sesgos.md`](../../docs/ISSUE-31-sesgos.md). Las métricas de abajo se
+  obtuvieron **sin** información de cola ni de capacidad.
 - Las cuadrillas todavía no tienen especialidad cargada, así que la capacidad se
   reparte pareja entre zonas en vez de por especialidad. Cuando ISSUE-29 cargue
   las especialidades, la cuota debe calcularse por categoría.
@@ -129,6 +148,19 @@ docker run --rm -v "$PWD/backend/ms-prediccion:/app" -w /app \
   ojo-camba/ms-prediccion:dev sh -c "pip install -q pytest && python -m pytest -q"
 ```
 
-Cubren umbrales de alerta (80/100), que la carga se mida en reportes y no en
-Casos, la guarda contra fuga de información, que la partición sea temporal y que
-se comparen los tres modelos.
+29 pruebas, en tres archivos:
+
+- `test_alertas.py` — umbrales 80/100, que la carga se mida en reportes y no en
+  Casos, que la cola abierta ocupe capacidad y que toda alerta traiga factores.
+- `test_dataset_y_entrenamiento.py` — la guarda contra fuga de información, la
+  rejilla completa, que los rezagos miren al pasado, que la partición sea
+  temporal y que se comparen los tres modelos.
+- `test_api.py` — contrato HTTP: 409 mientras no haya modelo, campos de cada
+  respuesta, filtros y validación de rangos.
+
+El proxy del gateway se prueba aparte, del lado de NestJS, porque ahí es donde
+viven los roles:
+
+```bash
+pnpm --filter @ojo-camba/gateway-principal test
+```

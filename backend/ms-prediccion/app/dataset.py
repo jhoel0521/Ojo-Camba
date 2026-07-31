@@ -180,18 +180,29 @@ def agregar_variables_temporales(datos: pd.DataFrame) -> pd.DataFrame:
     datos["semana_del_anio"] = datos["semana"].dt.isocalendar().week.astype(int)
     datos["es_lluvias"] = datos["mes"].isin(MESES_LLUVIOSOS).astype(int)
 
-    # Carga por cuadrilla: la cola dividida entre la capacidad disponible.
-    datos["carga_por_cuadrilla"] = datos["casos_abiertos_inicio"] / datos[
-        "cuadrillas_activas"
-    ].replace(0, pd.NA)
-    datos["carga_por_cuadrilla"] = datos["carga_por_cuadrilla"].fillna(0)
+    # Carga por cuadrilla: la cola dividida entre la capacidad disponible. El
+    # `where` deja NaN donde no hay cuadrillas (dividir por cero no es carga
+    # infinita, es "todavia no habia capacidad") y mantiene la columna en float.
+    cuadrillas = datos["cuadrillas_activas"].astype(float)
+    datos["carga_por_cuadrilla"] = (
+        datos["casos_abiertos_inicio"] / cuadrillas.where(cuadrillas > 0)
+    ).fillna(0.0)
 
     return datos
 
 
 def construir(engine: Engine, clima: pd.DataFrame | None = None) -> pd.DataFrame:
     """Dataset listo para entrenar: rejilla completa, rezagos y clima real."""
-    datos = completar_rejilla(leer_base(engine))
+    return construir_desde(leer_base(engine), clima)
+
+
+def construir_desde(base: pd.DataFrame, clima: pd.DataFrame | None = None) -> pd.DataFrame:
+    """
+    El resto de `construir`, ya con la base leida. Separado para que el EDA
+    pueda inspeccionar cada etapa sin volver a golpear la base: la consulta de
+    la cola cruza cada semana con cada Caso y no es barata.
+    """
+    datos = completar_rejilla(base)
     datos = agregar_variables_temporales(datos)
 
     if clima is not None and not clima.empty:
