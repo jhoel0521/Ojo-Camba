@@ -95,6 +95,21 @@ function actualizacionImagePath(a: { id: number; url_imagen: string | null }): s
   return `/admin/updates/${a.id}/imagen`;
 }
 
+function reportePreviewImagePath(preview: {
+  reporteId: number | string | null;
+  urlImagen: string | null;
+}): string | null {
+  if (!preview.urlImagen) return null;
+  if (isExternalUrl(preview.urlImagen)) return preview.urlImagen;
+  if (!preview.reporteId) return null;
+  return `/reportes/${preview.reporteId}/imagen`;
+}
+
+const PREVIEW_REPORTE_ID_SQL =
+  '(ARRAY_AGG(r.id ORDER BY r.creado_en ASC) FILTER (WHERE r.url_imagen IS NOT NULL))[1]';
+const PREVIEW_IMAGEN_SQL =
+  '(ARRAY_AGG(r.url_imagen ORDER BY r.creado_en ASC) FILTER (WHERE r.url_imagen IS NOT NULL))[1]';
+
 @Injectable()
 export class AdminService {
   private readonly logger = new Logger(AdminService.name);
@@ -630,7 +645,8 @@ export class AdminService {
       .addSelect('g.categoria_id', 'categoria_id')
       .addSelect('g.creado_en', 'creado_en')
       .addSelect('COUNT(r.id)', 'total_reportes')
-      .addSelect('MIN(r.url_imagen)', 'preview_imagen')
+      .addSelect(PREVIEW_REPORTE_ID_SQL, 'preview_reporte_id')
+      .addSelect(PREVIEW_IMAGEN_SQL, 'preview_imagen')
       .groupBy('g.id')
       .orderBy('g.creado_en', 'DESC');
 
@@ -643,7 +659,14 @@ export class AdminService {
     if (categoriaId !== undefined) {
       qb.andWhere('g.categoria_id = :categoriaId', { categoriaId });
     }
-    return qb.getRawMany();
+    const data = await qb.getRawMany();
+    return data.map((grupo) => ({
+      ...grupo,
+      preview_imagen: reportePreviewImagePath({
+        reporteId: grupo.preview_reporte_id,
+        urlImagen: grupo.preview_imagen,
+      }),
+    }));
   }
 
   async listGroups(page = 1, limit = 20, filtros: FiltrosListaGrupos = {}) {
@@ -658,6 +681,10 @@ export class AdminService {
       .createQueryBuilder('g')
       .leftJoin(Reporte, 'r', 'r.grupo_id = g.id')
       .addSelect('COUNT(r.id)', 'total_reportes')
+      // La lista de casos necesita una evidencia representativa sin consultar
+      // los reportes de cada tarjeta por separado (evita el patrón N+1).
+      .addSelect(PREVIEW_REPORTE_ID_SQL, 'preview_reporte_id')
+      .addSelect(PREVIEW_IMAGEN_SQL, 'preview_imagen')
       .groupBy('g.id');
     this.aplicarFiltrosListaGrupos(qb, filtros);
     qb.orderBy('g.creado_en', orden);
@@ -670,6 +697,10 @@ export class AdminService {
     const data = rows.entities.map((g, i) => ({
       ...g,
       total_reportes: parseInt(rows.raw[i]?.total_reportes ?? '0', 10),
+      preview_imagen: reportePreviewImagePath({
+        reporteId: rows.raw[i]?.preview_reporte_id ?? null,
+        urlImagen: rows.raw[i]?.preview_imagen ?? null,
+      }),
     }));
 
     return { data, total, page: pagina, limit: limite };
@@ -852,7 +883,8 @@ export class AdminService {
       .addSelect('g.fecha_estimada_fin', 'fecha_estimada_fin')
       .addSelect('g.creado_en', 'creado_en')
       .addSelect('COUNT(DISTINCT r.id)', 'total_reportes')
-      .addSelect('MIN(r.url_imagen)', 'preview_imagen')
+      .addSelect(PREVIEW_REPORTE_ID_SQL, 'preview_reporte_id')
+      .addSelect(PREVIEW_IMAGEN_SQL, 'preview_imagen')
       .addSelect('AVG(CAST(r.lat AS FLOAT))', 'lat')
       .addSelect('AVG(CAST(r.lng AS FLOAT))', 'lng')
       .where('CAST(r.lat AS FLOAT) BETWEEN :minLat AND :maxLat', {
@@ -875,6 +907,10 @@ export class AdminService {
       total_reportes: parseInt(g.total_reportes, 10),
       lat: Number(g.lat),
       lng: Number(g.lng),
+      preview_imagen: reportePreviewImagePath({
+        reporteId: g.preview_reporte_id,
+        urlImagen: g.preview_imagen,
+      }),
     }));
   }
 
