@@ -31,7 +31,7 @@ const PERFILES: Perfil[] = [
     email: 'moderador2@ojocamba.bo',
     password: 'mod123',
     areaInicial: '/revisar',
-    menu: ['Bandeja'],
+    menu: ['Bandeja', 'Alertas', 'Historial', 'Calidad'],
     rutaProhibida: '/accesos',
   },
   {

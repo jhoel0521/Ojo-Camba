@@ -11,6 +11,9 @@ import {
   Repeat,
   Menu,
   X,
+  BellRing,
+  History,
+  BarChart3,
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { areasDisponibles, olvidarArea, puedeEntrar } from '../lib/areas';
@@ -22,6 +25,9 @@ import Asistente from './Asistente';
 const NAV_ITEMS = [
   { to: '/', icon: Construction, label: 'Panel estrategico' },
   { to: '/revisar', icon: ClipboardList, label: 'Bandeja' },
+  { to: '/revisar/alertas', icon: BellRing, label: 'Alertas' },
+  { to: '/revisar/historial', icon: History, label: 'Historial' },
+  { to: '/revisar/calidad', icon: BarChart3, label: 'Calidad' },
   { to: '/casos', icon: FolderOpen, label: 'Casos' },
   { to: '/accesos', icon: Users, label: 'Accesos y cuadrillas' },
   { to: '/configuracion/ia', icon: Settings2, label: 'IA y respaldos' },
@@ -92,7 +98,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
           {itemsVisibles.map(({ to, icon: Icon, label }) => {
             const active =
-              location.pathname === to || (to !== '/' && location.pathname.startsWith(to));
+              location.pathname === to ||
+              (to !== '/' && to !== '/revisar' && location.pathname.startsWith(`${to}/`));
             return (
               <NavLink
                 key={to}

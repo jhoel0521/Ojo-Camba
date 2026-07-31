@@ -7,6 +7,7 @@ import {
   CreateGroupDto,
   UpdateCaseDto,
   AcceptReportDto,
+  RejectReportDto,
   BanDeviceDto,
   CreateCuadrillaDto,
   UpdateCuadrillaDto,
@@ -30,14 +31,29 @@ export class AdminController {
     return this.adminService.listPending(dto.page, dto.limit);
   }
 
+  @MessagePattern(TCP_PATTERNS.ADMIN.LIST_REVIEW_ALERTS)
+  listReviewAlerts() {
+    return this.adminService.listReviewAlerts();
+  }
+
+  @MessagePattern(TCP_PATTERNS.ADMIN.LIST_REVIEW_HISTORY)
+  listReviewHistory(@Payload() dto: { page?: number; limit?: number }) {
+    return this.adminService.listReviewHistory(dto.page, dto.limit);
+  }
+
+  @MessagePattern(TCP_PATTERNS.ADMIN.GET_REJECTION_QUALITY)
+  getRejectionQuality(@Payload() dto: { desde?: string; hasta?: string }) {
+    return this.adminService.getRejectionQuality(dto?.desde, dto?.hasta);
+  }
+
   @MessagePattern(TCP_PATTERNS.ADMIN.ACCEPT_REPORT)
   acceptReport(@Payload() dto: AcceptReportDto) {
     return this.adminService.acceptReport(dto);
   }
 
   @MessagePattern(TCP_PATTERNS.ADMIN.REJECT_REPORT)
-  rejectReport(@Payload() dto: { report_id: number }) {
-    return this.adminService.rejectReport(dto.report_id);
+  rejectReport(@Payload() dto: RejectReportDto) {
+    return this.adminService.rejectReport(dto);
   }
 
   @MessagePattern(TCP_PATTERNS.ADMIN.BAN_DEVICE)

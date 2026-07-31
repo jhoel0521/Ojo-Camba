@@ -52,6 +52,7 @@ function makeQb(rawMany: unknown[] = [], count = 0) {
   qb.getRawAndEntities = jest.fn().mockResolvedValue({ entities: [], raw: [] });
   qb.getMany = jest.fn().mockResolvedValue([]);
   qb.getManyAndCount = jest.fn().mockResolvedValue([[], 0]);
+  qb.getOne = jest.fn().mockResolvedValue(null);
   return qb;
 }
 
@@ -72,6 +73,7 @@ describe('AdminService', () => {
     dispositivoRepo = makeRepoMock();
     cuadrillaRepo = makeRepoMock();
     especialidadRepo = makeRepoMock();
+    grupoRepo.createQueryBuilder.mockReturnValue(makeQb());
     gamifyClient = { emit: jest.fn().mockReturnValue({ subscribe: jest.fn() }) };
 
     // acceptReport corre dentro de reporteRepo.manager.transaction(); el manager
@@ -86,6 +88,11 @@ describe('AdminService', () => {
       ),
       create: jest.fn((entity: unknown, x: unknown) =>
         entity === GrupoReporte ? grupoRepo.create(x) : reporteRepo.create(x),
+      ),
+      createQueryBuilder: jest.fn((entity: unknown, alias: string) =>
+        entity === GrupoReporte
+          ? grupoRepo.createQueryBuilder(alias)
+          : reporteRepo.createQueryBuilder(alias),
       ),
       save: jest.fn((x: Record<string, unknown>) =>
         x && 'codigo_obra' in x ? grupoRepo.save(x) : reporteRepo.save(x),
@@ -371,10 +378,76 @@ describe('AdminService', () => {
   });
 
   describe('acceptReport', () => {
+    it('vincula automáticamente a un Caso activo equivalente en la misma celda H3', async () => {
+      const candidatoQb = makeQb();
+      candidatoQb.getOne.mockResolvedValue({ id: 8, codigo_obra: 'O-26-0000008' });
+      grupoRepo.createQueryBuilder.mockReturnValue(candidatoQb);
+      reporteRepo.findOne.mockResolvedValue({
+        id: 1,
+        estado: EstadoReporte.Reportado,
+        categoria_id: 1,
+        h3_res_11: '88abc',
+      });
+      grupoRepo.findOne.mockResolvedValue({ id: 8, codigo_obra: 'O-26-0000008' });
+
+      const result = await service.acceptReport({ report_id: 1, moderador_id: 9 });
+
+      expect(result.grupo_id).toBe(8);
+      expect(grupoRepo.create).not.toHaveBeenCalled();
+      expect(reporteRepo.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          grupo_id: 8,
+          admitido_por_usuario_id: 9,
+          admitido_en: expect.any(Date),
+        }),
+      );
+    });
+
     it('rechaza aceptar un reporte que no esta en estado Reportado', async () => {
       reporteRepo.findOne.mockResolvedValue({ id: 1, estado: EstadoReporte.Aceptado });
       await expect(service.acceptReport({ report_id: 1, moderador_id: 1 })).rejects.toThrow(
         BadRequestException,
+      );
+    });
+  });
+
+  describe('rechazo y calidad de Backoffice (ISSUE-30)', () => {
+    it('exige un motivo estandarizado y deja el descarte digital auditado', async () => {
+      const reporte = { id: 4, estado: EstadoReporte.Reportado };
+      reporteRepo.findOne.mockResolvedValue(reporte);
+
+      const result = await service.rejectReport({
+        report_id: 4,
+        moderador_id: 12,
+        motivo: 'evidencia_insuficiente',
+      });
+
+      expect(result).toEqual(expect.objectContaining({ estado: EstadoReporte.Rechazado }));
+      expect(reporteRepo.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          motivo_descarte_digital: 'evidencia_insuficiente',
+          descartado_por_usuario_id: 12,
+          descartado_en: expect.any(Date),
+        }),
+      );
+    });
+
+    it('calcula la proporción de rechazos de campo por categoría sobre admisiones', async () => {
+      const admisionesQb = makeQb([], 10);
+      const rechazosQb = makeQb([
+        { categoria_id: '7', categoria: 'No existe problema', total: '2' },
+      ]);
+      reporteRepo.createQueryBuilder
+        .mockReturnValueOnce(admisionesQb)
+        .mockReturnValueOnce(rechazosQb);
+
+      const resultado = await service.getRejectionQuality('2026-07-01', '2026-07-31');
+
+      expect(resultado.total_admisiones).toBe(10);
+      expect(resultado.total_rechazos_campo).toBe(2);
+      expect(resultado.proporcion_rechazo).toBe(20);
+      expect(resultado.por_categoria[0]).toEqual(
+        expect.objectContaining({ categoria: 'No existe problema', proporcion: 20 }),
       );
     });
   });

@@ -7,6 +7,9 @@ export default defineConfig({
   testDir: './tests',
   timeout: 60_000,
   retries: 0,
+  // Las pruebas comparten la misma base y moderan/consumen reportes. Ejecutarlas
+  // en paralelo vuelve aleatorio cuál sesión toma una tarjeta primero.
+  workers: 1,
   reporter: 'list',
   use: {
     headless: false,
