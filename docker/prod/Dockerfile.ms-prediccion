@@ -16,8 +16,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY backend/ms-prediccion/app ./app
 
 # Los modelos se entrenan localmente y se publican dentro de la imagen.
-# `modelos/` está ignorado por Git, pero forma parte del contexto local de
-# Docker al construir la imagen de producción.
+# `modelos/` forma parte del contexto local de Docker y se puede versionar para
+# que la imagen de producción incluya el entrenamiento local.
 COPY backend/ms-prediccion/modelos ./modelos
 
 # El caché de clima puede montarse como volumen. El usuario sin privilegios
