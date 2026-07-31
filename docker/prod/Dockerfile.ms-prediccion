@@ -1,0 +1,31 @@
+# ms-prediccion (ISSUE-31) — pronostico semanal de Casos de Obra.
+#
+# A diferencia del resto, no hay etapa de build: Python no compila. La imagen es
+# la misma que backend/ms-prediccion/Dockerfile, pero con el contexto en la raiz
+# del repo, que es como Coolify construye todos los servicios.
+#
+# Python 3.12 y no la ultima: es la version con wheels estables para pandas,
+# numpy y scikit-learn, y evita compilar nada al construir.
+FROM python:3.12-slim
+
+WORKDIR /app
+
+COPY backend/ms-prediccion/requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY backend/ms-prediccion/app ./app
+
+# El modelo entrenado y el cache de clima tienen que vivir en un volumen: si se
+# quedan en la imagen, cada redeploy borra lo entrenado y el servicio arranca
+# devolviendo 409 hasta que alguien vuelva a entrenar a mano.
+# El chown importa: sin el, el usuario sin privilegios no puede guardar el
+# modelo y el entrenamiento falla recien al final, despues de varios minutos.
+RUN mkdir -p /app/modelos /app/datos && chown -R nobody:nogroup /app/modelos /app/datos
+
+ENV PYTHONUNBUFFERED=1
+
+USER nobody
+
+EXPOSE 3007
+
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "3007"]

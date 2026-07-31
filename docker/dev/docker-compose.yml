@@ -147,6 +147,29 @@ services:
       - ms-admin
       - ms-register
 
+  # ── Microservicio HTTP en Python (ISSUE-31) ─────────────────
+  # Único que no habla el TCP de Nest: el pipeline de Machine Learning vive en
+  # pandas y scikit-learn. Tampoco expone puerto al host — se llega por el
+  # gateway, que es donde se comprueban los roles.
+  ms-prediccion:
+    build:
+      context: ../../backend/ms-prediccion
+      dockerfile: Dockerfile
+    volumes:
+      - ../../backend/ms-prediccion/app:/app/app
+      # El modelo entrenado y el cache de clima sobreviven al rebuild: entrenar
+      # tarda y no corre al arrancar (a propósito, ver el README del servicio).
+      - ../../backend/ms-prediccion/modelos:/app/modelos
+      - ../../backend/ms-prediccion/datos:/app/datos
+    environment:
+      # psycopg v3: el driver de SQLAlchemy va en la URL, no como en los Nest.
+      DATABASE_URL: postgresql+psycopg://ojocamba:ojocamba_secret@postgres:5432/ojocamba
+    networks:
+      - ojo-camba-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+
   # ── API Gateways HTTP (exponen puerto al host) ──────────────
   gateway-principal:
     build:
@@ -169,6 +192,7 @@ services:
       MS_GAMIFY_PORT: 3004
       MS_IA_HOST: ms-ia
       MS_IA_PORT: 3006
+      MS_PREDICCION_URL: http://ms-prediccion:3007
     networks:
       - ojo-camba-net
     depends_on:
@@ -177,6 +201,7 @@ services:
       - ms-admin
       - ms-gamify
       - ms-ia
+      - ms-prediccion
 
   gateway-status:
     build:
