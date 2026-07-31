@@ -420,6 +420,8 @@ DATABASE_URL=postgresql+psycopg://<usuario>:<clave>@<host>:5432/<base>
 
 El puerto va fijo en `3007`: la imagen de producción arranca uvicorn con `--port 3007` en el CMD. En ejecución local fuera del contenedor el servicio lee `PUERTO` (defecto `3007`). No existe `PORT` ni `TCP_PORT` como en los microservicios de Nest.
 
+El `DATABASE_URL` también acepta el formato `postgresql://` sin driver (igual que los servicios Nest): el servicio lo normaliza a `+psycopg` automáticamente.
+
 En Coolify crear dos volúmenes persistentes:
 
 ```text
