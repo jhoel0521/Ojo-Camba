@@ -9,6 +9,7 @@ import {
   Categoria,
   Cuadrilla,
   Especialidad,
+  EstadoCaso,
   EstadoReporte,
 } from '@ojo-camba/common';
 import { AdminService, type DashboardInsight } from './admin.service';
@@ -112,6 +113,7 @@ describe('AdminService', () => {
               proyeccion: 0,
               umbral_maximo: 10,
             }),
+            crearVisitaAlAsignarCuadrilla: jest.fn().mockResolvedValue({ id: 1 }),
           },
         },
         { provide: 'MS_GAMIFY', useValue: gamifyClient },
@@ -213,7 +215,7 @@ describe('AdminService', () => {
 
   describe('updateCase', () => {
     it('permite bitacora sin cambiar estado (HU-05)', async () => {
-      grupoRepo.findOne.mockResolvedValue({ id: 1, estado_actual: EstadoReporte.Aceptado });
+      grupoRepo.findOne.mockResolvedValue({ id: 1, estado_actual: EstadoCaso.PendienteAsignacion });
       actualizacionRepo.create.mockReturnValue({
         id: 10,
         comentario: 'avance',
@@ -233,8 +235,11 @@ describe('AdminService', () => {
       expect(reporteRepo.update).not.toHaveBeenCalled();
     });
 
-    it('cambia estado del grupo y cascada a sus reportes (transicion legal Aceptado -> ValidacionEnCampo)', async () => {
-      grupoRepo.findOne.mockResolvedValue({ id: 1, estado_actual: EstadoReporte.Aceptado });
+    it('cambia estado del grupo y conserva reportes como aceptados (PendienteAsignacion -> PlanificadoVisita)', async () => {
+      grupoRepo.findOne.mockResolvedValue({
+        id: 1,
+        estado_actual: EstadoCaso.PendienteAsignacion,
+      });
       actualizacionRepo.create.mockImplementation((x) => x);
       actualizacionRepo.save.mockImplementation((x) =>
         Promise.resolve({ id: 11, creado_en: new Date(), ...x }),
@@ -244,20 +249,20 @@ describe('AdminService', () => {
         grupo_id: 1,
         usuario_id: 2,
         comentario: 'inicio',
-        estado_nuevo: EstadoReporte.ValidacionEnCampo,
+        estado_nuevo: EstadoCaso.PlanificadoVisita,
       });
 
       expect(grupoRepo.save).toHaveBeenCalledWith(
-        expect.objectContaining({ estado_actual: EstadoReporte.ValidacionEnCampo }),
+        expect.objectContaining({ estado_actual: EstadoCaso.PlanificadoVisita }),
       );
       expect(reporteRepo.update).toHaveBeenCalledWith(
         { grupo_id: 1 },
-        { estado: EstadoReporte.ValidacionEnCampo },
+        { estado: EstadoReporte.Aceptado },
       );
     });
 
     it('rechaza estado_nuevo invalido', async () => {
-      grupoRepo.findOne.mockResolvedValue({ id: 1, estado_actual: EstadoReporte.Aceptado });
+      grupoRepo.findOne.mockResolvedValue({ id: 1, estado_actual: EstadoCaso.PendienteAsignacion });
       actualizacionRepo.create.mockReturnValue({});
       actualizacionRepo.save.mockResolvedValue({});
 
@@ -280,10 +285,16 @@ describe('AdminService', () => {
       );
     });
 
-    const transicionesLegales: [EstadoReporte, EstadoReporte][] = [
-      [EstadoReporte.Aceptado, EstadoReporte.ValidacionEnCampo],
-      [EstadoReporte.ValidacionEnCampo, EstadoReporte.EnTrabajo],
-      [EstadoReporte.EnTrabajo, EstadoReporte.Finalizado],
+    const transicionesLegales: [EstadoCaso, EstadoCaso][] = [
+      [EstadoCaso.PendienteAsignacion, EstadoCaso.PlanificadoVisita],
+      [EstadoCaso.PlanificadoVisita, EstadoCaso.ValidacionCampo],
+      [EstadoCaso.ValidacionCampo, EstadoCaso.Reencolado],
+      [EstadoCaso.ValidacionCampo, EstadoCaso.EnTrabajo],
+      [EstadoCaso.ValidacionCampo, EstadoCaso.Derivado],
+      [EstadoCaso.ValidacionCampo, EstadoCaso.RechazadoCampo],
+      [EstadoCaso.Reencolado, EstadoCaso.PlanificadoVisita],
+      [EstadoCaso.EnTrabajo, EstadoCaso.PlanificadoVisita],
+      [EstadoCaso.EnTrabajo, EstadoCaso.Finalizado],
     ];
 
     it.each(transicionesLegales)('permite %s -> %s', async (desde, hasta) => {
@@ -297,13 +308,12 @@ describe('AdminService', () => {
       );
     });
 
-    const transicionesIlegales: [EstadoReporte, EstadoReporte][] = [
-      [EstadoReporte.Aceptado, EstadoReporte.EnTrabajo], // salto
-      [EstadoReporte.Aceptado, EstadoReporte.Finalizado], // salto
-      [EstadoReporte.EnTrabajo, EstadoReporte.Aceptado], // retroceso — el caso reportado por el usuario
-      [EstadoReporte.EnTrabajo, EstadoReporte.ValidacionEnCampo], // retroceso
-      [EstadoReporte.ValidacionEnCampo, EstadoReporte.Aceptado], // retroceso
-      [EstadoReporte.Aceptado, EstadoReporte.Rechazado], // Rechazado no aplica a un Caso ya agrupado
+    const transicionesIlegales: [EstadoCaso, EstadoCaso][] = [
+      [EstadoCaso.PendienteAsignacion, EstadoCaso.EnTrabajo],
+      [EstadoCaso.PlanificadoVisita, EstadoCaso.Finalizado],
+      [EstadoCaso.ValidacionCampo, EstadoCaso.Finalizado],
+      [EstadoCaso.EnTrabajo, EstadoCaso.ValidacionCampo],
+      [EstadoCaso.Derivado, EstadoCaso.PlanificadoVisita],
     ];
 
     it.each(transicionesIlegales)('rechaza %s -> %s con mensaje claro', async (desde, hasta) => {
@@ -316,14 +326,14 @@ describe('AdminService', () => {
     });
 
     it('Finalizado es terminal: cualquier estado_nuevo posterior se rechaza', async () => {
-      grupoRepo.findOne.mockResolvedValue({ id: 1, estado_actual: EstadoReporte.Finalizado });
+      grupoRepo.findOne.mockResolvedValue({ id: 1, estado_actual: EstadoCaso.Finalizado });
 
       await expect(
         service.updateCase({
           grupo_id: 1,
           usuario_id: 2,
           comentario: 'x',
-          estado_nuevo: EstadoReporte.EnTrabajo,
+          estado_nuevo: EstadoCaso.EnTrabajo,
         }),
       ).rejects.toThrow(/estado terminal/i);
     });
@@ -331,26 +341,26 @@ describe('AdminService', () => {
     it('persiste estado_anterior en la bitacora al cambiar de estado', async () => {
       grupoRepo.findOne.mockResolvedValue({
         id: 1,
-        estado_actual: EstadoReporte.ValidacionEnCampo,
+        estado_actual: EstadoCaso.ValidacionCampo,
       });
 
       await service.updateCase({
         grupo_id: 1,
         usuario_id: 2,
         comentario: 'avanza',
-        estado_nuevo: EstadoReporte.EnTrabajo,
+        estado_nuevo: EstadoCaso.EnTrabajo,
       });
 
       expect(actualizacionRepo.create).toHaveBeenCalledWith(
         expect.objectContaining({
-          estado_anterior: EstadoReporte.ValidacionEnCampo,
-          estado_nuevo: EstadoReporte.EnTrabajo,
+          estado_anterior: EstadoCaso.ValidacionCampo,
+          estado_nuevo: EstadoCaso.EnTrabajo,
         }),
       );
     });
 
     it('estado_anterior queda null cuando no hay cambio de estado', async () => {
-      grupoRepo.findOne.mockResolvedValue({ id: 1, estado_actual: EstadoReporte.Aceptado });
+      grupoRepo.findOne.mockResolvedValue({ id: 1, estado_actual: EstadoCaso.PendienteAsignacion });
 
       await service.updateCase({ grupo_id: 1, usuario_id: 2, comentario: 'solo avance' });
 

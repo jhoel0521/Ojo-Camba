@@ -20,6 +20,13 @@ export class Cuadrilla {
   @Column({ type: 'boolean', default: true })
   activa: boolean;
 
+  /** Base opcional usada por el motor cuando el responsable no comparte GPS. */
+  @Column({ type: 'decimal', precision: 10, scale: 7, nullable: true })
+  lat_base: number | null;
+
+  @Column({ type: 'decimal', precision: 10, scale: 7, nullable: true })
+  lng_base: number | null;
+
   @CreateDateColumn({ type: 'timestamptz' })
   creado_en: Date;
 }

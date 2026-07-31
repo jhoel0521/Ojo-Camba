@@ -11,7 +11,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
-import { ROLES, TCP_PATTERNS } from '@ojo-camba/common';
+import { EstadoCaso, ROLES, TCP_PATTERNS } from '@ojo-camba/common';
 import { sendRpc } from './rpc.helper';
 import { RequireRoles, RolesGuard, TokenValidation } from './roles.guard';
 
@@ -22,6 +22,167 @@ type AuthenticatedRequest = { user: TokenValidation };
 @UseGuards(RolesGuard)
 export class OperacionController {
   constructor(@Inject('MS_ADMIN') private readonly admin: ClientProxy) {}
+
+  @Get('contexto')
+  @RequireRoles(ROLES.TECNICO, ROLES.COORDINADOR_OPERATIVO)
+  async contexto(@Req() request: AuthenticatedRequest) {
+    const operativo = await sendRpc(
+      this.admin.send(TCP_PATTERNS.ADMIN.GET_CONTEXTO_OPERATIVO, {
+        usuario_id: request.user.user_id,
+      }),
+    );
+    return { ...operativo, roles: request.user.roles };
+  }
+
+  @Get('mis-obras')
+  @RequireRoles(ROLES.TECNICO)
+  misObras(
+    @Req() request: AuthenticatedRequest,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return sendRpc(
+      this.admin.send(TCP_PATTERNS.ADMIN.LIST_VISITAS_TECNICO, {
+        usuario_id: request.user.user_id,
+        page: page ? parseInt(page, 10) : undefined,
+        limit: limit ? parseInt(limit, 10) : undefined,
+      }),
+    );
+  }
+
+  @Get('mi-ruta')
+  @RequireRoles(ROLES.TECNICO)
+  miRuta(@Req() request: AuthenticatedRequest, @Query('fecha') fecha?: string) {
+    return sendRpc(
+      this.admin.send(TCP_PATTERNS.ADMIN.LIST_VISITAS_TECNICO, {
+        usuario_id: request.user.user_id,
+        page: 1,
+        limit: 100,
+        fecha,
+      }),
+    );
+  }
+
+  @Get('mi-cuadrilla/visitas')
+  @RequireRoles(ROLES.TECNICO)
+  visitasMiCuadrilla(
+    @Req() request: AuthenticatedRequest,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return sendRpc(
+      this.admin.send(TCP_PATTERNS.ADMIN.LIST_VISITAS_CUADRILLA, {
+        usuario_id: request.user.user_id,
+        page: page ? parseInt(page, 10) : undefined,
+        limit: limit ? parseInt(limit, 10) : undefined,
+      }),
+    );
+  }
+
+  @Get('visitas/:id')
+  @RequireRoles(ROLES.TECNICO)
+  detalleVisita(@Req() request: AuthenticatedRequest, @Param('id') id: string) {
+    return sendRpc(
+      this.admin.send(TCP_PATTERNS.ADMIN.GET_VISITA_TECNICO, {
+        visita_id: parseInt(id, 10),
+        usuario_id: request.user.user_id,
+      }),
+    );
+  }
+
+  @Post('visitas/:id/llegada')
+  @RequireRoles(ROLES.TECNICO)
+  registrarLlegada(
+    @Req() request: AuthenticatedRequest,
+    @Param('id') id: string,
+    @Body() dto: { lat: number; lng: number },
+  ) {
+    return sendRpc(
+      this.admin.send(TCP_PATTERNS.ADMIN.REGISTRAR_LLEGADA_VISITA, {
+        visita_id: parseInt(id, 10),
+        tecnico_id: request.user.user_id,
+        lat: dto.lat,
+        lng: dto.lng,
+      }),
+    );
+  }
+
+  @Put('mi-cuadrilla/visitas/:id/asignacion')
+  @RequireRoles(ROLES.TECNICO)
+  asignarVisita(
+    @Req() request: AuthenticatedRequest,
+    @Param('id') id: string,
+    @Body()
+    dto: {
+      tecnico_id: number;
+      fecha_planificada: string;
+      orden_ruta: number;
+      motivo?: string;
+    },
+  ) {
+    return sendRpc(
+      this.admin.send(TCP_PATTERNS.ADMIN.ASIGNAR_VISITA_TECNICO, {
+        visita_id: parseInt(id, 10),
+        responsable_id: request.user.user_id,
+        ...dto,
+      }),
+    );
+  }
+
+  @Post('visitas/:id/propuestas')
+  @RequireRoles(ROLES.TECNICO)
+  proponerResultadoVisita(
+    @Req() request: AuthenticatedRequest,
+    @Param('id') id: string,
+    @Body()
+    dto: {
+      estado_propuesto: EstadoCaso;
+      comentario: string;
+      evidencia_url?: string;
+      entidad_destino?: string;
+      categoria_rechazo_id?: number;
+    },
+  ) {
+    return sendRpc(
+      this.admin.send(TCP_PATTERNS.ADMIN.PROPONER_RESULTADO_VISITA, {
+        visita_id: parseInt(id, 10),
+        tecnico_id: request.user.user_id,
+        ...dto,
+      }),
+    );
+  }
+
+  @Post('mi-cuadrilla/propuestas/:id/confirmar')
+  @RequireRoles(ROLES.TECNICO)
+  confirmarPropuestaCuadrilla(
+    @Req() request: AuthenticatedRequest,
+    @Param('id') id: string,
+    @Body() dto: { motivo_decision?: string },
+  ) {
+    return sendRpc(
+      this.admin.send(TCP_PATTERNS.ADMIN.CONFIRMAR_PROPUESTA_VISITA, {
+        propuesta_id: parseInt(id, 10),
+        usuario_id: request.user.user_id,
+        ...dto,
+      }),
+    );
+  }
+
+  @Post('excepciones/propuestas/:id/rechazar')
+  @RequireRoles(ROLES.COORDINADOR_OPERATIVO)
+  confirmarRechazoCampo(
+    @Req() request: AuthenticatedRequest,
+    @Param('id') id: string,
+    @Body() dto: { motivo_decision?: string },
+  ) {
+    return sendRpc(
+      this.admin.send(TCP_PATTERNS.ADMIN.CONFIRMAR_PROPUESTA_VISITA, {
+        propuesta_id: parseInt(id, 10),
+        usuario_id: request.user.user_id,
+        ...dto,
+      }),
+    );
+  }
 
   @Get('tecnico/groups')
   @RequireRoles(ROLES.TECNICO)

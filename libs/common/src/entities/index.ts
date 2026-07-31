@@ -5,6 +5,8 @@ export { GrupoReporte } from './grupo-reporte.entity';
 export { Especialidad } from './especialidad.entity';
 export { Cuadrilla } from './cuadrilla.entity';
 export { CuadrillaMiembro } from './cuadrilla-miembro.entity';
+export { VisitaCaso } from './visita-caso.entity';
+export { PropuestaVisita, DecisionPropuestaVisita } from './propuesta-visita.entity';
 export { ConfiguracionOperativa } from './configuracion-operativa.entity';
 export { DerivacionCaso } from './derivacion-caso.entity';
 export { SolicitudTi } from './solicitud-ti.entity';

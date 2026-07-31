@@ -2,7 +2,10 @@ import { spawnSync } from 'child_process';
 import { resolve } from 'path';
 
 const root = resolve(import.meta.dirname, '..');
-const cli = resolve(root, 'libs/common/node_modules/typeorm/cli.js');
+// pnpm enlaza las dependencias de los workspaces al almacén raíz; no todos los
+// paquetes tienen un node_modules físico propio. Ejecutar el CLI raíz mantiene
+// migration:show/run funcional tanto localmente como en CI.
+const cli = resolve(root, 'node_modules/typeorm/cli.js');
 
 const result = spawnSync(
   process.execPath,

@@ -1,8 +1,12 @@
 const STATUS_COLORS: Record<string, string> = {
   Reportado: 'bg-arena text-perla',
-  Aceptado: 'bg-sol-camba text-perla',
-  ValidacionEnCampo: 'bg-caoba text-perla',
+  PendienteAsignacion: 'bg-sol-camba text-perla',
+  PlanificadoVisita: 'bg-caoba text-perla',
+  ValidacionCampo: 'bg-caoba text-perla',
+  Reencolado: 'bg-sol-camba text-perla',
   EnTrabajo: 'bg-caoba text-perla',
+  Derivado: 'bg-ladrillo text-perla',
+  RechazadoCampo: 'bg-catedral text-arena',
   Finalizado: 'bg-green-600 text-perla',
   Rechazado: 'bg-catedral text-arena',
 };

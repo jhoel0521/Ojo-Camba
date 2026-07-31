@@ -66,5 +66,19 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
+  const roles = useAuthStore.getState().user?.roles ?? [];
+  if (!roles.includes('tecnico') && !roles.includes('coordinador_operativo')) {
+    return (
+      <div className="min-h-screen bg-lienzo p-6 font-pirai">
+        <div className="mx-auto mt-24 max-w-sm rounded-3xl-3 bg-perla p-6 text-center shadow-sm">
+          <h1 className="text-lg font-semibold text-tierra">Sin acceso operativo</h1>
+          <p className="mt-2 text-sm leading-6 text-arena">
+            Esta aplicación está reservada para técnicos de campo y coordinación operativa.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return <>{children}</>;
 }
