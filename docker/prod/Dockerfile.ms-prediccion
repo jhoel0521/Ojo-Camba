@@ -15,12 +15,14 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY backend/ms-prediccion/app ./app
 
-# El modelo entrenado y el cache de clima tienen que vivir en un volumen: si se
-# quedan en la imagen, cada redeploy borra lo entrenado y el servicio arranca
-# devolviendo 409 hasta que alguien vuelva a entrenar a mano.
-# El chown importa: sin el, el usuario sin privilegios no puede guardar el
-# modelo y el entrenamiento falla recien al final, despues de varios minutos.
-RUN mkdir -p /app/modelos /app/datos && chown -R nobody:nogroup /app/modelos /app/datos
+# Los modelos se entrenan localmente y se publican dentro de la imagen.
+# `modelos/` está ignorado por Git, pero forma parte del contexto local de
+# Docker al construir la imagen de producción.
+COPY backend/ms-prediccion/modelos ./modelos
+
+# El caché de clima puede montarse como volumen. El usuario sin privilegios
+# también necesita permisos para reentrenar o actualizar artefactos.
+RUN mkdir -p /app/datos && chown -R nobody:nogroup /app/modelos /app/datos
 
 ENV PYTHONUNBUFFERED=1
 
