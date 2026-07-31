@@ -34,7 +34,11 @@ async function login(page: Page, cred: { email: string; password: string }) {
   await page.getByPlaceholder('moderador@ojocamba.bo').fill(cred.email);
   await page.getByPlaceholder('••••••••').fill(cred.password);
   await page.getByRole('button', { name: 'Ingresar' }).click();
-  await expect(page).toHaveURL(`${BACKOFFICE_URL}/`, { timeout: 10_000 });
+  await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 10_000 });
+  if (new URL(page.url()).pathname === '/areas') {
+    await page.getByRole('button', { name: /Bandeja prioritaria/ }).click();
+  }
+  await expect(page).toHaveURL(`${BACKOFFICE_URL}/revisar`, { timeout: 10_000 });
 }
 
 async function abrirRevisar(browser: Browser, cred: { email: string; password: string }) {

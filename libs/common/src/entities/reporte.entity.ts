@@ -42,6 +42,23 @@ export class Reporte {
   @Column({ type: 'varchar', length: 500 })
   url_imagen: string;
 
+  /** Quién admitió el reporte en Backoffice; alimenta la métrica de calidad. */
+  @Column({ type: 'int', nullable: true })
+  admitido_por_usuario_id: number | null;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  admitido_en: Date | null;
+
+  /** Descarte previo a una visita, distinto del rechazo de campo del Caso. */
+  @Column({ type: 'varchar', length: 80, nullable: true })
+  motivo_descarte_digital: string | null;
+
+  @Column({ type: 'int', nullable: true })
+  descartado_por_usuario_id: number | null;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  descartado_en: Date | null;
+
   @CreateDateColumn({ type: 'timestamptz' })
   creado_en: Date;
 }

@@ -19,14 +19,18 @@ import {
   Categoria,
   Cuadrilla,
   Especialidad,
+  EstadoCaso,
   EstadoReporte,
   Gravedad,
   TCP_PATTERNS,
+  puedeTransicionarCaso,
+  TRANSICIONES_CASO,
 } from '@ojo-camba/common';
 import {
   CreateGroupDto,
   UpdateCaseDto,
   AcceptReportDto,
+  RejectReportDto,
   BanDeviceDto,
   CreateCuadrillaDto,
   UpdateCuadrillaDto,
@@ -54,25 +58,21 @@ export interface FiltrosListaGrupos {
   orden?: 'recientes' | 'antiguos';
 }
 
-// Flujo obligatorio y secuencial de un Caso de Obra (trazabilidad, pedido del
-// docente): desde cada estado solo se permite avanzar al/los siguiente(s)
-// indicado(s). "Rechazado" no aparece aqui porque aplica solo a Reporte
-// individuales antes de agruparse (ver rejectReport()), nunca a un
-// GrupoReporte ya en curso.
-const TRANSICIONES_VALIDAS: Record<string, EstadoReporte[]> = {
-  [EstadoReporte.Aceptado]: [EstadoReporte.ValidacionEnCampo],
-  [EstadoReporte.ValidacionEnCampo]: [EstadoReporte.EnTrabajo],
-  [EstadoReporte.EnTrabajo]: [EstadoReporte.Finalizado],
-  [EstadoReporte.Finalizado]: [],
-};
-
 // Un caso "ocupa" a su cuadrilla mientras no esté finalizado — es la carga que
 // pondera el motor de recomendación de ms-ia.
 const ESTADOS_ACTIVOS = [
-  EstadoReporte.Aceptado,
-  EstadoReporte.ValidacionEnCampo,
-  EstadoReporte.EnTrabajo,
+  EstadoCaso.PendienteAsignacion,
+  EstadoCaso.PlanificadoVisita,
+  EstadoCaso.ValidacionCampo,
+  EstadoCaso.Reencolado,
+  EstadoCaso.EnTrabajo,
 ];
+
+function estadoReporteDesdeCaso(estado: EstadoCaso): EstadoReporte {
+  if (estado === EstadoCaso.Finalizado) return EstadoReporte.Finalizado;
+  if (estado === EstadoCaso.RechazadoCampo) return EstadoReporte.Rechazado;
+  return EstadoReporte.Aceptado;
+}
 
 const isExternalUrl = (url: string | null): boolean => url?.startsWith('http') === true;
 
@@ -94,6 +94,21 @@ function actualizacionImagePath(a: { id: number; url_imagen: string | null }): s
   if (isExternalUrl(a.url_imagen)) return a.url_imagen;
   return `/admin/updates/${a.id}/imagen`;
 }
+
+function reportePreviewImagePath(preview: {
+  reporteId: number | string | null;
+  urlImagen: string | null;
+}): string | null {
+  if (!preview.urlImagen) return null;
+  if (isExternalUrl(preview.urlImagen)) return preview.urlImagen;
+  if (!preview.reporteId) return null;
+  return `/reportes/${preview.reporteId}/imagen`;
+}
+
+const PREVIEW_REPORTE_ID_SQL =
+  '(ARRAY_AGG(r.id ORDER BY r.creado_en ASC) FILTER (WHERE r.url_imagen IS NOT NULL))[1]';
+const PREVIEW_IMAGEN_SQL =
+  '(ARRAY_AGG(r.url_imagen ORDER BY r.creado_en ASC) FILTER (WHERE r.url_imagen IS NOT NULL))[1]';
 
 @Injectable()
 export class AdminService {
@@ -171,6 +186,9 @@ export class AdminService {
       }
 
       reporte.estado = EstadoReporte.Aceptado;
+      reporte.categoria_id = dto.categoria_id ?? reporte.categoria_id;
+      reporte.admitido_por_usuario_id = dto.moderador_id;
+      reporte.admitido_en = new Date();
 
       // La gravedad solo cambia si el moderador la envio explicitamente; el triaje sugiere,
       // no decide. El @IsIn del DTO no alcanza: este microservicio no tiene ValidationPipe,
@@ -182,8 +200,24 @@ export class AdminService {
         reporte.gravedad = dto.gravedad;
       }
 
-      if (dto.grupo_id) {
-        const grupo = await manager.findOne(GrupoReporte, { where: { id: dto.grupo_id } });
+      let grupoId = dto.grupo_id;
+      if (!grupoId) {
+        // La unidad de coincidencia es la celda H3 del reporte y la categoría
+        // final del triaje. Así un reporte ciudadano mal categorizado puede
+        // corregirse antes de vincularlo, sin crear casos virales duplicados.
+        const candidato = await manager
+          .createQueryBuilder(GrupoReporte, 'g')
+          .innerJoin(Reporte, 'r', 'r.grupo_id = g.id')
+          .where('g.estado_actual IN (:...estadosActivos)', { estadosActivos: ESTADOS_ACTIVOS })
+          .andWhere('g.categoria_id = :categoriaId', { categoriaId: reporte.categoria_id })
+          .andWhere('r.h3_res_11 = :h3', { h3: reporte.h3_res_11 })
+          .orderBy('g.creado_en', 'ASC')
+          .getOne();
+        grupoId = candidato?.id;
+      }
+
+      if (grupoId) {
+        const grupo = await manager.findOne(GrupoReporte, { where: { id: grupoId } });
         if (!grupo) throw new NotFoundException('Caso de Obra no encontrado');
         reporte.grupo_id = grupo.id;
         await manager.save(reporte);
@@ -201,7 +235,7 @@ export class AdminService {
       const grupo = await manager.save(
         manager.create(GrupoReporte, {
           codigo_obra: codigoObra,
-          estado_actual: EstadoReporte.Aceptado,
+          estado_actual: EstadoCaso.PendienteAsignacion,
           creado_por_usuario_id: dto.moderador_id,
           categoria_id: dto.categoria_id ?? reporte.categoria_id,
         }),
@@ -236,17 +270,135 @@ export class AdminService {
     };
   }
 
-  async rejectReport(reportId: number) {
-    const reporte = await this.reporteRepo.findOne({ where: { id: reportId } });
+  async rejectReport(dto: RejectReportDto) {
+    const reporte = await this.reporteRepo.findOne({ where: { id: dto.report_id } });
     if (!reporte) throw new NotFoundException('Reporte no encontrado');
     if (reporte.estado !== EstadoReporte.Reportado) {
       throw new BadRequestException('Solo se pueden rechazar reportes en estado Reportado');
     }
 
     reporte.estado = EstadoReporte.Rechazado;
+    reporte.motivo_descarte_digital = dto.motivo;
+    reporte.descartado_por_usuario_id = dto.moderador_id;
+    reporte.descartado_en = new Date();
     await this.reporteRepo.save(reporte);
 
-    return { id: reporte.id, estado: reporte.estado };
+    return { id: reporte.id, estado: reporte.estado, motivo: reporte.motivo_descarte_digital };
+  }
+
+  /** Alertas accionables de la bandeja; no asignan trabajo de cuadrillas. */
+  async listReviewAlerts() {
+    const [virales, espera, reincidencias] = await Promise.all([
+      this.reporteRepo
+        .createQueryBuilder('r')
+        .select('r.h3_res_11', 'zona')
+        .addSelect('COUNT(r.id)', 'total')
+        .where('r.estado = :estado', { estado: EstadoReporte.Reportado })
+        .groupBy('r.h3_res_11')
+        .having('COUNT(r.id) >= 3')
+        .orderBy('COUNT(r.id)', 'DESC')
+        .take(10)
+        .getRawMany(),
+      this.reporteRepo
+        .createQueryBuilder('r')
+        .select('r.id', 'reporte_id')
+        .addSelect('r.creado_en', 'creado_en')
+        .where('r.estado = :estado', { estado: EstadoReporte.Reportado })
+        .andWhere("r.creado_en < NOW() - INTERVAL '24 hours'")
+        .orderBy('r.creado_en', 'ASC')
+        .take(10)
+        .getRawMany(),
+      this.reporteRepo
+        .createQueryBuilder('r')
+        .innerJoin(Reporte, 'anterior', 'anterior.h3_res_11 = r.h3_res_11')
+        .innerJoin(GrupoReporte, 'g', 'g.id = anterior.grupo_id')
+        .select('r.id', 'reporte_id')
+        .addSelect('g.codigo_obra', 'codigo_obra')
+        .where('r.estado = :estado', { estado: EstadoReporte.Reportado })
+        .andWhere('g.estado_actual = :finalizado', { finalizado: EstadoCaso.Finalizado })
+        .distinct(true)
+        .take(10)
+        .getRawMany(),
+    ]);
+
+    return [
+      ...virales.map((fila) => ({
+        tipo: 'reporte_viral',
+        titulo: 'Reportes concentrados en una zona',
+        detalle: `${fila.total} reportes pendientes en la misma zona.`,
+        zona: fila.zona,
+      })),
+      ...espera.map((fila) => ({
+        tipo: 'espera_excesiva',
+        titulo: 'Reporte sin revisar por más de 24 horas',
+        detalle: `Reporte #${fila.reporte_id} requiere revisión prioritaria.`,
+        reporte_id: Number(fila.reporte_id),
+      })),
+      ...reincidencias.map((fila) => ({
+        tipo: 'posible_reincidencia',
+        titulo: 'Posible reincidencia de una obra cerrada',
+        detalle: `El reporte #${fila.reporte_id} coincide con ${fila.codigo_obra}.`,
+        reporte_id: Number(fila.reporte_id),
+        codigo_obra: fila.codigo_obra,
+      })),
+    ];
+  }
+
+  async listReviewHistory(page = 1, limit = 20) {
+    const [data, total] = await this.reporteRepo.findAndCount({
+      where: { estado: In([EstadoReporte.Aceptado, EstadoReporte.Rechazado]) },
+      order: { creado_en: 'DESC' },
+      skip: (Math.max(1, page) - 1) * Math.min(Math.max(1, limit), 100),
+      take: Math.min(Math.max(1, limit), 100),
+    });
+    return { data, total, page: Math.max(1, page), limit: Math.min(Math.max(1, limit), 100) };
+  }
+
+  async getRejectionQuality(desde?: string, hasta?: string) {
+    const admisiones = this.reporteRepo
+      .createQueryBuilder('r')
+      .where('r.admitido_por_usuario_id IS NOT NULL');
+    const rechazos = this.reporteRepo
+      .createQueryBuilder('r')
+      .innerJoin(GrupoReporte, 'g', 'g.id = r.grupo_id')
+      .leftJoin(Categoria, 'c', 'c.id = g.categoria_rechazo_campo_id')
+      .select('g.categoria_rechazo_campo_id', 'categoria_id')
+      .addSelect("COALESCE(c.nombre, 'Sin categoría')", 'categoria')
+      .addSelect('COUNT(r.id)', 'total')
+      .where('r.admitido_por_usuario_id IS NOT NULL')
+      .andWhere('g.estado_actual = :estado', { estado: EstadoCaso.RechazadoCampo })
+      .groupBy('g.categoria_rechazo_campo_id')
+      .addGroupBy('c.nombre');
+
+    const inicio = fechaInicioUtc(desde);
+    const fin = fechaFinExclusivaUtc(hasta);
+    for (const qb of [admisiones, rechazos]) {
+      if (inicio) qb.andWhere('r.admitido_en >= :inicio', { inicio });
+      if (fin) qb.andWhere('r.admitido_en < :fin', { fin });
+    }
+    const [totalAdmisiones, filas] = await Promise.all([
+      admisiones.getCount(),
+      rechazos.getRawMany(),
+    ]);
+    const porCategoria = filas.map((fila) => {
+      const total = Number(fila.total);
+      return {
+        categoria_id: fila.categoria_id == null ? null : Number(fila.categoria_id),
+        categoria: fila.categoria,
+        total,
+        proporcion: totalAdmisiones ? Number(((total / totalAdmisiones) * 100).toFixed(1)) : 0,
+      };
+    });
+    const totalRechazos = porCategoria.reduce((suma, fila) => suma + fila.total, 0);
+    return {
+      rango_aplicado: { desde: desde ?? null, hasta: hasta ?? null },
+      total_admisiones: totalAdmisiones,
+      total_rechazos_campo: totalRechazos,
+      proporcion_rechazo: totalAdmisiones
+        ? Number(((totalRechazos / totalAdmisiones) * 100).toFixed(1))
+        : 0,
+      por_categoria: porCategoria,
+    };
   }
 
   // ── CU-09: Banear dispositivo ─────────────────────────────
@@ -295,7 +447,7 @@ export class AdminService {
 
     const grupo = this.grupoRepo.create({
       codigo_obra: codigoObra,
-      estado_actual: EstadoReporte.Aceptado,
+      estado_actual: EstadoCaso.PendienteAsignacion,
       creado_por_usuario_id: dto.creado_por_usuario_id,
       categoria_id: categoriaFinal,
     });
@@ -305,6 +457,8 @@ export class AdminService {
       grupo_id: grupo.id,
       estado: EstadoReporte.Aceptado,
       categoria_id: categoriaFinal,
+      admitido_por_usuario_id: dto.creado_por_usuario_id,
+      admitido_en: new Date(),
     });
 
     this.logger.log(`Caso de Obra creado: ${codigoObra} con ${dto.report_ids.length} reportes`);
@@ -332,8 +486,8 @@ export class AdminService {
     // validacion que lo use termina devolviendo 401 en vez de 400. Se usa
     // "deben" a proposito porque solo matchea la rama de BadRequestException.
     if (dto.estado_nuevo) {
-      const validos = Object.values(EstadoReporte);
-      if (!validos.includes(dto.estado_nuevo as EstadoReporte)) {
+      const validos = Object.values(EstadoCaso);
+      if (!validos.includes(dto.estado_nuevo as EstadoCaso)) {
         throw new BadRequestException(
           `Los valores de estado deben ser uno de: ${validos.join(', ')}.`,
         );
@@ -341,8 +495,10 @@ export class AdminService {
 
       // Flujo secuencial obligatorio: no basta con que el valor exista en el
       // enum, tiene que ser una transicion legal desde el estado actual.
-      const siguientesValidos = TRANSICIONES_VALIDAS[grupo.estado_actual] ?? [];
-      if (!siguientesValidos.includes(dto.estado_nuevo as EstadoReporte)) {
+      const estadoActual = grupo.estado_actual as EstadoCaso;
+      const estadoNuevo = dto.estado_nuevo as EstadoCaso;
+      const siguientesValidos = TRANSICIONES_CASO[estadoActual] ?? [];
+      if (!puedeTransicionarCaso(estadoActual, estadoNuevo)) {
         throw new BadRequestException(
           `Los cambios de estado deben seguir el flujo secuencial: no se puede pasar de "${grupo.estado_actual}" a "${dto.estado_nuevo}". ` +
             (siguientesValidos.length
@@ -394,7 +550,10 @@ export class AdminService {
       }
       await this.grupoRepo.save(grupo);
 
-      await this.reporteRepo.update({ grupo_id: dto.grupo_id }, { estado: dto.estado_nuevo });
+      await this.reporteRepo.update(
+        { grupo_id: dto.grupo_id },
+        { estado: estadoReporteDesdeCaso(dto.estado_nuevo as EstadoCaso) },
+      );
     }
 
     return {
@@ -486,7 +645,8 @@ export class AdminService {
       .addSelect('g.categoria_id', 'categoria_id')
       .addSelect('g.creado_en', 'creado_en')
       .addSelect('COUNT(r.id)', 'total_reportes')
-      .addSelect('MIN(r.url_imagen)', 'preview_imagen')
+      .addSelect(PREVIEW_REPORTE_ID_SQL, 'preview_reporte_id')
+      .addSelect(PREVIEW_IMAGEN_SQL, 'preview_imagen')
       .groupBy('g.id')
       .orderBy('g.creado_en', 'DESC');
 
@@ -499,7 +659,14 @@ export class AdminService {
     if (categoriaId !== undefined) {
       qb.andWhere('g.categoria_id = :categoriaId', { categoriaId });
     }
-    return qb.getRawMany();
+    const data = await qb.getRawMany();
+    return data.map((grupo) => ({
+      ...grupo,
+      preview_imagen: reportePreviewImagePath({
+        reporteId: grupo.preview_reporte_id,
+        urlImagen: grupo.preview_imagen,
+      }),
+    }));
   }
 
   async listGroups(page = 1, limit = 20, filtros: FiltrosListaGrupos = {}) {
@@ -514,6 +681,10 @@ export class AdminService {
       .createQueryBuilder('g')
       .leftJoin(Reporte, 'r', 'r.grupo_id = g.id')
       .addSelect('COUNT(r.id)', 'total_reportes')
+      // La lista de casos necesita una evidencia representativa sin consultar
+      // los reportes de cada tarjeta por separado (evita el patrón N+1).
+      .addSelect(PREVIEW_REPORTE_ID_SQL, 'preview_reporte_id')
+      .addSelect(PREVIEW_IMAGEN_SQL, 'preview_imagen')
       .groupBy('g.id');
     this.aplicarFiltrosListaGrupos(qb, filtros);
     qb.orderBy('g.creado_en', orden);
@@ -526,6 +697,10 @@ export class AdminService {
     const data = rows.entities.map((g, i) => ({
       ...g,
       total_reportes: parseInt(rows.raw[i]?.total_reportes ?? '0', 10),
+      preview_imagen: reportePreviewImagePath({
+        reporteId: rows.raw[i]?.preview_reporte_id ?? null,
+        urlImagen: rows.raw[i]?.preview_imagen ?? null,
+      }),
     }));
 
     return { data, total, page: pagina, limit: limite };
@@ -708,7 +883,8 @@ export class AdminService {
       .addSelect('g.fecha_estimada_fin', 'fecha_estimada_fin')
       .addSelect('g.creado_en', 'creado_en')
       .addSelect('COUNT(DISTINCT r.id)', 'total_reportes')
-      .addSelect('MIN(r.url_imagen)', 'preview_imagen')
+      .addSelect(PREVIEW_REPORTE_ID_SQL, 'preview_reporte_id')
+      .addSelect(PREVIEW_IMAGEN_SQL, 'preview_imagen')
       .addSelect('AVG(CAST(r.lat AS FLOAT))', 'lat')
       .addSelect('AVG(CAST(r.lng AS FLOAT))', 'lng')
       .where('CAST(r.lat AS FLOAT) BETWEEN :minLat AND :maxLat', {
@@ -731,6 +907,10 @@ export class AdminService {
       total_reportes: parseInt(g.total_reportes, 10),
       lat: Number(g.lat),
       lng: Number(g.lng),
+      preview_imagen: reportePreviewImagePath({
+        reporteId: g.preview_reporte_id,
+        urlImagen: g.preview_imagen,
+      }),
     }));
   }
 
@@ -871,8 +1051,13 @@ export class AdminService {
       }
     }
 
+    const estadoAnterior = grupo.estado_actual;
     grupo.cuadrilla_id = nueva?.id ?? null;
+    if (nueva && grupo.estado_actual === EstadoCaso.PendienteAsignacion) {
+      grupo.estado_actual = EstadoCaso.PlanificadoVisita;
+    }
     await this.grupoRepo.save(grupo);
+    if (nueva) await this.operacionService.crearVisitaAlAsignarCuadrilla(grupo.id, nueva.id);
 
     const comentario = nueva
       ? anterior
@@ -884,8 +1069,8 @@ export class AdminService {
       grupo_id: grupo.id,
       usuario_id: dto.usuario_id,
       comentario,
-      estado_anterior: null,
-      estado_nuevo: null,
+      estado_anterior: estadoAnterior !== grupo.estado_actual ? estadoAnterior : null,
+      estado_nuevo: estadoAnterior !== grupo.estado_actual ? grupo.estado_actual : null,
       recursos_solicitados: null,
       fecha_estimada_fin: null,
       lat_actualizada: null,

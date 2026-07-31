@@ -31,7 +31,7 @@ const PERFILES: Perfil[] = [
     email: 'moderador2@ojocamba.bo',
     password: 'mod123',
     areaInicial: '/revisar',
-    menu: ['Bandeja'],
+    menu: ['Bandeja', 'Alertas', 'Historial', 'Calidad'],
     rutaProhibida: '/accesos',
   },
   {
@@ -81,6 +81,7 @@ test.describe('ISSUE-30 — acceso por rol', () => {
 
       expect(rutaActual(page)).toBe(perfil.areaInicial);
 
+      await expect(page.locator('aside a').first()).toBeVisible({ timeout: 10_000 });
       const menu = await page.locator('aside a').allInnerTexts();
       expect(menu.map((t) => t.trim())).toEqual(perfil.menu);
     });

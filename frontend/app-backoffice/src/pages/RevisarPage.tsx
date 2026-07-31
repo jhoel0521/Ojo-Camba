@@ -28,6 +28,8 @@ import {
   listNearbyReports,
   acceptReport,
   rejectReport as rejectReportApi,
+  MOTIVOS_DESCARTE_DIGITAL,
+  type MotivoDescarteDigital,
   createGroup,
   banDevice,
   type PendingReport,
@@ -63,6 +65,8 @@ export default function RevisarPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
+  const [motivoDescarte, setMotivoDescarte] =
+    useState<MotivoDescarteDigital>('evidencia_insuficiente');
 
   const [selectedReport, setSelectedReport] = useState<PendingReport | null>(null);
   const [editedCategoriaId, setEditedCategoriaId] = useState<number>(0);
@@ -179,10 +183,10 @@ export default function RevisarPage() {
 
   const handleReject = (id: number) => {
     setConfirmModal({
-      title: 'Rechazar reporte',
-      message: `El reporte #${id} será rechazado permanentemente.`,
+      title: 'Descartar evidencia digital',
+      message: `El reporte #${id} no llegará a una cuadrilla. Elegí un motivo estandarizado para conservar la trazabilidad.`,
       action: async () => {
-        await rejectReportApi(id);
+        await rejectReportApi(id, motivoDescarte);
         removeReports([id]);
       },
     });
@@ -220,7 +224,7 @@ export default function RevisarPage() {
       message: `¿Marcar "${report.device_id.slice(0, 16)}..." como spam y bloquear este dispositivo?`,
       action: async () => {
         await banDevice(report.device_id, 'Marcado como spam por moderador');
-        await rejectReportApi(report.id);
+        await rejectReportApi(report.id, 'contenido_inapropiado');
         removeReports([report.id]);
       },
     });
@@ -672,7 +676,24 @@ export default function RevisarPage() {
           }
         }}
         onCancel={() => setConfirmModal(null)}
-      />
+      >
+        {confirmModal?.title === 'Descartar evidencia digital' && (
+          <label className="block">
+            <span className="text-xs font-semibold text-ladrillo">Motivo del descarte</span>
+            <select
+              value={motivoDescarte}
+              onChange={(event) => setMotivoDescarte(event.target.value as MotivoDescarteDigital)}
+              className="mt-2 min-h-12 w-full bg-perla border border-arcilla rounded-3xl-3 px-4 text-sm text-tierra focus:outline-none focus:border-caoba"
+            >
+              {MOTIVOS_DESCARTE_DIGITAL.map((motivo) => (
+                <option key={motivo.value} value={motivo.value}>
+                  {motivo.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+      </ConfirmModal>
     </div>
   );
 }

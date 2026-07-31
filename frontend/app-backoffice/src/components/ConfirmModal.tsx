@@ -1,4 +1,5 @@
 import { AlertTriangle } from 'lucide-react';
+import type { ReactNode } from 'react';
 
 interface ConfirmModalProps {
   open: boolean;
@@ -9,6 +10,7 @@ interface ConfirmModalProps {
   loading?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
+  children?: ReactNode;
 }
 
 export default function ConfirmModal({
@@ -20,6 +22,7 @@ export default function ConfirmModal({
   loading,
   onConfirm,
   onCancel,
+  children,
 }: ConfirmModalProps) {
   if (!open) return null;
 
@@ -36,6 +39,7 @@ export default function ConfirmModal({
             <p className="text-xs text-arena mt-1">{message}</p>
           </div>
         </div>
+        {children && <div className="mb-4">{children}</div>}
         <div className="flex gap-2 justify-end">
           <button
             onClick={onCancel}

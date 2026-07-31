@@ -8,6 +8,8 @@ import { Categoria } from './entities/categoria.entity';
 import { Especialidad } from './entities/especialidad.entity';
 import { Cuadrilla } from './entities/cuadrilla.entity';
 import { CuadrillaMiembro } from './entities/cuadrilla-miembro.entity';
+import { VisitaCaso } from './entities/visita-caso.entity';
+import { PropuestaVisita } from './entities/propuesta-visita.entity';
 import { ConfiguracionOperativa } from './entities/configuracion-operativa.entity';
 import { DerivacionCaso } from './entities/derivacion-caso.entity';
 import { Dispositivo } from './entities/dispositivo.entity';
@@ -43,6 +45,8 @@ export const AppDataSource = new DataSource({
     Especialidad,
     Cuadrilla,
     CuadrillaMiembro,
+    VisitaCaso,
+    PropuestaVisita,
     ConfiguracionOperativa,
     DerivacionCaso,
     Dispositivo,

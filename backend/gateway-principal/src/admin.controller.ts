@@ -82,6 +82,29 @@ export class AdminController {
     );
   }
 
+  @Get('review/alerts')
+  @UseGuards(BackofficeGuard)
+  listReviewAlerts() {
+    return sendRpc(this.client.send(TCP_PATTERNS.ADMIN.LIST_REVIEW_ALERTS, {}));
+  }
+
+  @Get('review/history')
+  @UseGuards(BackofficeGuard)
+  listReviewHistory(@Query() query: { page?: string; limit?: string }) {
+    return sendRpc(
+      this.client.send(TCP_PATTERNS.ADMIN.LIST_REVIEW_HISTORY, {
+        page: query.page ? parseInt(query.page, 10) : undefined,
+        limit: query.limit ? parseInt(query.limit, 10) : undefined,
+      }),
+    );
+  }
+
+  @Get('review/quality')
+  @UseGuards(BackofficeGuard)
+  getRejectionQuality(@Query('desde') desde?: string, @Query('hasta') hasta?: string) {
+    return sendRpc(this.client.send(TCP_PATTERNS.ADMIN.GET_REJECTION_QUALITY, { desde, hasta }));
+  }
+
   @Post('reports/:id/accept')
   @UseGuards(BackofficeGuard)
   async acceptReport(
@@ -107,9 +130,17 @@ export class AdminController {
 
   @Post('reports/:id/reject')
   @UseGuards(BackofficeGuard)
-  async rejectReport(@Param('id') id: string) {
+  async rejectReport(
+    @Param('id') id: string,
+    @Req() request: { user: { user_id: number } },
+    @Body() dto: { motivo: string },
+  ) {
     const result = await sendRpc(
-      this.client.send(TCP_PATTERNS.ADMIN.REJECT_REPORT, { report_id: parseInt(id, 10) }),
+      this.client.send(TCP_PATTERNS.ADMIN.REJECT_REPORT, {
+        report_id: parseInt(id, 10),
+        moderador_id: request.user.user_id,
+        motivo: dto.motivo,
+      }),
     );
     this.events.emitReportResolved(parseInt(id, 10));
     this.events.emitStatsUpdate(null);
