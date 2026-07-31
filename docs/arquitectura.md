@@ -111,6 +111,29 @@ control de acceso es del gateway.
 | `GET`  | `/prediccion/alertas` | coordinador | Alertas de capacidad al 80% y 100% con recomendación explicable. Filtro: `solo_criticas` (por defecto `true`) |
 | `POST` | `/prediccion/entrenar` | IT | Reentrena y vuelve a comparar. Parámetro: `semanas_prueba` (4–26) |
 
+### Panel de decisión (ISSUE-32)
+
+El panel del Backoffice (`/prediccion`) se arma con estas rutas. Las dos
+primeras las sirve `ms-admin` por TCP —una decisión es un hecho operativo, no
+una salida del modelo—; el gateway compone la comparativa.
+
+| Método | Ruta | Rol requerido | Qué devuelve |
+|--------|------|---------------|--------------|
+| `GET`  | `/prediccion/comparativa` | coordinador, autoridad | Lo observado y lo estimado **por separado**, cada uno con su origen y su período, más el alineado por zona H3 con la diferencia. Filtros: `desde`, `hasta`, `categoria_id`, `estado` |
+| `POST` | `/prediccion/decisiones` | coordinador | Registra aceptar, modificar o descartar una recomendación. Motivo obligatorio |
+| `GET`  | `/prediccion/decisiones` | coordinador, autoridad | Historial con precisión retrospectiva: pronóstico, Casos observados y error |
+
+- La comparativa **nunca funde** las dos fuentes en un solo número: si hiciera
+  falta la diferencia, viaja aparte con los dos originales al lado.
+- Sin modelo entrenado la comparativa igual responde: `estimado` viene en `null`
+  con el motivo, y el lado observado se muestra completo. La operación real no
+  depende de que alguien haya entrenado.
+- La decisión se atribuye al usuario del token, nunca a un id del navegador, y
+  guarda una **copia** de la recomendación: se recalcula en cada reentrenamiento
+  y para auditar hace falta lo que el coordinador tenía a la vista.
+- La autoridad municipal consulta comparativa e historial —son agregados, sin
+  fotos ni reportes individuales— pero no llega a `/alertas` ni puede decidir.
+
 Notas de contrato:
 
 - Mientras nadie haya entrenado, las tres rutas de lectura responden **409**, no

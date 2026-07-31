@@ -1,15 +1,19 @@
 import 'reflect-metadata';
 import { HttpException } from '@nestjs/common';
-import { ROLES } from '@ojo-camba/common';
+import { ClientProxy } from '@nestjs/microservices';
+import { AccionRecomendacion, ROLES, TCP_PATTERNS } from '@ojo-camba/common';
+import { of } from 'rxjs';
 import { PrediccionController } from './prediccion.controller';
-import { ROLES_REQUERIDOS } from './roles.guard';
+import { ROLES_REQUERIDOS, TokenValidation } from './roles.guard';
 
 /**
- * Contrato del proxy hacia ms-prediccion (ISSUE-31).
+ * Contrato del proxy hacia ms-prediccion (ISSUE-31) y del panel de decisión
+ * (ISSUE-32).
  *
- * Acá se prueban dos cosas que el microservicio Python no puede probar por sí
- * mismo: quién llega a cada ruta —el control de roles vive en el gateway— y qué
- * ve el coordinador cuando el servicio de predicción no está disponible.
+ * Acá se prueban las cosas que el microservicio Python no puede probar por sí
+ * mismo: quién llega a cada ruta —el control de roles vive en el gateway—, qué
+ * ve el coordinador cuando el servicio de predicción no está disponible, y que
+ * lo observado y lo estimado nunca se mezclen en un solo número.
  */
 
 const rolesDe = (metodo: keyof PrediccionController): string[] =>
@@ -18,12 +22,18 @@ const rolesDe = (metodo: keyof PrediccionController): string[] =>
 const respuesta = (cuerpo: unknown, { ok = true, status = 200 } = {}) =>
   ({ ok, status, json: async () => cuerpo }) as Response;
 
+const sesion = (rol: string): { user: TokenValidation } => ({
+  user: { valid: true, user_id: 7, roles: [rol] },
+});
+
 describe('PrediccionController', () => {
   let controlador: PrediccionController;
   let fetchMock: jest.Mock;
+  let adminSend: jest.Mock;
 
   beforeEach(() => {
-    controlador = new PrediccionController();
+    adminSend = jest.fn().mockReturnValue(of({}));
+    controlador = new PrediccionController({ send: adminSend } as unknown as ClientProxy);
     fetchMock = jest.fn().mockResolvedValue(respuesta({}));
     global.fetch = fetchMock as unknown as typeof fetch;
   });
@@ -56,8 +66,39 @@ describe('PrediccionController', () => {
       expect(rolesDe('modelo')).toContain(ROLES.ENCARGADO_IT);
     });
 
+    it('deja decidir sólo al coordinador', () => {
+      // ISSUE-32: la autoridad municipal consulta, no opera.
+      expect(rolesDe('registrarDecision')).toEqual([ROLES.COORDINADOR_OPERATIVO]);
+    });
+
+    it('abre la comparativa y el historial también a la autoridad municipal', () => {
+      // Son datos agregados: sin fotos ni reportes individuales.
+      for (const ruta of ['comparativa', 'listarDecisiones'] as const) {
+        expect(rolesDe(ruta)).toEqual([ROLES.COORDINADOR_OPERATIVO, ROLES.AUTORIDAD_MUNICIPAL]);
+      }
+    });
+
+    it('no le da a la autoridad municipal ninguna ruta que opere', () => {
+      const operativas: (keyof PrediccionController)[] = [
+        'alertas',
+        'registrarDecision',
+        'entrenar',
+      ];
+      for (const ruta of operativas) {
+        expect(rolesDe(ruta)).not.toContain(ROLES.AUTORIDAD_MUNICIPAL);
+      }
+    });
+
     it('no deja ninguna ruta sin roles declarados', () => {
-      const rutas: (keyof PrediccionController)[] = ['modelo', 'pronostico', 'alertas', 'entrenar'];
+      const rutas: (keyof PrediccionController)[] = [
+        'modelo',
+        'pronostico',
+        'alertas',
+        'entrenar',
+        'comparativa',
+        'registrarDecision',
+        'listarDecisiones',
+      ];
       for (const ruta of rutas) {
         expect(rolesDe(ruta)?.length).toBeGreaterThan(0);
       }
@@ -131,6 +172,190 @@ describe('PrediccionController', () => {
       const error = await controlador.alertas().catch((e: HttpException) => e);
       expect(error).toBeInstanceOf(HttpException);
       expect((error as HttpException).getStatus()).toBe(502);
+    });
+  });
+
+  describe('comparativa actual vs. predicción (ISSUE-32)', () => {
+    const observado = {
+      origen: 'observacion',
+      periodo: { desde: '2026-07-27', hasta: '2026-08-02' },
+      total_casos: 5,
+      detalle: [
+        { zona_h3: 'zona-a', categoria_id: 1, casos: 3 },
+        { zona_h3: 'zona-a', categoria_id: 2, casos: 2 },
+      ],
+    };
+    const estimado = {
+      periodo: { desde: '2026-08-03', hasta: '2026-08-09' },
+      version_modelo: 'v1',
+      version_dataset: 'd1',
+      modelo: 'regresion_lineal',
+      origen: 'estimacion',
+      total_casos_estimados: 9,
+      detalle: [
+        {
+          zona_h3: 'zona-a',
+          categoria_id: 1,
+          casos_estimados: 2,
+          margen_error: 1,
+          confianza: 'baja',
+        },
+        {
+          zona_h3: 'zona-a',
+          categoria_id: 2,
+          casos_estimados: 6,
+          margen_error: 1,
+          confianza: 'alta',
+        },
+        {
+          zona_h3: 'zona-b',
+          categoria_id: 1,
+          casos_estimados: 1,
+          margen_error: 1,
+          confianza: 'media',
+        },
+      ],
+    };
+
+    beforeEach(() => {
+      adminSend.mockReturnValue(of(observado));
+      fetchMock.mockResolvedValue(respuesta(estimado));
+    });
+
+    it('nunca funde observado y estimado en un solo número', async () => {
+      const resultado = await controlador.comparativa();
+
+      const zonaA = resultado.zonas.find((z) => z.zona_h3 === 'zona-a');
+      expect(zonaA).toMatchObject({ casos_observados: 5, casos_estimados: 8, diferencia: 3 });
+      // Cada lado conserva su procedencia.
+      expect(resultado.observado.origen).toBe('observacion');
+      expect(resultado.estimado?.origen).toBe('estimacion');
+      expect(resultado.estimado?.version_modelo).toBe('v1');
+    });
+
+    it('etiqueta la zona con la categoría y la confianza que dominan la estimación', async () => {
+      const resultado = await controlador.comparativa();
+
+      const zonaA = resultado.zonas.find((z) => z.zona_h3 === 'zona-a');
+      // categoria 2 estima 6 casos contra 2 de la categoria 1.
+      expect(zonaA?.categoria_estimada).toBe(2);
+      expect(zonaA?.confianza).toBe('alta');
+    });
+
+    it('incluye zonas que sólo aparecen en la estimación, con cero observado', async () => {
+      const resultado = await controlador.comparativa();
+
+      expect(resultado.zonas.find((z) => z.zona_h3 === 'zona-b')).toMatchObject({
+        casos_observados: 0,
+        casos_estimados: 1,
+      });
+    });
+
+    it('sigue mostrando lo observado cuando todavía no hay modelo entrenado', async () => {
+      fetchMock.mockResolvedValue(
+        respuesta({ detail: 'No hay modelo entrenado.' }, { ok: false, status: 409 }),
+      );
+
+      const resultado = await controlador.comparativa();
+
+      expect(resultado.observado.total_casos).toBe(5);
+      expect(resultado.estimado).toBeNull();
+      expect(resultado.motivo_sin_estimacion).toContain('No hay modelo entrenado');
+      // Sin estimación no se inventa una diferencia.
+      expect(resultado.zonas.every((z) => z.diferencia === null)).toBe(true);
+    });
+
+    it('observa por defecto 7 dias, la misma duración que pronostica el modelo', async () => {
+      await controlador.comparativa();
+
+      const payload = adminSend.mock.calls[0][1] as { desde: string; hasta: string };
+      const dias =
+        Math.round(
+          (new Date(`${payload.hasta}T00:00:00Z`).getTime() -
+            new Date(`${payload.desde}T00:00:00Z`).getTime()) /
+            86_400_000,
+        ) + 1;
+      expect(dias).toBe(7);
+      // Hasta ayer: un día en curso todavía no terminó de acumular Casos.
+      expect(payload.hasta < new Date().toISOString().slice(0, 10)).toBe(true);
+    });
+
+    it('no resta períodos de distinta duración', async () => {
+      // Un mes observado contra una semana estimada daba una diferencia enorme
+      // y sin sentido. Se muestran las dos cifras, no su resta.
+      const resultado = await controlador.comparativa('2026-06-01', '2026-06-30');
+
+      expect(resultado.periodos_comparables).toMatchObject({
+        comparables: false,
+        dias_observados: 30,
+        dias_estimados: 7,
+      });
+      expect(resultado.periodos_comparables.motivo).toContain('30');
+      expect(resultado.zonas.every((z) => z.diferencia === null)).toBe(true);
+      // Pero los dos numeros siguen estando.
+      const zonaA = resultado.zonas.find((z) => z.zona_h3 === 'zona-a');
+      expect(zonaA).toMatchObject({ casos_observados: 5, casos_estimados: 8 });
+    });
+
+    it('sí resta cuando los dos períodos duran lo mismo', async () => {
+      const resultado = await controlador.comparativa('2026-07-27', '2026-08-02');
+
+      expect(resultado.periodos_comparables.comparables).toBe(true);
+      expect(resultado.zonas.find((z) => z.zona_h3 === 'zona-a')?.diferencia).toBe(3);
+    });
+
+    it('propaga los filtros a los dos lados', async () => {
+      await controlador.comparativa('2026-07-01', '2026-07-07', '3', 'EnTrabajo');
+
+      expect(adminSend.mock.calls[0][1]).toMatchObject({
+        desde: '2026-07-01',
+        hasta: '2026-07-07',
+        categoria_id: 3,
+        estado: 'EnTrabajo',
+      });
+      expect(fetchMock.mock.calls[0][0]).toContain('categoria_id=3');
+    });
+  });
+
+  describe('registro de la decisión (ISSUE-32)', () => {
+    const recomendacion = {
+      zona_h3: 'zona-a',
+      categoria_id: 2,
+      nivel: 'apoyo',
+      accion: AccionRecomendacion.Descartada,
+      motivo: 'La cuadrilla 4 ya tiene refuerzo asignado esta semana.',
+      recomendacion_original: 'Solicitar apoyo para la zona zona-a',
+      factores: ['temporada de lluvias'],
+      riesgo: 1.4,
+      casos_estimados: 8,
+      periodo_desde: '2026-08-03',
+      periodo_hasta: '2026-08-09',
+    };
+
+    it('atribuye la decisión al usuario del token, no a lo que mande el navegador', async () => {
+      await controlador.registrarDecision(sesion(ROLES.COORDINADOR_OPERATIVO), {
+        ...recomendacion,
+        // Un cliente malicioso podría intentar firmar a nombre de otro.
+        decidido_por_usuario_id: 99,
+      } as never);
+
+      expect(adminSend).toHaveBeenCalledWith(
+        TCP_PATTERNS.ADMIN.REGISTRAR_DECISION_RECOMENDACION,
+        expect.objectContaining({ decidido_por_usuario_id: 7 }),
+      );
+    });
+
+    it('manda la recomendación completa para poder auditarla después', async () => {
+      await controlador.registrarDecision(sesion(ROLES.COORDINADOR_OPERATIVO), recomendacion);
+
+      expect(adminSend.mock.calls[0][1]).toMatchObject({
+        zona_h3: 'zona-a',
+        accion: AccionRecomendacion.Descartada,
+        motivo: recomendacion.motivo,
+        recomendacion_original: recomendacion.recomendacion_original,
+        riesgo: 1.4,
+        periodo_desde: '2026-08-03',
+      });
     });
   });
 });

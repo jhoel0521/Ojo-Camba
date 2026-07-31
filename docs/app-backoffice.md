@@ -93,3 +93,27 @@ Reportado → Aceptado → ValidacionEnCampo → EnTrabajo → Finalizado
 | `POST` | `/admin/devices/ban` | Banear un dispositivo |
 | `GET` | `/admin/devices` | Listar dispositivos (baneados) |
 | `GET` | `/auth/users` | Listar usuarios registrados |
+| `GET` | `/prediccion/comparativa` | Panel de decision: observado y estimado por zona H3 |
+| `GET` | `/prediccion/alertas` | Alertas de capacidad (solo coordinador) |
+| `POST` | `/prediccion/decisiones` | Registrar la decision sobre una recomendacion |
+| `GET` | `/prediccion/decisiones` | Historial de decisiones con precision retrospectiva |
+
+## Panel de decision (`/prediccion`, ISSUE-32)
+
+Cuatro secciones: resumen ejecutivo (maximo tres alertas criticas), actual vs.
+prediccion con mapa H3 filtrable, capacidad y acciones, e historial con la
+precision retrospectiva de cada decision.
+
+- **Lo observado y lo estimado no se mezclan.** Cada cifra lleva su etiqueta de
+  origen, su periodo y —del lado estimado— la version de modelo y dataset. En el
+  mapa lo estimado va ademas con borde punteado: el color solo no alcanza.
+- **Quien ve que.** El coordinador decide; la autoridad municipal consulta el
+  agregado y no recibe la seccion de capacidad y acciones. Lo comprueba el
+  gateway (403), no solo el menu.
+- **Decidir no mueve cuadrillas**: registra que se recomendo, que se resolvio,
+  con que motivo, quien y cuando.
+- En escritorio las secciones se ven a la vez; en movil son pestanas. Se elige
+  en JavaScript (`useEsEscritorio`) y no con clases: con `hidden lg:block` el
+  panel se montaria dos veces, con dos instancias de Leaflet.
+- La pagina se carga diferida (`React.lazy`): leaflet y h3-js pesan ~180 kB y
+  solo los descarga quien entra al panel.

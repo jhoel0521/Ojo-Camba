@@ -104,6 +104,13 @@ const PERMISOS_RUTA: readonly { patron: RegExp; roles: readonly string[] }[] = [
     patron: /^\/$/,
     roles: [ROLES.AUTORIDAD_MUNICIPAL, ROLES.COORDINADOR_OPERATIVO, ROLES.ENCARGADO_IT],
   },
+  // Panel de decision (ISSUE-32): quien decide y quien consulta el agregado.
+  // La autoridad entra, pero adentro no ve la seccion de capacidad y acciones
+  // ni puede decidir: eso lo comprueba el gateway, aca solo se abre la ruta.
+  {
+    patron: /^\/prediccion(\/|$)/,
+    roles: [ROLES.COORDINADOR_OPERATIVO, ROLES.AUTORIDAD_MUNICIPAL],
+  },
   // "Aceptar/rechazar bandeja": solo Backoffice.
   { patron: /^\/revisar(\/|$)/, roles: [ROLES.BACKOFFICE] },
   // "Ver/actualizar casos" y "priorizar/reasignar cuadrilla": coordinador.

@@ -4,6 +4,12 @@ import { EstadoCaso, TCP_PATTERNS } from '@ojo-camba/common';
 import { AdminService } from './admin.service';
 import { OperacionService } from './operacion.service';
 import {
+  CasosPorZonaDto,
+  ListarDecisionesDto,
+  PrediccionDecisionesService,
+  RegistrarDecisionDto,
+} from './prediccion-decisiones.service';
+import {
   CreateGroupDto,
   UpdateCaseDto,
   AcceptReportDto,
@@ -19,6 +25,7 @@ export class AdminController {
   constructor(
     private readonly adminService: AdminService,
     private readonly operacionService: OperacionService,
+    private readonly prediccionDecisionesService: PrediccionDecisionesService,
   ) {}
 
   @MessagePattern(TCP_PATTERNS.ADMIN.PING)
@@ -324,5 +331,20 @@ export class AdminController {
     @Payload() dto: { propuesta_id: number; usuario_id: number; motivo_decision?: string },
   ) {
     return this.operacionService.confirmarPropuestaVisita(dto);
+  }
+
+  @MessagePattern(TCP_PATTERNS.ADMIN.REGISTRAR_DECISION_RECOMENDACION)
+  registrarDecisionRecomendacion(@Payload() dto: RegistrarDecisionDto) {
+    return this.prediccionDecisionesService.registrarDecision(dto);
+  }
+
+  @MessagePattern(TCP_PATTERNS.ADMIN.LIST_DECISIONES_RECOMENDACION)
+  listDecisionesRecomendacion(@Payload() dto: ListarDecisionesDto) {
+    return this.prediccionDecisionesService.listarDecisiones(dto);
+  }
+
+  @MessagePattern(TCP_PATTERNS.ADMIN.GET_CASOS_POR_ZONA)
+  getCasosPorZona(@Payload() dto: CasosPorZonaDto) {
+    return this.prediccionDecisionesService.casosPorZona(dto);
   }
 }
