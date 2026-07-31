@@ -3,6 +3,7 @@
 from functools import lru_cache
 from pathlib import Path
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 RAIZ = Path(__file__).resolve().parent.parent
@@ -13,6 +14,17 @@ class Config(BaseSettings):
 
     # Misma base que el resto de los microservicios.
     database_url: str = "postgresql+psycopg://ojocamba:ojocamba_secret@localhost:5432/ojocamba"
+
+    @field_validator("database_url")
+    @classmethod
+    def _con_driver_psycopg(cls, url: str) -> str:
+        """El resto de los microservicios usan `postgresql://` sin driver, que
+        SQLAlchemy resuelve a psycopg2 — no instalado aca. Si la URL viene sin
+        driver, forzar psycopg v3: un copiar/pegar no debe tumbar la API."""
+        for prefijo in ("postgresql://", "postgres://"):
+            if url.startswith(prefijo):
+                return f"postgresql+psycopg://{url[len(prefijo):]}"
+        return url
 
     puerto: int = 3007
 
