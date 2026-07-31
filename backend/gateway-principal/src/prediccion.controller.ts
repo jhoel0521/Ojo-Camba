@@ -26,7 +26,11 @@ type AuthenticatedRequest = { user: TokenValidation };
  * El servicio no se publica con dominio propio: sólo se llega por este
  * gateway, que es donde se comprueban los roles.
  */
-const MS_PREDICCION_URL = process.env.MS_PREDICCION_URL ?? 'http://localhost:3007';
+// Mismo par MS_X_HOST/MS_X_PORT que el resto de los microservicios: la URL se
+// construye aca porque es el unico servicio HTTP (el resto son ClientProxy TCP).
+const MS_PREDICCION_URL = `http://${process.env.MS_PREDICCION_HOST ?? 'localhost'}:${
+  process.env.MS_PREDICCION_PORT ?? '3007'
+}`;
 const TIEMPO_MAXIMO_MS = 30_000;
 /** Reentrenar tarda: compara tres modelos con validación cruzada temporal. */
 const TIEMPO_MAXIMO_ENTRENAMIENTO_MS = 300_000;

@@ -101,8 +101,8 @@ sólo por `gateway-principal`, que es donde se comprueban los roles.
 ### Predicción (ISSUE-31)
 
 Estas rutas no tienen patrón TCP: el gateway hace de proxy HTTP hacia
-`ms-prediccion` (`MS_PREDICCION_URL`, por defecto `http://localhost:3007`). El
-control de acceso es del gateway.
+`ms-prediccion` (`MS_PREDICCION_HOST`/`MS_PREDICCION_PORT`, por defecto
+`http://localhost:3007`). El control de acceso es del gateway.
 
 | Método | Ruta | Rol requerido | Qué devuelve |
 |--------|------|---------------|--------------|

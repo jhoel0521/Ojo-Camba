@@ -383,9 +383,13 @@ Cada microservicio es dueño de sus entidades. Solo ese servicio las crea/modifi
 |---------|:---:|----------|
 | `usuarios`, `roles`, `niveles` | ms-auth | ms-gamify, ms-admin |
 | `dispositivos` | ms-auth | ms-register |
-| `reportes`, `categorias` | ms-register | ms-admin, ms-gamify |
-| `grupos_reportes`, `actualizaciones_caso` | ms-admin | ms-register |
+| `reportes`, `categorias` | ms-register | ms-admin, ms-gamify, ms-prediccion |
+| `grupos_reportes`, `actualizaciones_caso` | ms-admin | ms-register, ms-prediccion |
+| `cuadrillas`, `configuracion_operativa` | ms-admin | ms-prediccion |
+| `decisiones_recomendacion` | ms-admin | — |
 | puntos, nivel_id en `usuarios` | ms-gamify | — |
+
+`ms-prediccion` solo **lee** vía SQLAlchemy las tablas listadas; no crea ni modifica ninguna. `decisiones_recomendacion` es la evidencia de las decisiones del coordinador sobre las recomendaciones (ISSUE-32), la crea `ms-admin` por TCP.
 
 ### Fase 2 — Crecimiento
 
@@ -406,14 +410,15 @@ Una instancia SeaweedFS es suficiente para el MVP. Si el volumen de imagenes cre
 Las imagenes se sirven via el gateway (`GET /api/reportes/{id}/imagen`). SeaweedFS nunca recibe trafico publico.
 ## Servicio `ms-prediccion` (ISSUE-31)
 
-El servicio de predicción se despliega con `docker/prod/Dockerfile.ms-prediccion`, usando el contexto raíz del repositorio (`.`). Escucha HTTP interno en el puerto `3007` y no debe exponerse públicamente; solamente `gateway-principal` debe acceder a él mediante `MS_PREDICCION_URL`.
+El servicio de predicción se despliega con `docker/prod/Dockerfile.ms-prediccion`, usando el contexto raíz del repositorio (`.`). Escucha HTTP interno en el puerto `3007` y **no expone puerto hacia afuera** (igual que los microservicios TCP): solamente `gateway-principal` lo alcanza. El gateway configura `MS_PREDICCION_HOST`/`MS_PREDICCION_PORT` (mismo par que el resto de los microservicios) y arma la URL interna `http://host:port`.
 
 Variables requeridas:
 
 ```text
 DATABASE_URL=postgresql+psycopg://<usuario>:<clave>@<host>:5432/<base>
-PORT=3007
 ```
+
+El puerto va fijo en `3007`: la imagen de producción arranca uvicorn con `--port 3007` en el CMD. En ejecución local fuera del contenedor el servicio lee `PUERTO` (defecto `3007`). No existe `PORT` ni `TCP_PORT` como en los microservicios de Nest.
 
 En Coolify crear dos volúmenes persistentes:
 

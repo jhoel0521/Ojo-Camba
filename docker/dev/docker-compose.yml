@@ -192,7 +192,8 @@ services:
       MS_GAMIFY_PORT: 3004
       MS_IA_HOST: ms-ia
       MS_IA_PORT: 3006
-      MS_PREDICCION_URL: http://ms-prediccion:3007
+      MS_PREDICCION_HOST: ms-prediccion
+      MS_PREDICCION_PORT: 3007
     networks:
       - ojo-camba-net
     depends_on:

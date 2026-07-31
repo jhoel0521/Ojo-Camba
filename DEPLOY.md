@@ -39,7 +39,7 @@ pnpm ping
 | 3 | `ms-admin` | `docker/prod/Dockerfile.ms-admin` | ❌ (TCP) | ❌ |
 | 4 | `ms-gamify` | `docker/prod/Dockerfile.ms-gamify` | ❌ (TCP) | ❌ |
 | 5 | `ms-ia` | `docker/prod/Dockerfile.ms-ia` | ❌ (TCP) | ❌ |
-| 6 | `ms-prediccion` | `docker/prod/Dockerfile.ms-prediccion` | ✅ (3007) | ❌ |
+| 6 | `ms-prediccion` | `docker/prod/Dockerfile.ms-prediccion` | ❌ (HTTP interno) | ❌ |
 | 7 | `gateway-principal` | `docker/prod/Dockerfile.gateway-principal` | ✅ (3000) | ✅ |
 | 8 | `gateway-status` | `docker/prod/Dockerfile.gateway-status` | ✅ (3005) | ✅ |
 | 9 | `app-reporte` | `docker/prod/Dockerfile.app-reporte` | ✅ (80) | ✅ |
@@ -65,7 +65,8 @@ pnpm ping
 | `MS_GAMIFY_PORT` | ✅ | ✅ | — | — | ✅ | — | — | — |
 | `MS_IA_HOST` | ✅ | ✅ | — | — | — | — | — | — |
 | `MS_IA_PORT` | ✅ | ✅ | — | — | — | — | — | — |
-| `MS_PREDICCION_URL` | ✅ | — | — | — | — | — | — | — |
+| `MS_PREDICCION_HOST` | ✅ | — | — | — | — | — | — | — |
+| `MS_PREDICCION_PORT` | ✅ | — | — | — | — | — | — | — |
 | `DATABASE_URL` | — | — | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ (psycopg) |
 | `JWT_SECRET` | — | — | ✅ | — | — | — | — | — |
 | `JWT_EXPIRES_IN` | — | — | ✅ | — | — | — | — | — |
@@ -76,7 +77,7 @@ pnpm ping
 | `PUNTOS_POR_REPORTE_ACEPTADO` | — | — | — | — | — | ✅ (def. 10) | — | — |
 | `AI_CONFIG_ENCRYPTION_KEY` | — | — | — | — | — | — | ✅ | — |
 
-`MS_PREDICCION_URL` es la URL interna del servicio (`http://ms-prediccion:3007`), no una pública. El `DATABASE_URL` de `ms-prediccion` lleva el driver en el esquema porque lo consume SQLAlchemy: `postgresql+psycopg://usuario:clave@host:5432/ojocamba`.
+`MS_PREDICCION_HOST`/`MS_PREDICCION_PORT` siguen el mismo par que el resto de los microservicios; el gateway construye la URL interna (`http://ms-prediccion:3007` en Coolify) porque `ms-prediccion` es el único que habla HTTP en vez de TCP. El `DATABASE_URL` de `ms-prediccion` lleva el driver en el esquema porque lo consume SQLAlchemy: `postgresql+psycopg://usuario:clave@host:5432/ojocamba`.
 
 `AI_CONFIG_ENCRYPTION_KEY` es una clave maestra estable de 32 bytes para cifrar las credenciales configurables de Groq, Gemini, DeepSeek y OpenAI. Generarla una sola vez con `openssl rand -hex 32`, guardarla como secreto del servicio `ms-ia` y ejecutar `pnpm db:migrate` antes de desplegar esta versión.
 
