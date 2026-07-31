@@ -1,11 +1,15 @@
 import { spawnSync } from 'child_process';
+import { createRequire } from 'module';
 import { resolve } from 'path';
 
 const root = resolve(import.meta.dirname, '..');
-// pnpm enlaza las dependencias de los workspaces al almacén raíz; no todos los
-// paquetes tienen un node_modules físico propio. Ejecutar el CLI raíz mantiene
-// migration:show/run funcional tanto localmente como en CI.
-const cli = resolve(root, 'node_modules/typeorm/cli.js');
+
+// El .npmrc usa node-linker=hoisted, asi que typeorm queda en el node_modules
+// raiz y libs/common/node_modules nunca se crea. Resolver el CLI por modulo (en
+// vez de una ruta fija) funciona con ambos layouts de pnpm.
+const cli = createRequire(import.meta.url).resolve('typeorm/cli.js', {
+  paths: [root, resolve(root, 'libs/common')],
+});
 
 const result = spawnSync(
   process.execPath,
