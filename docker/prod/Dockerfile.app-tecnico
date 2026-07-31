@@ -8,12 +8,25 @@ RUN corepack enable && corepack prepare pnpm@9 --activate
 WORKDIR /app
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
+COPY libs/common/package.json libs/common/
 COPY frontend/app-tecnico/package.json frontend/app-tecnico/
 
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
     pnpm install --frozen-lockfile
 
+# app-tecnico importa @ojo-camba/common/motor/ruta (lógica pura, sin TypeORM):
+# hay que compilar libs/common y apuntar el workspace a su dist, como en los
+# Dockerfiles de backend. Sin esto el build falla con TS2307 en RutaSugerida.
+COPY tsconfig.base.json ./
+COPY libs/common/ libs/common/
 COPY frontend/app-tecnico/ frontend/app-tecnico/
+
+WORKDIR /app/libs/common
+RUN pnpm build
+
+RUN rm -f /app/frontend/app-tecnico/node_modules/@ojo-camba/common && \
+    mkdir -p /app/frontend/app-tecnico/node_modules/@ojo-camba/common && \
+    cp -r dist package.json /app/frontend/app-tecnico/node_modules/@ojo-camba/common/
 
 WORKDIR /app/frontend/app-tecnico
 
