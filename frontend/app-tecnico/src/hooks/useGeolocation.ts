@@ -32,33 +32,34 @@ function messageFor(code: number): string {
 export function useGeolocation() {
   const [state, setState] = useState<GeoState>(INITIAL);
 
-  const capture = useCallback(() => {
+  const capture = useCallback((): Promise<GpsFix> => {
     if (typeof navigator === 'undefined' || !navigator.geolocation) {
+      const error = 'Este dispositivo no soporta geolocalizacion.';
       setState({
         status: 'error',
         fix: null,
         accuracy: null,
-        error: 'Este dispositivo no soporta geolocalizacion.',
+        error,
       });
-      return;
+      return Promise.reject(new Error(error));
     }
 
     setState((s) => ({ ...s, status: 'loading', error: null }));
-
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setState({
-          status: 'success',
-          fix: { lat: pos.coords.latitude, lng: pos.coords.longitude },
-          accuracy: pos.coords.accuracy ?? null,
-          error: null,
-        });
-      },
-      (err) => {
-        setState({ status: 'error', fix: null, accuracy: null, error: messageFor(err.code) });
-      },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
-    );
+    return new Promise((resolve, reject) => {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const fix = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+          setState({ status: 'success', fix, accuracy: pos.coords.accuracy ?? null, error: null });
+          resolve(fix);
+        },
+        (err) => {
+          const error = messageFor(err.code);
+          setState({ status: 'error', fix: null, accuracy: null, error });
+          reject(new Error(error));
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
+      );
+    });
   }, []);
 
   const reset = useCallback(() => setState(INITIAL), []);

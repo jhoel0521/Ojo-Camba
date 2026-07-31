@@ -5,9 +5,12 @@ import {
   CuadrillaMiembro,
   DerivacionCaso,
   ActualizacionCaso,
+  EstadoCaso,
   GrupoReporte,
+  PropuestaVisita,
   Reporte,
   UsuarioRol,
+  VisitaCaso,
 } from '@ojo-camba/common';
 import { OperacionService, UMBRALES_OPERATIVOS } from './operacion.service';
 
@@ -32,6 +35,9 @@ describe('OperacionService', () => {
   let miembroRepo: ReturnType<typeof repoMock>;
   let actualizacionRepo: ReturnType<typeof repoMock>;
   let usuarioRolRepo: ReturnType<typeof repoMock>;
+  let visitaRepo: ReturnType<typeof repoMock>;
+  let grupoRepo: ReturnType<typeof repoMock>;
+  let propuestaRepo: ReturnType<typeof repoMock>;
 
   beforeEach(async () => {
     configRepo = repoMock();
@@ -40,7 +46,9 @@ describe('OperacionService', () => {
     miembroRepo = repoMock();
     actualizacionRepo = repoMock();
     usuarioRolRepo = repoMock();
-    const grupoRepo = repoMock();
+    visitaRepo = repoMock();
+    grupoRepo = repoMock();
+    propuestaRepo = repoMock();
     const modulo = await Test.createTestingModule({
       providers: [
         OperacionService,
@@ -51,6 +59,8 @@ describe('OperacionService', () => {
         { provide: getRepositoryToken(Reporte), useValue: reporteRepo },
         { provide: getRepositoryToken(ActualizacionCaso), useValue: actualizacionRepo },
         { provide: getRepositoryToken(UsuarioRol), useValue: usuarioRolRepo },
+        { provide: getRepositoryToken(VisitaCaso), useValue: visitaRepo },
+        { provide: getRepositoryToken(PropuestaVisita), useValue: propuestaRepo },
       ],
     }).compile();
     service = modulo.get(OperacionService);
@@ -111,9 +121,195 @@ describe('OperacionService', () => {
     });
   });
 
+  it('Mis obras solo devuelve visitas abiertas asignadas al técnico solicitado', async () => {
+    visitaRepo.findAndCount.mockResolvedValue([
+      [{ id: 8, grupo_id: 14, tecnico_id: 9, fecha_planificada: '2026-08-01' }],
+      1,
+    ]);
+    grupoRepo.find.mockResolvedValue([{ id: 14, codigo_obra: 'O-26-0000014' }]);
+
+    const resultado = await service.visitasDelTecnico(9, 1, 20);
+
+    expect(visitaRepo.findAndCount).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ tecnico_id: 9 }),
+      }),
+    );
+    expect(resultado.data).toEqual([
+      expect.objectContaining({ caso: expect.objectContaining({ codigo_obra: 'O-26-0000014' }) }),
+    ]);
+  });
+
   it('no permite agregar a una cuadrilla a una persona sin el rol tecnico', async () => {
     usuarioRolRepo.find.mockResolvedValue([{ rol: { nombre: 'ciudadano' } }]);
 
     await expect(service.asignarMiembro(1, 9)).rejects.toThrow('debe tener el rol tecnico');
+  });
+
+  it('el responsable asigna una visita a un técnico de su propia cuadrilla y queda trazabilidad', async () => {
+    visitaRepo.findOne.mockResolvedValue({
+      id: 8,
+      grupo_id: 14,
+      cuadrilla_id: 3,
+      cerrada_en: null,
+    });
+    miembroRepo.findOne
+      .mockResolvedValueOnce({ cuadrilla_id: 3, usuario_id: 4, es_responsable: true })
+      .mockResolvedValueOnce({ cuadrilla_id: 3, usuario_id: 9, es_responsable: false });
+
+    await service.asignarVisitaTecnico({
+      visita_id: 8,
+      responsable_id: 4,
+      tecnico_id: 9,
+      fecha_planificada: '2026-08-01',
+      orden_ruta: 2,
+    });
+
+    expect(visitaRepo.save).toHaveBeenCalledWith(
+      expect.objectContaining({ tecnico_id: 9, orden_ruta: 2 }),
+    );
+    expect(actualizacionRepo.save).toHaveBeenCalledWith(
+      expect.objectContaining({ grupo_id: 14, usuario_id: 4 }),
+    );
+  });
+
+  it('impide que el responsable distribuya una visita de otra cuadrilla', async () => {
+    visitaRepo.findOne.mockResolvedValue({
+      id: 8,
+      grupo_id: 14,
+      cuadrilla_id: 3,
+      cerrada_en: null,
+    });
+    miembroRepo.findOne.mockResolvedValue(null);
+
+    await expect(
+      service.asignarVisitaTecnico({
+        visita_id: 8,
+        responsable_id: 4,
+        tecnico_id: 9,
+        fecha_planificada: '2026-08-01',
+        orden_ruta: 1,
+      }),
+    ).rejects.toThrow('Solo el responsable de esta cuadrilla');
+  });
+
+  it('solo permite registrar llegada al técnico asignado a la visita', async () => {
+    visitaRepo.findOne.mockResolvedValue({
+      id: 8,
+      grupo_id: 14,
+      cuadrilla_id: 3,
+      tecnico_id: 9,
+      cerrada_en: null,
+    });
+
+    await expect(
+      service.registrarLlegada({ visita_id: 8, tecnico_id: 10, lat: -17.78, lng: -63.18 }),
+    ).rejects.toThrow('Solo el técnico asignado');
+  });
+
+  it('devuelve la obra con la agrupación completa de reportes al técnico asignado', async () => {
+    visitaRepo.findOne.mockResolvedValue({ id: 8, grupo_id: 14, cuadrilla_id: 3, tecnico_id: 9 });
+    grupoRepo.findOne.mockResolvedValue({ id: 14, codigo_obra: 'O-26-0000014' });
+    reporteRepo.find.mockResolvedValue([{ id: 101 }, { id: 102 }, { id: 103 }]);
+
+    await expect(service.detalleVisitaParaTecnico(8, 9)).resolves.toEqual(
+      expect.objectContaining({
+        visita: expect.objectContaining({ id: 8 }),
+        caso: expect.objectContaining({ codigo_obra: 'O-26-0000014' }),
+        agrupacion: expect.objectContaining({ total_reportes: 3 }),
+      }),
+    );
+  });
+
+  it('el técnico asignado propone finalización con evidencia, sin cerrar el Caso por sí mismo', async () => {
+    visitaRepo.findOne.mockResolvedValue({ id: 8, grupo_id: 14, tecnico_id: 9, cerrada_en: null });
+    propuestaRepo.save.mockImplementation((value) => Promise.resolve({ id: 25, ...value }));
+
+    const propuesta = await service.proponerResultadoVisita({
+      visita_id: 8,
+      tecnico_id: 9,
+      estado_propuesto: EstadoCaso.Finalizado,
+      comentario: 'Se repuso la tapa y se aseguró el perímetro.',
+      evidencia_url: 'actualizaciones/final.jpg',
+    });
+
+    expect(propuesta).toEqual(expect.objectContaining({ decision: 'Pendiente' }));
+    expect(grupoRepo.save).not.toHaveBeenCalled();
+  });
+
+  it('rechaza una propuesta terminal sin evidencia', async () => {
+    visitaRepo.findOne.mockResolvedValue({ id: 8, grupo_id: 14, tecnico_id: 9, cerrada_en: null });
+
+    await expect(
+      service.proponerResultadoVisita({
+        visita_id: 8,
+        tecnico_id: 9,
+        estado_propuesto: EstadoCaso.Finalizado,
+        comentario: 'Trabajo realizado.',
+      }),
+    ).rejects.toThrow('requiere evidencia');
+  });
+
+  it('aplica EnTrabajo como resultado no terminal sin enviarlo a confirmación', async () => {
+    visitaRepo.findOne.mockResolvedValue({ id: 8, grupo_id: 14, tecnico_id: 9, cerrada_en: null });
+    grupoRepo.findOne.mockResolvedValue({ id: 14, estado_actual: EstadoCaso.ValidacionCampo });
+
+    await expect(
+      service.proponerResultadoVisita({
+        visita_id: 8,
+        tecnico_id: 9,
+        estado_propuesto: EstadoCaso.EnTrabajo,
+        comentario: 'Se requiere material para completar el bacheo.',
+      }),
+    ).resolves.toEqual({ requiere_confirmacion: false, estado_actual: EstadoCaso.EnTrabajo });
+    expect(propuestaRepo.save).not.toHaveBeenCalled();
+    expect(grupoRepo.save).toHaveBeenCalledWith(
+      expect.objectContaining({ estado_actual: EstadoCaso.EnTrabajo }),
+    );
+  });
+
+  it('solo Coordinación confirma RechazadoCampo y deja categoría para el indicador de calidad', async () => {
+    propuestaRepo.findOne.mockResolvedValue({
+      id: 22,
+      visita_id: 8,
+      estado_propuesto: EstadoCaso.RechazadoCampo,
+      categoria_rechazo_id: 4,
+      decision: 'Pendiente',
+    });
+    visitaRepo.findOne.mockResolvedValue({
+      id: 8,
+      grupo_id: 14,
+      cuadrilla_id: 3,
+      cerrada_en: null,
+    });
+    grupoRepo.findOne.mockResolvedValue({ id: 14, estado_actual: EstadoCaso.ValidacionCampo });
+    usuarioRolRepo.find.mockResolvedValue([{ rol: { nombre: 'coordinador_operativo' } }]);
+
+    await service.confirmarPropuestaVisita({ propuesta_id: 22, usuario_id: 5 });
+
+    expect(grupoRepo.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        estado_actual: EstadoCaso.RechazadoCampo,
+        categoria_rechazo_campo_id: 4,
+        rechazado_campo_por_usuario_id: 5,
+        rechazado_campo_en: expect.any(Date),
+      }),
+    );
+  });
+
+  it('el responsable ve solamente visitas abiertas de su propia cuadrilla', async () => {
+    miembroRepo.find.mockResolvedValue([{ cuadrilla_id: 3, usuario_id: 4, es_responsable: true }]);
+    visitaRepo.findAndCount.mockResolvedValue([
+      [{ id: 8, grupo_id: 14, cuadrilla_id: 3, tecnico_id: null, cerrada_en: null }],
+      1,
+    ]);
+    grupoRepo.find.mockResolvedValue([{ id: 14, codigo_obra: 'O-26-0000014' }]);
+
+    await expect(service.visitasDeCuadrillaResponsable(4)).resolves.toEqual(
+      expect.objectContaining({
+        total: 1,
+        data: [expect.objectContaining({ caso: expect.objectContaining({ id: 14 }) })],
+      }),
+    );
   });
 });

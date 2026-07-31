@@ -48,6 +48,30 @@ export interface PaginatedResponse<T> {
   limit: number;
 }
 
+export interface VisitaCaso {
+  id: number;
+  grupo_id: number;
+  cuadrilla_id: number;
+  tecnico_id: number | null;
+  fecha_planificada: string | null;
+  orden_ruta: number | null;
+  llegada_en: string | null;
+  cerrada_en: string | null;
+  caso: GrupoReporte | null;
+}
+
+export interface ContextoOperativo {
+  roles: string[];
+  es_responsable: boolean;
+  cuadrillas: Array<{ cuadrilla_id: number; es_responsable: boolean }>;
+}
+
+export interface DetalleVisita {
+  visita: VisitaCaso;
+  caso: GrupoReporte;
+  agrupacion: { total_reportes: number; reportes: ReporteDeGrupo[] };
+}
+
 /** Payload aceptado por POST /admin/groups/:id/updates */
 export interface ActualizacionPayload {
   usuario_id: number;
@@ -113,4 +137,29 @@ export async function registrarDerivacion(
     `/operacion/tecnico/groups/${grupo_id}/derivaciones`,
     { method: 'POST', body: JSON.stringify(payload) },
   );
+}
+
+export function getContextoOperativo(): Promise<ContextoOperativo> {
+  return fetchAPI<ContextoOperativo>('/operacion/contexto');
+}
+
+export function listMisObras(page = 1, limit = 20): Promise<PaginatedResponse<VisitaCaso>> {
+  return fetchAPI<PaginatedResponse<VisitaCaso>>(
+    `/operacion/mis-obras?page=${page}&limit=${limit}`,
+  );
+}
+
+export function listMiRuta(fecha: string): Promise<PaginatedResponse<VisitaCaso>> {
+  return fetchAPI<PaginatedResponse<VisitaCaso>>(`/operacion/mi-ruta?fecha=${fecha}`);
+}
+
+export function getVisita(id: number): Promise<DetalleVisita> {
+  return fetchAPI<DetalleVisita>(`/operacion/visitas/${id}`);
+}
+
+export function registrarLlegadaVisita(id: number, lat: number, lng: number): Promise<VisitaCaso> {
+  return fetchAPI<VisitaCaso>(`/operacion/visitas/${id}/llegada`, {
+    method: 'POST',
+    body: JSON.stringify({ lat, lng }),
+  });
 }

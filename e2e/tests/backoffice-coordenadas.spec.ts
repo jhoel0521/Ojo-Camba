@@ -74,6 +74,8 @@ test.describe('Backoffice: coordenadas históricas en la bitácora', () => {
     await page.locator('input[type="email"]').fill(ADMIN_EMAIL);
     await page.locator('input[type="password"]').fill(ADMIN_PASSWORD);
     await page.getByRole('button', { name: 'Ingresar' }).click();
+    await expect(page).toHaveURL(`${BACKOFFICE_URL}/areas`, { timeout: 10_000 });
+    await page.getByRole('button', { name: /Usuarios y solicitudes/ }).click();
     await expect(page).toHaveURL(`${BACKOFFICE_URL}/accesos`, { timeout: 10_000 });
     await page.goto(`${BACKOFFICE_URL}/casos/${caso.id}`);
 

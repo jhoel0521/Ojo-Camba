@@ -17,6 +17,7 @@ import {
   Lock,
   Wifi,
   WifiOff,
+  ArrowLeft,
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { useModeration } from '../hooks/useModeration';
@@ -27,6 +28,8 @@ import {
   listNearbyReports,
   acceptReport,
   rejectReport as rejectReportApi,
+  MOTIVOS_DESCARTE_DIGITAL,
+  type MotivoDescarteDigital,
   createGroup,
   banDevice,
   type PendingReport,
@@ -62,6 +65,8 @@ export default function RevisarPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
+  const [motivoDescarte, setMotivoDescarte] =
+    useState<MotivoDescarteDigital>('evidencia_insuficiente');
 
   const [selectedReport, setSelectedReport] = useState<PendingReport | null>(null);
   const [editedCategoriaId, setEditedCategoriaId] = useState<number>(0);
@@ -178,10 +183,10 @@ export default function RevisarPage() {
 
   const handleReject = (id: number) => {
     setConfirmModal({
-      title: 'Rechazar reporte',
-      message: `El reporte #${id} será rechazado permanentemente.`,
+      title: 'Descartar evidencia digital',
+      message: `El reporte #${id} no llegará a una cuadrilla. Elegí un motivo estandarizado para conservar la trazabilidad.`,
       action: async () => {
-        await rejectReportApi(id);
+        await rejectReportApi(id, motivoDescarte);
         removeReports([id]);
       },
     });
@@ -219,7 +224,7 @@ export default function RevisarPage() {
       message: `¿Marcar "${report.device_id.slice(0, 16)}..." como spam y bloquear este dispositivo?`,
       action: async () => {
         await banDevice(report.device_id, 'Marcado como spam por moderador');
-        await rejectReportApi(report.id);
+        await rejectReportApi(report.id, 'contenido_inapropiado');
         removeReports([report.id]);
       },
     });
@@ -253,9 +258,15 @@ export default function RevisarPage() {
   );
 
   return (
-    <div className="-m-6 h-full overflow-hidden flex">
+    // En movil las tres columnas no entran (256+300+300): se muestra una por
+    // vez, bandeja -> detalle a pantalla completa (ISSUE-30).
+    <div className="-m-4 lg:-m-6 h-full overflow-hidden flex">
       {/* ── COL 1: Bandeja de entrada ── */}
-      <section className="w-[300px] shrink-0 bg-perla border-r border-arcilla flex flex-col shadow-[2px_0_8px_rgba(27,20,16,0.05)]">
+      <section
+        className={`w-full lg:w-[300px] shrink-0 bg-perla border-r border-arcilla flex-col shadow-[2px_0_8px_rgba(27,20,16,0.05)] ${
+          selectedReport ? 'hidden lg:flex' : 'flex'
+        }`}
+      >
         <div className="px-4 py-3 border-b border-arcilla flex items-center justify-between bg-lienzo/60">
           <h2 className="font-semibold text-tierra text-sm flex items-center gap-2">
             <List className="w-4 h-4 text-caoba" />
@@ -358,7 +369,11 @@ export default function RevisarPage() {
       </section>
 
       {/* ── COL 2: Detalle del reporte ── */}
-      <section className="flex-1 bg-lienzo/40 border-r border-arcilla flex flex-col overflow-y-auto">
+      <section
+        className={`flex-1 w-full min-w-0 bg-lienzo/40 border-r border-arcilla flex-col overflow-y-auto ${
+          selectedReport ? 'flex' : 'hidden lg:flex'
+        }`}
+      >
         {!selectedReport ? (
           <div className="flex-1 flex flex-col items-center justify-center gap-3 text-center p-8">
             <Inbox className="w-10 h-10 text-arcilla" />
@@ -367,7 +382,18 @@ export default function RevisarPage() {
             </p>
           </div>
         ) : (
-          <div className="p-5 space-y-4">
+          <div className="p-4 lg:p-5 space-y-4">
+            <button
+              type="button"
+              onClick={() => {
+                release(selectedReport.id);
+                setSelectedReport(null);
+              }}
+              className="flex min-h-11 items-center gap-2 text-sm font-medium text-caoba lg:hidden"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Volver a la bandeja
+            </button>
             <div className="flex items-center gap-3">
               <span className="bg-yeso text-ladrillo px-3 py-1 rounded-xl text-xs font-mono font-bold border border-arcilla">
                 #{selectedReport.id}
@@ -511,7 +537,9 @@ export default function RevisarPage() {
       </section>
 
       {/* ── COL 3: Contexto espacial (obras + reportes cercanos) ── */}
-      <section className="w-[300px] shrink-0 bg-perla flex flex-col">
+      {/* Contexto espacial: acompana a la inspeccion, en movil no hay ancho
+          para una tercera columna. */}
+      <section className="w-[300px] shrink-0 bg-perla hidden lg:flex flex-col">
         <div className="px-4 py-3 border-b border-arcilla bg-lienzo/60">
           <h2 className="font-semibold text-tierra text-sm flex items-center gap-2">
             <MapPin className="w-4 h-4 text-caoba" />
@@ -648,7 +676,24 @@ export default function RevisarPage() {
           }
         }}
         onCancel={() => setConfirmModal(null)}
-      />
+      >
+        {confirmModal?.title === 'Descartar evidencia digital' && (
+          <label className="block">
+            <span className="text-xs font-semibold text-ladrillo">Motivo del descarte</span>
+            <select
+              value={motivoDescarte}
+              onChange={(event) => setMotivoDescarte(event.target.value as MotivoDescarteDigital)}
+              className="mt-2 min-h-12 w-full bg-perla border border-arcilla rounded-3xl-3 px-4 text-sm text-tierra focus:outline-none focus:border-caoba"
+            >
+              {MOTIVOS_DESCARTE_DIGITAL.map((motivo) => (
+                <option key={motivo.value} value={motivo.value}>
+                  {motivo.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+      </ConfirmModal>
     </div>
   );
 }

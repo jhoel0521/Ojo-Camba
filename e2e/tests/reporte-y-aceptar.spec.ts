@@ -22,8 +22,8 @@ function getConfiguredApiOrigin(): string {
 const CONFIGURED_API = getConfiguredApiOrigin();
 const LOCAL_API = 'http://localhost:3000';
 
-const MODERATOR_EMAIL = 'admin@ojocamba.bo';
-const MODERATOR_PASSWORD = 'admin123';
+const MODERATOR_EMAIL = 'moderador2@ojocamba.bo';
+const MODERATOR_PASSWORD = 'mod123';
 
 const GEOLOCATION = { latitude: -17.7833, longitude: -63.1821, accuracy: 10 };
 
@@ -54,7 +54,7 @@ async function loginBackoffice(page: import('@playwright/test').Page) {
   await page.getByPlaceholder('moderador@ojocamba.bo').fill(MODERATOR_EMAIL);
   await page.getByPlaceholder('••••••••').fill(MODERATOR_PASSWORD);
   await page.getByRole('button', { name: 'Ingresar' }).click();
-  await expect(page).toHaveURL(`${BACKOFFICE_URL}/`, { timeout: 10_000 });
+  await expect(page).toHaveURL(`${BACKOFFICE_URL}/revisar`, { timeout: 10_000 });
 }
 
 test.describe('Flujo completo: ciudadano reporta → moderador acepta', () => {

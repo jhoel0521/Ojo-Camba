@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
-import { ILike, Repository } from 'typeorm';
+import { ILike, In, Repository } from 'typeorm';
 import * as bcrypt from 'bcryptjs';
 import * as crypto from 'crypto';
 import { Usuario, UsuarioRol, Rol, RefreshToken, ROLES } from '@ojo-camba/common';
@@ -57,6 +57,48 @@ export class AuthService implements OnModuleInit {
       refresh_token: tokens.refresh_token,
       user: { id: usuario.id, nombre: usuario.nombre, email: usuario.email },
     };
+  }
+
+  /**
+   * Asegura una cuenta conocida para una demostración sin borrar al usuario.
+   * Las membresías de cuadrilla usan el id del usuario, por eso un seed no
+   * puede recrearlo cada vez que se ejecuta.
+   */
+  async asegurarUsuarioDemo(dto: {
+    nombre: string;
+    email: string;
+    password: string;
+    roles: string[];
+  }) {
+    const rolesRequeridos = Array.from(new Set([ROLES.CIUDADANO, ...dto.roles]));
+    const roles = await this.rolRepo.find({ where: { nombre: In(rolesRequeridos) } });
+    if (roles.length !== rolesRequeridos.length) {
+      throw new NotFoundException(
+        'No están inicializados todos los roles requeridos para el seed.',
+      );
+    }
+
+    const password_hash = await bcrypt.hash(dto.password, 10);
+    let usuario = await this.usuarioRepo.findOne({ where: { email: dto.email } });
+    if (usuario) {
+      usuario.nombre = dto.nombre;
+      usuario.password_hash = password_hash;
+    } else {
+      usuario = this.usuarioRepo.create({
+        nombre: dto.nombre,
+        email: dto.email,
+        password_hash,
+      });
+    }
+    usuario = await this.usuarioRepo.save(usuario);
+
+    // Sincroniza roles de la cuenta demo; no toca cuadrilla_miembros ni el id.
+    await this.usuarioRolRepo.delete({ usuario_id: usuario.id });
+    await this.usuarioRolRepo.save(
+      roles.map((rol) => this.usuarioRolRepo.create({ usuario_id: usuario!.id, rol_id: rol.id })),
+    );
+
+    return usuario;
   }
 
   async login(dto: LoginDto) {

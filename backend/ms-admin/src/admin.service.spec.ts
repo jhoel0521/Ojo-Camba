@@ -9,6 +9,7 @@ import {
   Categoria,
   Cuadrilla,
   Especialidad,
+  EstadoCaso,
   EstadoReporte,
 } from '@ojo-camba/common';
 import { AdminService, type DashboardInsight } from './admin.service';
@@ -51,6 +52,7 @@ function makeQb(rawMany: unknown[] = [], count = 0) {
   qb.getRawAndEntities = jest.fn().mockResolvedValue({ entities: [], raw: [] });
   qb.getMany = jest.fn().mockResolvedValue([]);
   qb.getManyAndCount = jest.fn().mockResolvedValue([[], 0]);
+  qb.getOne = jest.fn().mockResolvedValue(null);
   return qb;
 }
 
@@ -71,6 +73,7 @@ describe('AdminService', () => {
     dispositivoRepo = makeRepoMock();
     cuadrillaRepo = makeRepoMock();
     especialidadRepo = makeRepoMock();
+    grupoRepo.createQueryBuilder.mockReturnValue(makeQb());
     gamifyClient = { emit: jest.fn().mockReturnValue({ subscribe: jest.fn() }) };
 
     // acceptReport corre dentro de reporteRepo.manager.transaction(); el manager
@@ -85,6 +88,11 @@ describe('AdminService', () => {
       ),
       create: jest.fn((entity: unknown, x: unknown) =>
         entity === GrupoReporte ? grupoRepo.create(x) : reporteRepo.create(x),
+      ),
+      createQueryBuilder: jest.fn((entity: unknown, alias: string) =>
+        entity === GrupoReporte
+          ? grupoRepo.createQueryBuilder(alias)
+          : reporteRepo.createQueryBuilder(alias),
       ),
       save: jest.fn((x: Record<string, unknown>) =>
         x && 'codigo_obra' in x ? grupoRepo.save(x) : reporteRepo.save(x),
@@ -112,6 +120,7 @@ describe('AdminService', () => {
               proyeccion: 0,
               umbral_maximo: 10,
             }),
+            crearVisitaAlAsignarCuadrilla: jest.fn().mockResolvedValue({ id: 1 }),
           },
         },
         { provide: 'MS_GAMIFY', useValue: gamifyClient },
@@ -213,7 +222,7 @@ describe('AdminService', () => {
 
   describe('updateCase', () => {
     it('permite bitacora sin cambiar estado (HU-05)', async () => {
-      grupoRepo.findOne.mockResolvedValue({ id: 1, estado_actual: EstadoReporte.Aceptado });
+      grupoRepo.findOne.mockResolvedValue({ id: 1, estado_actual: EstadoCaso.PendienteAsignacion });
       actualizacionRepo.create.mockReturnValue({
         id: 10,
         comentario: 'avance',
@@ -233,8 +242,11 @@ describe('AdminService', () => {
       expect(reporteRepo.update).not.toHaveBeenCalled();
     });
 
-    it('cambia estado del grupo y cascada a sus reportes (transicion legal Aceptado -> ValidacionEnCampo)', async () => {
-      grupoRepo.findOne.mockResolvedValue({ id: 1, estado_actual: EstadoReporte.Aceptado });
+    it('cambia estado del grupo y conserva reportes como aceptados (PendienteAsignacion -> PlanificadoVisita)', async () => {
+      grupoRepo.findOne.mockResolvedValue({
+        id: 1,
+        estado_actual: EstadoCaso.PendienteAsignacion,
+      });
       actualizacionRepo.create.mockImplementation((x) => x);
       actualizacionRepo.save.mockImplementation((x) =>
         Promise.resolve({ id: 11, creado_en: new Date(), ...x }),
@@ -244,20 +256,20 @@ describe('AdminService', () => {
         grupo_id: 1,
         usuario_id: 2,
         comentario: 'inicio',
-        estado_nuevo: EstadoReporte.ValidacionEnCampo,
+        estado_nuevo: EstadoCaso.PlanificadoVisita,
       });
 
       expect(grupoRepo.save).toHaveBeenCalledWith(
-        expect.objectContaining({ estado_actual: EstadoReporte.ValidacionEnCampo }),
+        expect.objectContaining({ estado_actual: EstadoCaso.PlanificadoVisita }),
       );
       expect(reporteRepo.update).toHaveBeenCalledWith(
         { grupo_id: 1 },
-        { estado: EstadoReporte.ValidacionEnCampo },
+        { estado: EstadoReporte.Aceptado },
       );
     });
 
     it('rechaza estado_nuevo invalido', async () => {
-      grupoRepo.findOne.mockResolvedValue({ id: 1, estado_actual: EstadoReporte.Aceptado });
+      grupoRepo.findOne.mockResolvedValue({ id: 1, estado_actual: EstadoCaso.PendienteAsignacion });
       actualizacionRepo.create.mockReturnValue({});
       actualizacionRepo.save.mockResolvedValue({});
 
@@ -280,10 +292,16 @@ describe('AdminService', () => {
       );
     });
 
-    const transicionesLegales: [EstadoReporte, EstadoReporte][] = [
-      [EstadoReporte.Aceptado, EstadoReporte.ValidacionEnCampo],
-      [EstadoReporte.ValidacionEnCampo, EstadoReporte.EnTrabajo],
-      [EstadoReporte.EnTrabajo, EstadoReporte.Finalizado],
+    const transicionesLegales: [EstadoCaso, EstadoCaso][] = [
+      [EstadoCaso.PendienteAsignacion, EstadoCaso.PlanificadoVisita],
+      [EstadoCaso.PlanificadoVisita, EstadoCaso.ValidacionCampo],
+      [EstadoCaso.ValidacionCampo, EstadoCaso.Reencolado],
+      [EstadoCaso.ValidacionCampo, EstadoCaso.EnTrabajo],
+      [EstadoCaso.ValidacionCampo, EstadoCaso.Derivado],
+      [EstadoCaso.ValidacionCampo, EstadoCaso.RechazadoCampo],
+      [EstadoCaso.Reencolado, EstadoCaso.PlanificadoVisita],
+      [EstadoCaso.EnTrabajo, EstadoCaso.PlanificadoVisita],
+      [EstadoCaso.EnTrabajo, EstadoCaso.Finalizado],
     ];
 
     it.each(transicionesLegales)('permite %s -> %s', async (desde, hasta) => {
@@ -297,13 +315,12 @@ describe('AdminService', () => {
       );
     });
 
-    const transicionesIlegales: [EstadoReporte, EstadoReporte][] = [
-      [EstadoReporte.Aceptado, EstadoReporte.EnTrabajo], // salto
-      [EstadoReporte.Aceptado, EstadoReporte.Finalizado], // salto
-      [EstadoReporte.EnTrabajo, EstadoReporte.Aceptado], // retroceso — el caso reportado por el usuario
-      [EstadoReporte.EnTrabajo, EstadoReporte.ValidacionEnCampo], // retroceso
-      [EstadoReporte.ValidacionEnCampo, EstadoReporte.Aceptado], // retroceso
-      [EstadoReporte.Aceptado, EstadoReporte.Rechazado], // Rechazado no aplica a un Caso ya agrupado
+    const transicionesIlegales: [EstadoCaso, EstadoCaso][] = [
+      [EstadoCaso.PendienteAsignacion, EstadoCaso.EnTrabajo],
+      [EstadoCaso.PlanificadoVisita, EstadoCaso.Finalizado],
+      [EstadoCaso.ValidacionCampo, EstadoCaso.Finalizado],
+      [EstadoCaso.EnTrabajo, EstadoCaso.ValidacionCampo],
+      [EstadoCaso.Derivado, EstadoCaso.PlanificadoVisita],
     ];
 
     it.each(transicionesIlegales)('rechaza %s -> %s con mensaje claro', async (desde, hasta) => {
@@ -316,14 +333,14 @@ describe('AdminService', () => {
     });
 
     it('Finalizado es terminal: cualquier estado_nuevo posterior se rechaza', async () => {
-      grupoRepo.findOne.mockResolvedValue({ id: 1, estado_actual: EstadoReporte.Finalizado });
+      grupoRepo.findOne.mockResolvedValue({ id: 1, estado_actual: EstadoCaso.Finalizado });
 
       await expect(
         service.updateCase({
           grupo_id: 1,
           usuario_id: 2,
           comentario: 'x',
-          estado_nuevo: EstadoReporte.EnTrabajo,
+          estado_nuevo: EstadoCaso.EnTrabajo,
         }),
       ).rejects.toThrow(/estado terminal/i);
     });
@@ -331,26 +348,26 @@ describe('AdminService', () => {
     it('persiste estado_anterior en la bitacora al cambiar de estado', async () => {
       grupoRepo.findOne.mockResolvedValue({
         id: 1,
-        estado_actual: EstadoReporte.ValidacionEnCampo,
+        estado_actual: EstadoCaso.ValidacionCampo,
       });
 
       await service.updateCase({
         grupo_id: 1,
         usuario_id: 2,
         comentario: 'avanza',
-        estado_nuevo: EstadoReporte.EnTrabajo,
+        estado_nuevo: EstadoCaso.EnTrabajo,
       });
 
       expect(actualizacionRepo.create).toHaveBeenCalledWith(
         expect.objectContaining({
-          estado_anterior: EstadoReporte.ValidacionEnCampo,
-          estado_nuevo: EstadoReporte.EnTrabajo,
+          estado_anterior: EstadoCaso.ValidacionCampo,
+          estado_nuevo: EstadoCaso.EnTrabajo,
         }),
       );
     });
 
     it('estado_anterior queda null cuando no hay cambio de estado', async () => {
-      grupoRepo.findOne.mockResolvedValue({ id: 1, estado_actual: EstadoReporte.Aceptado });
+      grupoRepo.findOne.mockResolvedValue({ id: 1, estado_actual: EstadoCaso.PendienteAsignacion });
 
       await service.updateCase({ grupo_id: 1, usuario_id: 2, comentario: 'solo avance' });
 
@@ -361,10 +378,76 @@ describe('AdminService', () => {
   });
 
   describe('acceptReport', () => {
+    it('vincula automáticamente a un Caso activo equivalente en la misma celda H3', async () => {
+      const candidatoQb = makeQb();
+      candidatoQb.getOne.mockResolvedValue({ id: 8, codigo_obra: 'O-26-0000008' });
+      grupoRepo.createQueryBuilder.mockReturnValue(candidatoQb);
+      reporteRepo.findOne.mockResolvedValue({
+        id: 1,
+        estado: EstadoReporte.Reportado,
+        categoria_id: 1,
+        h3_res_11: '88abc',
+      });
+      grupoRepo.findOne.mockResolvedValue({ id: 8, codigo_obra: 'O-26-0000008' });
+
+      const result = await service.acceptReport({ report_id: 1, moderador_id: 9 });
+
+      expect(result.grupo_id).toBe(8);
+      expect(grupoRepo.create).not.toHaveBeenCalled();
+      expect(reporteRepo.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          grupo_id: 8,
+          admitido_por_usuario_id: 9,
+          admitido_en: expect.any(Date),
+        }),
+      );
+    });
+
     it('rechaza aceptar un reporte que no esta en estado Reportado', async () => {
       reporteRepo.findOne.mockResolvedValue({ id: 1, estado: EstadoReporte.Aceptado });
       await expect(service.acceptReport({ report_id: 1, moderador_id: 1 })).rejects.toThrow(
         BadRequestException,
+      );
+    });
+  });
+
+  describe('rechazo y calidad de Backoffice (ISSUE-30)', () => {
+    it('exige un motivo estandarizado y deja el descarte digital auditado', async () => {
+      const reporte = { id: 4, estado: EstadoReporte.Reportado };
+      reporteRepo.findOne.mockResolvedValue(reporte);
+
+      const result = await service.rejectReport({
+        report_id: 4,
+        moderador_id: 12,
+        motivo: 'evidencia_insuficiente',
+      });
+
+      expect(result).toEqual(expect.objectContaining({ estado: EstadoReporte.Rechazado }));
+      expect(reporteRepo.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          motivo_descarte_digital: 'evidencia_insuficiente',
+          descartado_por_usuario_id: 12,
+          descartado_en: expect.any(Date),
+        }),
+      );
+    });
+
+    it('calcula la proporción de rechazos de campo por categoría sobre admisiones', async () => {
+      const admisionesQb = makeQb([], 10);
+      const rechazosQb = makeQb([
+        { categoria_id: '7', categoria: 'No existe problema', total: '2' },
+      ]);
+      reporteRepo.createQueryBuilder
+        .mockReturnValueOnce(admisionesQb)
+        .mockReturnValueOnce(rechazosQb);
+
+      const resultado = await service.getRejectionQuality('2026-07-01', '2026-07-31');
+
+      expect(resultado.total_admisiones).toBe(10);
+      expect(resultado.total_rechazos_campo).toBe(2);
+      expect(resultado.proporcion_rechazo).toBe(20);
+      expect(resultado.por_categoria[0]).toEqual(
+        expect.objectContaining({ categoria: 'No existe problema', proporcion: 20 }),
       );
     });
   });

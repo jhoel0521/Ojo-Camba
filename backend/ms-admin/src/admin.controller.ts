@@ -1,12 +1,13 @@
 import { Controller } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
-import { TCP_PATTERNS } from '@ojo-camba/common';
+import { EstadoCaso, TCP_PATTERNS } from '@ojo-camba/common';
 import { AdminService } from './admin.service';
 import { OperacionService } from './operacion.service';
 import {
   CreateGroupDto,
   UpdateCaseDto,
   AcceptReportDto,
+  RejectReportDto,
   BanDeviceDto,
   CreateCuadrillaDto,
   UpdateCuadrillaDto,
@@ -30,14 +31,29 @@ export class AdminController {
     return this.adminService.listPending(dto.page, dto.limit);
   }
 
+  @MessagePattern(TCP_PATTERNS.ADMIN.LIST_REVIEW_ALERTS)
+  listReviewAlerts() {
+    return this.adminService.listReviewAlerts();
+  }
+
+  @MessagePattern(TCP_PATTERNS.ADMIN.LIST_REVIEW_HISTORY)
+  listReviewHistory(@Payload() dto: { page?: number; limit?: number }) {
+    return this.adminService.listReviewHistory(dto.page, dto.limit);
+  }
+
+  @MessagePattern(TCP_PATTERNS.ADMIN.GET_REJECTION_QUALITY)
+  getRejectionQuality(@Payload() dto: { desde?: string; hasta?: string }) {
+    return this.adminService.getRejectionQuality(dto?.desde, dto?.hasta);
+  }
+
   @MessagePattern(TCP_PATTERNS.ADMIN.ACCEPT_REPORT)
   acceptReport(@Payload() dto: AcceptReportDto) {
     return this.adminService.acceptReport(dto);
   }
 
   @MessagePattern(TCP_PATTERNS.ADMIN.REJECT_REPORT)
-  rejectReport(@Payload() dto: { report_id: number }) {
-    return this.adminService.rejectReport(dto.report_id);
+  rejectReport(@Payload() dto: RejectReportDto) {
+    return this.adminService.rejectReport(dto);
   }
 
   @MessagePattern(TCP_PATTERNS.ADMIN.BAN_DEVICE)
@@ -241,5 +257,72 @@ export class AdminController {
   @MessagePattern(TCP_PATTERNS.ADMIN.GET_INDICADORES_CUADRILLA)
   indicadoresCuadrilla(@Payload() dto: { cuadrilla_id: number }) {
     return this.operacionService.indicadoresCuadrilla(dto.cuadrilla_id);
+  }
+
+  @MessagePattern(TCP_PATTERNS.ADMIN.GET_CONTEXTO_OPERATIVO)
+  contextoOperativo(@Payload() dto: { usuario_id: number }) {
+    return this.operacionService.contextoOperativo(dto.usuario_id);
+  }
+
+  @MessagePattern(TCP_PATTERNS.ADMIN.LIST_VISITAS_TECNICO)
+  visitasDelTecnico(
+    @Payload() dto: { usuario_id: number; page?: number; limit?: number; fecha?: string },
+  ) {
+    return this.operacionService.visitasDelTecnico(dto.usuario_id, dto.page, dto.limit, dto.fecha);
+  }
+
+  @MessagePattern(TCP_PATTERNS.ADMIN.LIST_VISITAS_CUADRILLA)
+  visitasDeCuadrilla(@Payload() dto: { usuario_id: number; page?: number; limit?: number }) {
+    return this.operacionService.visitasDeCuadrillaResponsable(dto.usuario_id, dto.page, dto.limit);
+  }
+
+  @MessagePattern(TCP_PATTERNS.ADMIN.GET_VISITA_TECNICO)
+  detalleVisitaTecnico(@Payload() dto: { visita_id: number; usuario_id: number }) {
+    return this.operacionService.detalleVisitaParaTecnico(dto.visita_id, dto.usuario_id);
+  }
+
+  @MessagePattern(TCP_PATTERNS.ADMIN.ASIGNAR_VISITA_TECNICO)
+  asignarVisitaTecnico(
+    @Payload()
+    dto: {
+      visita_id: number;
+      responsable_id: number;
+      tecnico_id: number;
+      fecha_planificada: string;
+      orden_ruta: number;
+      motivo?: string;
+    },
+  ) {
+    return this.operacionService.asignarVisitaTecnico(dto);
+  }
+
+  @MessagePattern(TCP_PATTERNS.ADMIN.REGISTRAR_LLEGADA_VISITA)
+  registrarLlegadaVisita(
+    @Payload() dto: { visita_id: number; tecnico_id: number; lat: number; lng: number },
+  ) {
+    return this.operacionService.registrarLlegada(dto);
+  }
+
+  @MessagePattern(TCP_PATTERNS.ADMIN.PROPONER_RESULTADO_VISITA)
+  proponerResultadoVisita(
+    @Payload()
+    dto: {
+      visita_id: number;
+      tecnico_id: number;
+      estado_propuesto: EstadoCaso;
+      comentario: string;
+      evidencia_url?: string;
+      entidad_destino?: string;
+      categoria_rechazo_id?: number;
+    },
+  ) {
+    return this.operacionService.proponerResultadoVisita(dto);
+  }
+
+  @MessagePattern(TCP_PATTERNS.ADMIN.CONFIRMAR_PROPUESTA_VISITA)
+  confirmarPropuestaVisita(
+    @Payload() dto: { propuesta_id: number; usuario_id: number; motivo_decision?: string },
+  ) {
+    return this.operacionService.confirmarPropuestaVisita(dto);
   }
 }

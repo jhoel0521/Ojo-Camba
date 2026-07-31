@@ -18,6 +18,7 @@ function makeRepoMock() {
       return Promise.resolve(x);
     }),
     update: jest.fn().mockResolvedValue({ affected: 1 }),
+    delete: jest.fn().mockResolvedValue({ affected: 1 }),
     increment: jest.fn().mockResolvedValue(undefined),
   };
 }
@@ -105,6 +106,40 @@ describe('AuthService', () => {
 
       expect(result.access_token).toBeTruthy();
       expect(refreshTokenRepo.save).toHaveBeenCalled();
+    });
+  });
+
+  describe('asegurarUsuarioDemo', () => {
+    it('actualiza la contraseña y roles sin recrear el usuario existente', async () => {
+      const existente = {
+        id: 42,
+        nombre: 'Nombre anterior',
+        email: 'jefe.cuadrilla@ojocamba.bo',
+        password_hash: 'anterior',
+      };
+      usuarioRepo.findOne.mockResolvedValue(existente);
+      rolRepo.find.mockResolvedValue([
+        { id: 1, nombre: 'ciudadano' },
+        { id: 2, nombre: 'tecnico' },
+      ]);
+
+      const usuario = await service.asegurarUsuarioDemo({
+        nombre: 'Responsable Cuadrilla Demo',
+        email: existente.email,
+        password: 'cuadrilla123',
+        roles: ['tecnico'],
+      });
+
+      expect(usuario.id).toBe(42);
+      expect(await bcrypt.compare('cuadrilla123', usuario.password_hash!)).toBe(true);
+      expect(usuarioRepo.create).not.toHaveBeenCalled();
+      expect(usuarioRolRepo.delete).toHaveBeenCalledWith({ usuario_id: 42 });
+      expect(usuarioRolRepo.save).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          expect.objectContaining({ usuario_id: 42, rol_id: 1 }),
+          expect.objectContaining({ usuario_id: 42, rol_id: 2 }),
+        ]),
+      );
     });
   });
 
