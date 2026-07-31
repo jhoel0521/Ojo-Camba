@@ -404,3 +404,22 @@ Una instancia SeaweedFS es suficiente para el MVP. Si el volumen de imagenes cre
 - Solo cambia `S3_ENDPOINT` en ms-register. Cero cambio de codigo.
 
 Las imagenes se sirven via el gateway (`GET /api/reportes/{id}/imagen`). SeaweedFS nunca recibe trafico publico.
+## Servicio `ms-prediccion` (ISSUE-31)
+
+El servicio de predicción se despliega con `docker/prod/Dockerfile.ms-prediccion`, usando el contexto raíz del repositorio (`.`). Escucha HTTP interno en el puerto `3007` y no debe exponerse públicamente; solamente `gateway-principal` debe acceder a él mediante `MS_PREDICCION_URL`.
+
+Variables requeridas:
+
+```text
+DATABASE_URL=postgresql+psycopg://<usuario>:<clave>@<host>:5432/<base>
+PORT=3007
+```
+
+En Coolify crear dos volúmenes persistentes:
+
+```text
+/app/modelos
+/app/datos
+```
+
+Sin esos volúmenes, un redeploy elimina el modelo entrenado y el servicio responderá `409` hasta que se vuelva a entrenar. El servicio no entrena automáticamente al arrancar.
