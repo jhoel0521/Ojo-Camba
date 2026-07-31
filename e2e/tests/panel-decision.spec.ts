@@ -28,13 +28,28 @@ async function ingresar(page: Page, { email, password }: { email: string; passwo
   await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 15_000 });
 }
 
+/**
+ * Espera a que el panel tenga datos, no solo a que exista la pagina.
+ *
+ * Dos trampas que costaron una corrida entera: el `h1` del Layout tambien dice
+ * "Panel de decision", asi que buscarlo da un falso positivo inmediato; y la
+ * carga real tarda porque el pronostico se recalcula en cada pedido (~13 s por
+ * llamada contra el historico completo). Por eso se ancla en un encabezado que
+ * solo existe dentro de la pagina y con margen de sobra.
+ */
+const ESPERA_CARGA = 45_000;
+
+async function esperarPanelCargado(page: Page) {
+  await expect(page.getByRole('heading', { name: 'Resumen ejecutivo' })).toBeVisible({
+    timeout: ESPERA_CARGA,
+  });
+}
+
 async function abrirPanel(page: Page, credenciales: { email: string; password: string }) {
   await page.setViewportSize({ width: 1280, height: 900 });
   await ingresar(page, credenciales);
   await page.goto(`${BACKOFFICE_URL}/prediccion`);
-  await expect(page.getByRole('heading', { name: 'Panel de decision' })).toBeVisible({
-    timeout: 15_000,
-  });
+  await esperarPanelCargado(page);
 }
 
 test.describe('ISSUE-32 — distincion entre lo observado y lo estimado', () => {
@@ -101,7 +116,10 @@ test.describe('ISSUE-32 — mapa, filtros y detalle por zona', () => {
 
     await page.getByLabel('Categoria').selectOption('1');
     await expect(page.getByLabel('Categoria')).toHaveValue('1');
-    await expect(page.getByRole('heading', { name: 'Panel de decision' })).toBeVisible();
+    // El Layout tambien titula "Panel de decision": hay que acotar a la pagina.
+    await expect(
+      page.getByRole('main').getByRole('heading', { name: 'Panel de decision' }),
+    ).toBeVisible();
   });
 
   test('sin zona elegida invita a elegir una', async ({ page }) => {
@@ -124,16 +142,19 @@ test.describe('ISSUE-32 — la decision queda justificada', () => {
     const registrar = page.getByRole('button', { name: 'Registrar decision' });
     await expect(registrar).toBeDisabled();
 
-    await page.getByRole('textbox').fill('corto');
+    // Los filtros de fecha tambien son textbox: hay que apuntar al motivo.
+    const motivo = page.getByRole('dialog').getByRole('textbox');
+    await motivo.fill('corto');
     await expect(registrar).toBeDisabled();
 
-    await page
-      .getByRole('textbox')
-      .fill('Se refuerza con la cuadrilla 3, que termina su obra el martes.');
+    await motivo.fill('Se refuerza con la cuadrilla 3, que termina su obra el martes.');
     await expect(registrar).toBeEnabled();
 
-    // El panel deja constancia; no mueve cuadrillas.
-    await expect(page.getByText(/no asigna ni reasigna cuadrillas/)).toBeVisible();
+    // El panel deja constancia; no mueve cuadrillas. Lo dice tambien la
+    // seccion de capacidad, asi que se comprueba dentro del dialogo.
+    await expect(
+      page.getByRole('dialog').getByText(/no asigna ni reasigna cuadrillas/),
+    ).toBeVisible();
   });
 });
 
@@ -143,9 +164,7 @@ test.describe('ISSUE-32 — el panel se opera desde un telefono', () => {
       await page.setViewportSize({ width: ancho, height: 780 });
       await ingresar(page, COORDINADOR);
       await page.goto(`${BACKOFFICE_URL}/prediccion`);
-      await expect(page.getByRole('heading', { name: 'Panel de decision' })).toBeVisible({
-        timeout: 15_000,
-      });
+      await esperarPanelCargado(page);
 
       const pestanas = page.getByRole('navigation', { name: 'Secciones del panel' });
       await expect(pestanas).toBeVisible();
@@ -153,7 +172,10 @@ test.describe('ISSUE-32 — el panel se opera desde un telefono', () => {
       // Cambiar de pestana no pierde el contexto: el encabezado sigue ahi.
       await page.getByRole('button', { name: 'Historial y precision' }).click();
       await expect(page.getByRole('heading', { name: 'Historial y precision' })).toBeVisible();
-      await expect(page.getByRole('heading', { name: 'Panel de decision' })).toBeVisible();
+      // El Layout tambien titula "Panel de decision": hay que acotar a la pagina.
+    await expect(
+      page.getByRole('main').getByRole('heading', { name: 'Panel de decision' }),
+    ).toBeVisible();
 
       const desbordaX = await page.evaluate(
         () => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1,

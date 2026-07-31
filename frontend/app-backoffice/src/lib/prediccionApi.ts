@@ -48,6 +48,17 @@ export interface Comparativa {
   observado: CasosObservados;
   estimado: Pronostico | null;
   motivo_sin_estimacion: string | null;
+  /**
+   * El pronostico siempre cubre 7 dias; el periodo observado lo elige quien
+   * consulta. Si no duran lo mismo, `diferencia` viene en null y aca esta el
+   * motivo: restar una semana estimada de un mes observado no significa nada.
+   */
+  periodos_comparables: {
+    comparables: boolean;
+    dias_observados: number;
+    dias_estimados: number | null;
+    motivo: string | null;
+  };
   zonas: ZonaComparada[];
 }
 

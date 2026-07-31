@@ -265,13 +265,43 @@ describe('PrediccionController', () => {
       expect(resultado.zonas.every((z) => z.diferencia === null)).toBe(true);
     });
 
-    it('usa la semana en curso cuando no le pasan período', async () => {
+    it('observa por defecto 7 dias, la misma duración que pronostica el modelo', async () => {
       await controlador.comparativa();
 
       const payload = adminSend.mock.calls[0][1] as { desde: string; hasta: string };
-      expect(payload.desde).toMatch(/^\d{4}-\d{2}-\d{2}$/);
-      expect(new Date(payload.desde).getUTCDay()).toBe(1); // lunes
-      expect(payload.desde <= payload.hasta).toBe(true);
+      const dias =
+        Math.round(
+          (new Date(`${payload.hasta}T00:00:00Z`).getTime() -
+            new Date(`${payload.desde}T00:00:00Z`).getTime()) /
+            86_400_000,
+        ) + 1;
+      expect(dias).toBe(7);
+      // Hasta ayer: un día en curso todavía no terminó de acumular Casos.
+      expect(payload.hasta < new Date().toISOString().slice(0, 10)).toBe(true);
+    });
+
+    it('no resta períodos de distinta duración', async () => {
+      // Un mes observado contra una semana estimada daba una diferencia enorme
+      // y sin sentido. Se muestran las dos cifras, no su resta.
+      const resultado = await controlador.comparativa('2026-06-01', '2026-06-30');
+
+      expect(resultado.periodos_comparables).toMatchObject({
+        comparables: false,
+        dias_observados: 30,
+        dias_estimados: 7,
+      });
+      expect(resultado.periodos_comparables.motivo).toContain('30');
+      expect(resultado.zonas.every((z) => z.diferencia === null)).toBe(true);
+      // Pero los dos numeros siguen estando.
+      const zonaA = resultado.zonas.find((z) => z.zona_h3 === 'zona-a');
+      expect(zonaA).toMatchObject({ casos_observados: 5, casos_estimados: 8 });
+    });
+
+    it('sí resta cuando los dos períodos duran lo mismo', async () => {
+      const resultado = await controlador.comparativa('2026-07-27', '2026-08-02');
+
+      expect(resultado.periodos_comparables.comparables).toBe(true);
+      expect(resultado.zonas.find((z) => z.zona_h3 === 'zona-a')?.diferencia).toBe(3);
     });
 
     it('propaga los filtros a los dos lados', async () => {

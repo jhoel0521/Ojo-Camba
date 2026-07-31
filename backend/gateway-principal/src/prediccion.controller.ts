@@ -82,14 +82,16 @@ function aFecha(valor: Date): string {
   return valor.toISOString().slice(0, 10);
 }
 
-/** Lunes de la semana en curso: el modelo agrega por semana ISO. */
-function lunesDeEstaSemana(): string {
-  const hoy = new Date();
-  const dia = hoy.getUTCDay();
-  const diferencia = dia === 0 ? 6 : dia - 1;
-  const lunes = new Date(hoy);
-  lunes.setUTCDate(hoy.getUTCDate() - diferencia);
-  return aFecha(lunes);
+function sumarDias(fecha: string, dias: number): string {
+  const resultado = new Date(`${fecha}T00:00:00Z`);
+  resultado.setUTCDate(resultado.getUTCDate() + dias);
+  return aFecha(resultado);
+}
+
+function diasEntre(desde: string, hasta: string): number {
+  const inicio = new Date(`${desde}T00:00:00Z`).getTime();
+  const fin = new Date(`${hasta}T00:00:00Z`).getTime();
+  return Math.round((fin - inicio) / 86_400_000) + 1;
 }
 
 @Controller('prediccion')
@@ -151,6 +153,13 @@ export class PrediccionController {
    *
    * Si todavía nadie entrenó, el lado observado se devuelve igual y `estimado`
    * viaja en null con el motivo: la operación real no depende del modelo.
+   *
+   * **La diferencia sólo se calcula si los dos períodos duran lo mismo.** El
+   * pronóstico siempre cubre 7 días, pero el período observado lo elige quien
+   * consulta: restarle una semana estimada a un mes observado daba un número
+   * enorme y sin sentido. Por defecto se observan los últimos 7 días completos,
+   * que sí son comparables; si se pide otro rango, `diferencia` viaja en null y
+   * `periodos_comparables` explica por qué.
    */
   @Get('comparativa')
   @RequireRoles(ROLES.COORDINADOR_OPERATIVO, ROLES.AUTORIDAD_MUNICIPAL)
@@ -160,8 +169,10 @@ export class PrediccionController {
     @Query('categoria_id') categoriaId?: string,
     @Query('estado') estado?: string,
   ) {
-    const periodoDesde = desde || lunesDeEstaSemana();
-    const periodoHasta = hasta || aFecha(new Date());
+    // Últimos 7 días completos: la misma duración que pronostica el modelo.
+    const ayer = sumarDias(aFecha(new Date()), -1);
+    const periodoDesde = desde || sumarDias(ayer, -6);
+    const periodoHasta = hasta || ayer;
 
     const observado = await sendRpc<CasosObservados>(
       this.admin.send(TCP_PATTERNS.ADMIN.GET_CASOS_POR_ZONA, {
@@ -233,13 +244,20 @@ export class PrediccionController {
       }
     }
 
+    const diasObservados = diasEntre(periodoDesde, periodoHasta);
+    const diasEstimados =
+      estimado?.periodo.desde && estimado.periodo.hasta
+        ? diasEntre(estimado.periodo.desde, estimado.periodo.hasta)
+        : null;
+    const comparables = diasEstimados !== null && diasObservados === diasEstimados;
+
     const zonas = [...porZona.values()]
       .map((fila) => ({
         ...fila,
         casos_estimados:
           fila.casos_estimados == null ? null : Number(fila.casos_estimados.toFixed(2)),
         diferencia:
-          fila.casos_estimados == null
+          fila.casos_estimados == null || !comparables
             ? null
             : Number((fila.casos_estimados - fila.casos_observados).toFixed(2)),
       }))
@@ -248,7 +266,22 @@ export class PrediccionController {
           (b.casos_estimados ?? b.casos_observados) - (a.casos_estimados ?? a.casos_observados),
       );
 
-    return { observado, estimado, motivo_sin_estimacion: motivoSinEstimacion, zonas };
+    return {
+      observado,
+      estimado,
+      motivo_sin_estimacion: motivoSinEstimacion,
+      periodos_comparables: {
+        comparables,
+        dias_observados: diasObservados,
+        dias_estimados: diasEstimados,
+        motivo: comparables
+          ? null
+          : diasEstimados === null
+            ? 'No hay pronóstico con el que comparar.'
+            : `El período observado dura ${diasObservados} días y el pronosticado ${diasEstimados}: no se puede restar uno del otro.`,
+      },
+      zonas,
+    };
   }
 
   /**

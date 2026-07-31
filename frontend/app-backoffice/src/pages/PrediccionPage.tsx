@@ -66,12 +66,10 @@ function nombreCategoria(id: number | null): string {
   return CATEGORIA_NAMES[id] ?? `Categoria ${id}`;
 }
 
-function lunesDeEstaSemana(): string {
-  const hoy = new Date();
-  const dia = hoy.getUTCDay();
-  const lunes = new Date(hoy);
-  lunes.setUTCDate(hoy.getUTCDate() - (dia === 0 ? 6 : dia - 1));
-  return lunes.toISOString().slice(0, 10);
+function diaRelativo(dias: number): string {
+  const fecha = new Date();
+  fecha.setUTCDate(fecha.getUTCDate() + dias);
+  return fecha.toISOString().slice(0, 10);
 }
 
 /** Etiqueta reutilizable: de donde viene cada numero de la pantalla. */
@@ -121,8 +119,10 @@ export default function PrediccionPage() {
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [desde, setDesde] = useState(lunesDeEstaSemana);
-  const [hasta, setHasta] = useState(() => new Date().toISOString().slice(0, 10));
+  // Ultimos 7 dias completos: misma duracion que el pronostico, para que la
+  // diferencia por zona sea comparable de entrada (ver periodos_comparables).
+  const [desde, setDesde] = useState(() => diaRelativo(-7));
+  const [hasta, setHasta] = useState(() => diaRelativo(-1));
   const [categoriaId, setCategoriaId] = useState<number | ''>('');
   const [estado, setEstado] = useState('');
   const [capa, setCapa] = useState<CapaMapa>('diferencia');
@@ -410,6 +410,16 @@ export default function PrediccionPage() {
       {!estimado && comparativa?.motivo_sin_estimacion && (
         <p className="mt-3 rounded-3xl-2 bg-yeso p-3 text-xs text-ladrillo">
           Se muestra solo lo observado: {comparativa.motivo_sin_estimacion}
+        </p>
+      )}
+
+      {estimado && comparativa && !comparativa.periodos_comparables.comparables && (
+        <p className="mt-3 flex items-start gap-2 rounded-3xl-2 border border-sol-camba/30 bg-sol-camba/5 p-3 text-xs text-ladrillo">
+          <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-sol-camba" />
+          <span>
+            {comparativa.periodos_comparables.motivo} Se muestran las dos cifras, pero no su
+            diferencia.
+          </span>
         </p>
       )}
 
