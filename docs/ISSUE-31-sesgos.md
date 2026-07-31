@@ -28,7 +28,7 @@ entre zonas con demanda esperada, no proporcional al pronóstico. Una zona con
 poca historia no queda sin cuota por el solo hecho de tener poca historia.
 
 **Pendiente.** Publicar el error del modelo *por zona* y no sólo agregado. Un
-MAE global de 0,899 puede esconder que en las cuatro zonas activas el error es
+MAE global de 0,897 puede esconder que en las cuatro zonas activas el error es
 la mitad y en el resto el doble.
 
 ---
@@ -77,32 +77,46 @@ evita inflar las métricas, pero no crea historia que no existe.
 
 ## 4. Variables degeneradas (hallazgo del EDA)
 
-**Qué se midió.** Tres de las 19 variables predictoras no aportan nada en este
-dataset:
+El EDA marca automáticamente toda variable predictora cuyo valor más frecuente
+cubra más del 98% de las filas. La primera corrida encontró **tres**, por dos
+motivos que conviene no confundir: uno de datos y uno de método.
 
-| Variable | Estado | Causa |
+### 4.1 El de método: `casos_abiertos_inicio` — **corregido**
+
+La consulta que arma la cola decidía si un Caso estaba abierto en la semana W
+mirando su estado **de hoy**, no el que tenía en W. Dos problemas en uno:
+
+1. Daba cero en todo el historial, porque el simulador cierra todo lo que genera
+   y los 278 Casos que siguen abiertos se crearon todos en la última semana.
+2. Más grave: sobre datos reales habría filtrado el presente hacia el pasado. El
+   modelo habría entrenado con información que en producción no existe al
+   momento de pronosticar — la misma clase de error que la sección 5 describe
+   para las variables contemporáneas, pero escondido detrás de un cero.
+
+**Corregido.** La cola de la semana W se reconstruye desde `actualizaciones_caso`
+(51.353 transiciones con fecha): un Caso cuenta si ya existía en W y todavía no
+se había cerrado en W. La columna pasó de constante a seis valores distintos, con
+correlación 0,58 con el objetivo.
+
+Lo que cambió al reentrenar es instructivo: **el error casi no se movió** (MAE de
+0,899 a 0,897), pero `casos_abiertos_inicio` se convirtió en la **segunda
+variable más influyente del modelo, con el 17,0%**. Es decir, el modelo anterior
+llegaba al mismo número por inercia pura de la demanda; el corregido llega a un
+número parecido pero **por las razones correctas**. Para una alerta que tiene que
+explicarle al coordinador de dónde sale el riesgo, eso no es un detalle.
+
+### 4.2 El de datos: capacidad — **sin corregir, y no es corregible**
+
+| Variable | Valor dominante | Causa |
 |---|---|---|
-| `casos_abiertos_inicio` | **constante en 0** | Los 278 Casos abiertos fueron creados todos en la última semana del historial |
-| `carga_por_cuadrilla` | **constante en 0** | Se deriva de la anterior dividida por cuadrillas |
-| `cuadrillas_activas` | 0 salvo la última semana | Las 20 cuadrillas se dan de alta en el seed, con fecha de hoy |
+| `cuadrillas_activas` | 0 en el 98,8% | Las 20 cuadrillas se dan de alta en el seed, con fecha de hoy |
+| `carga_por_cuadrilla` | 0 en el 99,5% | Se deriva de la anterior |
 
-**Por qué importa.** Hay dos problemas distintos acá y conviene no confundirlos.
-
-El primero es de **datos**: el simulador cierra todo lo que genera y deja el
-backlog y las cuadrillas para el final. No hay cola histórica que aprender.
-
-El segundo es de **método**, y es más grave: la consulta que arma
-`casos_abiertos_inicio` decide si un Caso estaba abierto en la semana W mirando
-su estado *de hoy*, no el que tenía en W. Sobre datos reales eso sería filtrar el
-presente hacia el pasado. Acá el error se esconde porque el resultado colapsa a
-cero, pero el día que haya cola histórica el modelo entrenaría con información
-que en producción no va a tener.
-
-**Estado.** La base ya tiene con qué corregirlo: `actualizaciones_caso` guarda
-51.353 transiciones de estado con fecha, así que el estado de un Caso en
-cualquier semana pasada es reconstruible. Mientras no se corrija, las métricas
-publicadas se obtuvieron **sin** información de cola ni de capacidad: son las de
-un modelo que predice sólo por inercia de la demanda.
+No hay historia de capacidad en la base y no se puede inventar: nadie registró
+cuándo empezó a operar cada cuadrilla. **El modelo entrena sin información de
+capacidad**, y eso queda en las limitaciones que devuelve
+`GET /prediccion/modelo`. Se resuelve solo con el tiempo, cuando la operación
+real acumule altas y bajas fechadas.
 
 ---
 
@@ -110,7 +124,7 @@ un modelo que predice sólo por inercia de la demanda.
 
 `reportes`, `dispositivos` y `gravedad_media` **de la propia semana** están fuera
 de las variables predictoras. Con ellas el modelo daba MAE 0,351 y R² 0,721;
-sin ellas, R² 0,382.
+sin ellas, R² 0,385.
 
 La diferencia no es una mejora perdida: esas variables no existen todavía cuando
 hay que pronosticar. Un modelo que las use tiene métricas de laboratorio y
@@ -177,3 +191,4 @@ Lo que este modelo **no** habilita:
 | 2026-07-30 | Se incorpora clima real de Open-Meteo con procedencia y fecha de extracción |
 | 2026-07-30 | Se comparan los tres modelos; gana regresión lineal por MAE en 12 semanas no vistas |
 | 2026-07-31 | EDA generado desde la base; se detectan tres variables degeneradas y el anacronismo de `casos_abiertos_inicio` (sección 4) |
+| 2026-07-31 | Se corrige la cola histórica usando `actualizaciones_caso` y se reentrena. MAE 0,899 → 0,897; `casos_abiertos_inicio` pasa a ser la segunda variable del modelo (17,0%) |

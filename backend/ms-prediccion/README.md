@@ -63,7 +63,7 @@ Una fila del dataset = **(semana, zona H3 res-8, categoría)**.
 | `reportes_media_4` | decimal | derivado | Promedio de reportes del último mes |
 | `dispositivos_lag_1` | entero | `reportes` | Dispositivos distintos que reportaron la semana previa |
 | `gravedad_lag_1` | decimal | `reportes` | Gravedad media de la semana previa (Baja=1 … Emergencia=4) |
-| `casos_abiertos_inicio` | entero | `grupos_reportes` | Cola al comenzar la semana (no Finalizado ni Rechazado) |
+| `casos_abiertos_inicio` | entero | `grupos_reportes` + `actualizaciones_caso` | Cola al comenzar la semana: ya creado y todavía sin cerrar **en esa semana**, según el historial de estados — no según el estado de hoy |
 | `cuadrillas_activas` | entero | `cuadrillas` | Capacidad acumulada hasta esa semana |
 | `carga_por_cuadrilla` | decimal | derivado | Cola dividida entre cuadrillas activas |
 | `mes`, `semana_del_anio` | entero | calendario | Estacionalidad |
@@ -77,7 +77,7 @@ Una fila del dataset = **(semana, zona H3 res-8, categoría)**.
 `reportes`, `dispositivos` y `gravedad_media` **de la propia semana** están
 excluidos de las variables predictoras. Con ellos el modelo daba MAE 0.351 y
 R² 0.721, pero explicaba el 90% con datos que al momento de pronosticar todavía
-no existen. Sin ellos, el R² real es 0.38. **El número peor es el honesto.**
+no existen. Sin ellos, el R² real es 0.385. **El número peor es el honesto.**
 
 El clima de la semana a predecir sí se usa, porque en producción se obtiene de
 un pronóstico meteorológico; cuando no está disponible se cae al promedio
@@ -98,14 +98,23 @@ entrenamiento) y validación cruzada con `TimeSeriesSplit`.
 
 | Modelo | MAE | RMSE | R² | Diagnóstico |
 |---|---|---|---|---|
-| **Regresión lineal** | **0.899** | 1.255 | 0.382 | ajuste razonable |
-| Árbol de decisión | 0.954 | 1.341 | 0.295 | ajuste razonable |
-| Random Forest | 0.918 | 1.278 | 0.360 | sobreajuste moderado |
+| **Regresión lineal** | **0.897** | 1.252 | 0.385 | ajuste razonable |
+| Árbol de decisión | 0.958 | 1.367 | 0.268 | sobreajuste moderado |
+| Random Forest | 0.904 | 1.266 | 0.372 | sobreajuste moderado |
 
 **Elegido: regresión lineal**, por menor error en las 12 semanas no vistas.
 Que le gane al Random Forest tiene sentido: el simulador genera la demanda con
 una fórmula casi lineal (base creciente × factor estacional + ruido), así que el
 bosque agrega varianza sin aportar señal.
+
+Variables más influyentes: `casos_media_4` (25.7%), **`casos_abiertos_inicio`
+(17.0%)**, `reportes_media_4` (15.7%), `casos_lag_1` (13.6%).
+
+Que la cola abierta sea la segunda variable del modelo es reciente: hasta que se
+corrigió la consulta que la calcula (ver limitaciones) valía cero en todo el
+historial y el modelo predecía sólo por inercia de la demanda. El error apenas
+se movió —de 0.899 a 0.897 de MAE—, pero la explicación de cada pronóstico
+cambió: ahora la cola pesa, que es como razona el coordinador.
 
 ## Limitaciones
 
@@ -114,12 +123,17 @@ bosque agrega varianza sin aportar señal.
   acotado). Un R² alto mediría que el modelo aprendió esas reglas, no que
   anticipe la operación municipal real.
 - La única variable observada del dataset es el clima.
-- **Tres variables predictoras están muertas en este dataset:**
-  `casos_abiertos_inicio` y `carga_por_cuadrilla` son constantes en cero, y
-  `cuadrillas_activas` sólo cambia en la última semana. La causa y el
-  anacronismo que la esconde están en la sección 4 de
-  [`ISSUE-31-sesgos.md`](../../docs/ISSUE-31-sesgos.md). Las métricas de abajo se
-  obtuvieron **sin** información de cola ni de capacidad.
+- **Dos variables predictoras siguen muertas:** `cuadrillas_activas` vale cero en
+  el 98.8% de las filas y `carga_por_cuadrilla`, que se deriva de ella, en el
+  99.5%. Las 20 cuadrillas se dan de alta en el seed con fecha de hoy, así que no
+  hay historia de capacidad que aprender y no es reconstruible desde los datos.
+  El modelo entrena **sin** información de capacidad.
+- Una tercera, `casos_abiertos_inicio`, estaba muerta por un motivo distinto y ya
+  **se corrigió**: la consulta decidía si un Caso estaba abierto en la semana W
+  mirando su estado de hoy en vez del que tenía en W. Además de dar cero en todo
+  el historial, sobre datos reales habría filtrado el presente hacia el pasado.
+  Ahora se reconstruye con `actualizaciones_caso`. Detalle en la sección 4 de
+  [`ISSUE-31-sesgos.md`](../../docs/ISSUE-31-sesgos.md).
 - Las cuadrillas todavía no tienen especialidad cargada, así que la capacidad se
   reparte pareja entre zonas en vez de por especialidad. Cuando ISSUE-29 cargue
   las especialidades, la cuota debe calcularse por categoría.

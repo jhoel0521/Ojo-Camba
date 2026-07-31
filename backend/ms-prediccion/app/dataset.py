@@ -17,12 +17,30 @@ from sqlalchemy import Engine, text
 
 # El Caso no guarda su zona: se toma la del primer reporte agrupado.
 SQL_BASE = """
-WITH caso_zona AS (
+WITH cierre AS (
+    -- Cuando se cerro cada Caso, segun el historial de estados. Hace falta para
+    -- reconstruir la cola de una semana pasada: `estado_actual` dice como esta
+    -- hoy, y usarlo para describir el pasado seria meter el presente en el
+    -- entrenamiento.
+    SELECT grupo_id, min(creado_en) AS cerrado_en
+    FROM actualizaciones_caso
+    WHERE estado_nuevo IN ('Finalizado', 'Rechazado')
+    GROUP BY grupo_id
+),
+caso_zona AS (
     SELECT
         g.id,
         g.categoria_id,
         g.creado_en,
         g.estado_actual,
+        CASE
+            WHEN ci.cerrado_en IS NOT NULL THEN ci.cerrado_en
+            -- Caso cerrado sin transicion registrada: no se sabe cuando. Se
+            -- cuenta como cerrado desde el principio antes que inflar la cola
+            -- con una que quiza nunca existio.
+            WHEN g.estado_actual IN ('Finalizado', 'Rechazado') THEN g.creado_en
+            ELSE NULL
+        END AS cerrado_en,
         (
             SELECT r.h3_res_8
             FROM reportes r
@@ -31,6 +49,7 @@ WITH caso_zona AS (
             LIMIT 1
         ) AS h3
     FROM grupos_reportes g
+    LEFT JOIN cierre ci ON ci.grupo_id = g.id
 ),
 casos_semana AS (
     SELECT
@@ -55,6 +74,11 @@ reportes_semana AS (
 ),
 -- Casos que seguian abiertos al comenzar cada semana: es la cola que arrastra
 -- la operacion y explica buena parte de la demanda atendida.
+--
+-- "Abierto en la semana W" se decide con el estado que el Caso tenia EN W, no
+-- con el de hoy: ya creado y todavia sin cerrar. Preguntarle al presente como
+-- estaba el pasado es fuga de informacion, y ademas dejaba la columna en cero
+-- para todo el historial (ver docs/ISSUE-31-sesgos.md).
 cola_semana AS (
     SELECT
         s.semana,
@@ -62,7 +86,7 @@ cola_semana AS (
         c.categoria_id,
         count(*) FILTER (
             WHERE c.creado_en < s.semana
-              AND c.estado_actual NOT IN ('Finalizado', 'Rechazado')
+              AND (c.cerrado_en IS NULL OR c.cerrado_en >= s.semana)
         ) AS casos_abiertos_inicio
     FROM (SELECT DISTINCT date_trunc('week', creado_en)::date AS semana FROM grupos_reportes) s
     CROSS JOIN LATERAL (

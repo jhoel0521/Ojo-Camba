@@ -1,6 +1,6 @@
 # EDA — pronostico semanal de Casos de Obra (ISSUE-31)
 
-> Generado por `python -m app.eda_cli` el 2026-07-31 04:25 UTC. **No editar a mano:**
+> Generado por `python -m app.eda_cli` el 2026-07-31 05:01 UTC. **No editar a mano:**
 > regenerarlo cuando cambie el historial.
 
 **Origen de los Casos y reportes:** simulador historico de ISSUE-28. Es
@@ -85,7 +85,20 @@ exactamente la semana que el coordinador necesita anticipar. Recortarlos mejorar
 las metricas y empeoraria el servicio. Lo que si se hace es acotar la prediccion a
 valores no negativos y publicar un margen de error junto a cada pronostico.
 
-## 5. Reparto geografico
+## 5. Variables degeneradas
+
+2 de las 19 variables predictoras son constantes o estan dominadas por un unico valor en mas del 98% de las filas:
+
+| Variable | Valores distintos | Valor mas frecuente | Media |
+|---|---|---|---|
+| `cuadrillas_activas` | 2 | 98.8% | 0.250 |
+| `carga_por_cuadrilla` | 4 | 99.5% | 0.000 |
+
+Una variable asi no le aporta nada al modelo, y casi siempre delata un problema
+aguas arriba: o la consulta no esta midiendo lo que dice medir, o el dato no
+existe en el origen. El detalle de cada caso esta en `ISSUE-31-sesgos.md`.
+
+## 6. Reparto geografico
 
 18 zonas H3 con actividad. El 20% mas activo (4 zonas) concentra el **37.5%** de los Casos. Todas registran al menos uno.
 
@@ -103,7 +116,7 @@ Esta concentracion es el principal **sesgo geografico** del modelo: aprende much
 mejor las zonas activas que las de cola larga, donde casi solo ve ceros. Se
 documenta en `ISSUE-31-sesgos.md`.
 
-## 6. Reparto por categoria
+## 7. Reparto por categoria
 
 | Categoria | Casos | % del total | Media semanal por zona |
 |---|---|---|---|
@@ -118,7 +131,7 @@ La categoria entra al modelo como variable, asi que un reparto disparejo no lo
 invalida, pero si explica que el error sea mayor en las categorias menos
 frecuentes: hay menos ejemplos de los que aprender.
 
-## 7. Estacionalidad
+## 8. Estacionalidad
 
 | Mes | Casos medios por zona y categoria | Temporada |
 |---|---|---|
@@ -144,7 +157,7 @@ construccion (factor 1.25 en lluvias, 0.78 en seca). **Eso es exactamente la
 limitacion del ejercicio:** el modelo esta recuperando una regla conocida, no
 descubriendo un patron de la operacion municipal real.
 
-## 8. Clima (unica variable observada real)
+## 9. Clima (unica variable observada real)
 
 Fuente: **Open-Meteo Archive API (ERA5)**, extraida el
 2026-07-31T02:48:26.554475+00:00.
@@ -158,7 +171,7 @@ Precipitacion media en lluvias: **39.8 mm** frente a **17.3 mm** en
 seca. Es el unico dato del dataset que no sale del simulador, y por eso se
 declara aparte en la procedencia del modelo.
 
-## 9. Correlacion con el objetivo
+## 10. Correlacion con el objetivo
 
 Las seis variables que mas se mueven con el objetivo:
 
@@ -178,8 +191,8 @@ Y las cinco que menos:
 | `semana_del_anio` | +0.007 |
 | `mes` | +0.020 |
 | `precipitacion_mm` | +0.044 |
-| `casos_abiertos_inicio` | +nan |
-| `carga_por_cuadrilla` | +nan |
+| `temperatura_media` | +0.067 |
+| `es_lluvias` | +0.110 |
 
 Toda la senal util esta en el **pasado reciente de la propia serie**: los rezagos
 y las medias moviles llegan a 0.71, mientras el calendario y el

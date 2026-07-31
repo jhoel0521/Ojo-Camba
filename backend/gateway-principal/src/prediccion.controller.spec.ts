@@ -28,7 +28,9 @@ describe('PrediccionController', () => {
     global.fetch = fetchMock as unknown as typeof fetch;
   });
 
-  const rutaPedida = () => new URL(fetchMock.mock.calls[0][0] as string).pathname + new URL(fetchMock.mock.calls[0][0] as string).search;
+  const rutaPedida = () =>
+    new URL(fetchMock.mock.calls[0][0] as string).pathname +
+    new URL(fetchMock.mock.calls[0][0] as string).search;
 
   describe('roles', () => {
     it('deja consultar el pronóstico al coordinador y a la autoridad municipal', () => {
@@ -55,12 +57,7 @@ describe('PrediccionController', () => {
     });
 
     it('no deja ninguna ruta sin roles declarados', () => {
-      const rutas: (keyof PrediccionController)[] = [
-        'modelo',
-        'pronostico',
-        'alertas',
-        'entrenar',
-      ];
+      const rutas: (keyof PrediccionController)[] = ['modelo', 'pronostico', 'alertas', 'entrenar'];
       for (const ruta of rutas) {
         expect(rolesDe(ruta)?.length).toBeGreaterThan(0);
       }

@@ -35,6 +35,10 @@ from .dataset import (
     leer_base,
 )
 
+# Una variable cuyo valor mas frecuente cubre esta proporcion de las filas es,
+# a efectos practicos, una constante: no le da al modelo nada con que separar.
+UMBRAL_DEGENERADA = 0.98
+
 MESES = {
     1: "enero",
     2: "febrero",
@@ -165,6 +169,49 @@ el valor correcto, no un dato faltante.
 """
 
 
+def _degeneradas(datos: pd.DataFrame) -> str:
+    """
+    Una variable casi constante no aporta nada al modelo y suele delatar un
+    problema en la consulta o en los datos de origen. Se detectan solas para
+    que el hallazgo no dependa de que alguien mire la tabla.
+    """
+    columnas = [c for c in COLUMNAS_PREDICTORAS if c in datos.columns]
+    sospechosas = []
+    for columna in columnas:
+        serie = datos[columna]
+        dominante = float(serie.value_counts(normalize=True).iloc[0])
+        if serie.nunique() <= 1 or dominante >= UMBRAL_DEGENERADA:
+            sospechosas.append((columna, serie.nunique(), dominante, float(serie.mean())))
+
+    if not sospechosas:
+        return f"""## 5. Variables degeneradas
+
+Ninguna variable predictora es constante ni esta dominada por un solo valor en
+mas del {UMBRAL_DEGENERADA:.0%} de las filas. Todas aportan variacion.
+"""
+
+    filas = [
+        [f"`{columna}`", f"{unicos}", f"{dominante:.1%}", f"{media:.3f}"]
+        for columna, unicos, dominante, media in sospechosas
+    ]
+    cuantas = (
+        f"1 de las {len(columnas)} variables predictoras es constante o esta dominada"
+        if len(sospechosas) == 1
+        else f"{len(sospechosas)} de las {len(columnas)} variables predictoras son constantes o estan dominadas"
+    )
+
+    return f"""## 5. Variables degeneradas
+
+{cuantas} por un unico valor en mas del {UMBRAL_DEGENERADA:.0%} de las filas:
+
+{_tabla(["Variable", "Valores distintos", "Valor mas frecuente", "Media"], filas)}
+
+Una variable asi no le aporta nada al modelo, y casi siempre delata un problema
+aguas arriba: o la consulta no esta midiendo lo que dice medir, o el dato no
+existe en el origen. El detalle de cada caso esta en `ISSUE-31-sesgos.md`.
+"""
+
+
 def _atipicos(datos: pd.DataFrame) -> str:
     objetivo = datos[COLUMNA_OBJETIVO]
     q1, q3 = objetivo.quantile([0.25, 0.75])
@@ -223,7 +270,7 @@ def _por_zona(datos: pd.DataFrame) -> str:
         for zona, casos in por_zona.head(5).items()
     ]
 
-    return f"""## 5. Reparto geografico
+    return f"""## 6. Reparto geografico
 
 {cuantas} zonas H3 con actividad. El 20% mas activo ({top_20_pct} zonas) concentra el **{concentracion:.1%}** de los Casos.{cola}
 
@@ -251,7 +298,7 @@ def _por_categoria(datos: pd.DataFrame) -> str:
         for categoria, fila in por_categoria.sort_values("sum", ascending=False).iterrows()
     ]
 
-    return f"""## 6. Reparto por categoria
+    return f"""## 7. Reparto por categoria
 
 {_tabla(["Categoria", "Casos", "% del total", "Media semanal por zona"], filas)}
 
@@ -272,7 +319,7 @@ def _estacionalidad(datos: pd.DataFrame) -> str:
         for mes, media in por_mes.items()
     ]
 
-    return f"""## 7. Estacionalidad
+    return f"""## 8. Estacionalidad
 
 {_tabla(["Mes", "Casos medios por zona y categoria", "Temporada"], filas)}
 
@@ -289,7 +336,7 @@ descubriendo un patron de la operacion municipal real.
 
 def _clima(datos: pd.DataFrame, procedencia: dict) -> str:
     if "precipitacion_mm" not in datos or datos["precipitacion_mm"].eq(0).all():
-        return f"""## 8. Clima
+        return f"""## 9. Clima
 
 No se incorporo clima en esta corrida: {procedencia.get('motivo', 'sin detalle')}.
 Las columnas quedan en cero y el modelo entrena sin esa variable.
@@ -298,7 +345,7 @@ Las columnas quedan en cero y el modelo entrena sin esa variable.
     lluvias = datos[datos["es_lluvias"] == 1]["precipitacion_mm"].mean()
     seca = datos[datos["es_lluvias"] == 0]["precipitacion_mm"].mean()
 
-    return f"""## 8. Clima (unica variable observada real)
+    return f"""## 9. Clima (unica variable observada real)
 
 Fuente: **{procedencia.get('fuente', 'Open-Meteo')}**, extraida el
 {procedencia.get('extraido_en', 'fecha no registrada')}.
@@ -339,7 +386,7 @@ def _correlaciones(datos: pd.DataFrame) -> str:
     fuertes = correlaciones.head(6)
     debiles = correlaciones.tail(5).sort_values(key=abs)
 
-    return f"""## 9. Correlacion con el objetivo
+    return f"""## 10. Correlacion con el objetivo
 
 Las seis variables que mas se mueven con el objetivo:
 
@@ -394,6 +441,7 @@ pide la issue.
         _objetivo(utilizable),
         _nulos(rejilla, con_variables),
         _atipicos(utilizable),
+        _degeneradas(utilizable),
         _por_zona(utilizable),
         _por_categoria(utilizable),
         _estacionalidad(utilizable),
