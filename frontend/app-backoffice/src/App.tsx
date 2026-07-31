@@ -11,6 +11,11 @@ import UsuariosPage from './pages/UsuariosPage';
 import GestionAccesosPage from './pages/GestionAccesosPage';
 import ConfiguracionIaPage from './pages/ConfiguracionIaPage';
 import SeleccionAreaPage from './pages/SeleccionAreaPage';
+import {
+  AlertasRevisionPage,
+  CalidadRevisionPage,
+  HistorialRevisionPage,
+} from './pages/RevisionComplementariaPage';
 
 function PlaceholderPage({ title }: { title: string }) {
   return (
@@ -45,6 +50,30 @@ export default function App() {
                           element={
                             <RoleRoute>
                               <RevisarPage />
+                            </RoleRoute>
+                          }
+                        />
+                        <Route
+                          path="/revisar/alertas"
+                          element={
+                            <RoleRoute>
+                              <AlertasRevisionPage />
+                            </RoleRoute>
+                          }
+                        />
+                        <Route
+                          path="/revisar/historial"
+                          element={
+                            <RoleRoute>
+                              <HistorialRevisionPage />
+                            </RoleRoute>
+                          }
+                        />
+                        <Route
+                          path="/revisar/calidad"
+                          element={
+                            <RoleRoute>
+                              <CalidadRevisionPage />
                             </RoleRoute>
                           }
                         />

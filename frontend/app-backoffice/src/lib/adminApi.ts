@@ -98,6 +98,37 @@ export interface PaginatedResponse<T> {
   limit: number;
 }
 
+export const MOTIVOS_DESCARTE_DIGITAL = [
+  { value: 'evidencia_insuficiente', label: 'Evidencia insuficiente' },
+  { value: 'imagen_no_corresponde', label: 'La imagen no corresponde al reporte' },
+  { value: 'contenido_duplicado_sin_aporte', label: 'Duplicado sin evidencia nueva' },
+  { value: 'contenido_inapropiado', label: 'Contenido inapropiado' },
+] as const;
+
+export type MotivoDescarteDigital = (typeof MOTIVOS_DESCARTE_DIGITAL)[number]['value'];
+
+export interface AlertaRevision {
+  tipo: 'reporte_viral' | 'espera_excesiva' | 'posible_reincidencia';
+  titulo: string;
+  detalle: string;
+  reporte_id?: number;
+  zona?: string;
+  codigo_obra?: string;
+}
+
+export interface CalidadRechazos {
+  rango_aplicado: { desde: string | null; hasta: string | null };
+  total_admisiones: number;
+  total_rechazos_campo: number;
+  proporcion_rechazo: number;
+  por_categoria: {
+    categoria_id: number | null;
+    categoria: string;
+    total: number;
+    proporcion: number;
+  }[];
+}
+
 export async function getDashboard(): Promise<DashboardStats> {
   return fetchAPI<DashboardStats>('/admin/dashboard');
 }
@@ -153,8 +184,38 @@ export async function listNearbyGroups(
   return Array.isArray(res) ? res : ((res as { data: GrupoReporte[] }).data ?? []);
 }
 
-export async function rejectReport(id: number): Promise<{ id: number; estado: string }> {
-  return fetchAPI(`/admin/reports/${id}/reject`, { method: 'POST' });
+export async function rejectReport(
+  id: number,
+  motivo: MotivoDescarteDigital,
+): Promise<{ id: number; estado: string; motivo: MotivoDescarteDigital }> {
+  return fetchAPI(`/admin/reports/${id}/reject`, {
+    method: 'POST',
+    body: JSON.stringify({ motivo }),
+  });
+}
+
+export async function listReviewAlerts(): Promise<AlertaRevision[]> {
+  return fetchAPI<AlertaRevision[]>('/admin/review/alerts');
+}
+
+export async function listReviewHistory(
+  page = 1,
+  limit = 20,
+): Promise<PaginatedResponse<PendingReport>> {
+  return fetchAPI<PaginatedResponse<PendingReport>>(
+    `/admin/review/history?page=${page}&limit=${limit}`,
+  );
+}
+
+export async function getRejectionQuality(
+  desde?: string,
+  hasta?: string,
+): Promise<CalidadRechazos> {
+  const params = new URLSearchParams();
+  if (desde) params.set('desde', desde);
+  if (hasta) params.set('hasta', hasta);
+  const query = params.toString();
+  return fetchAPI<CalidadRechazos>(`/admin/review/quality${query ? `?${query}` : ''}`);
 }
 
 export async function createGroup(report_ids: number[], creado_por_usuario_id: number) {
