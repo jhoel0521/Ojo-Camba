@@ -9,6 +9,7 @@ export { VisitaCaso } from './visita-caso.entity';
 export { PropuestaVisita, DecisionPropuestaVisita } from './propuesta-visita.entity';
 export { ConfiguracionOperativa } from './configuracion-operativa.entity';
 export { DerivacionCaso } from './derivacion-caso.entity';
+export { DecisionRecomendacion, AccionRecomendacion } from './decision-recomendacion.entity';
 export { SolicitudTi } from './solicitud-ti.entity';
 export { SolicitudTiUsuario } from './solicitud-ti-usuario.entity';
 export { ActualizacionCaso } from './actualizacion-caso.entity';

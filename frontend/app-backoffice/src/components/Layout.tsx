@@ -14,6 +14,7 @@ import {
   BellRing,
   History,
   BarChart3,
+  TrendingUp,
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { areasDisponibles, olvidarArea, puedeEntrar } from '../lib/areas';
@@ -24,6 +25,7 @@ import Asistente from './Asistente';
 // tenian listas de roles distintas y se desincronizaron (ISSUE-30).
 const NAV_ITEMS = [
   { to: '/', icon: Construction, label: 'Panel estrategico' },
+  { to: '/prediccion', icon: TrendingUp, label: 'Panel de decision' },
   { to: '/revisar', icon: ClipboardList, label: 'Bandeja' },
   { to: '/revisar/alertas', icon: BellRing, label: 'Alertas' },
   { to: '/revisar/historial', icon: History, label: 'Historial' },

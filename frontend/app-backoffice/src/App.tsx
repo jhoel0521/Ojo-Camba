@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import AuthGuard from './components/AuthGuard';
 import RoleRoute from './components/RoleRoute';
@@ -11,6 +12,10 @@ import UsuariosPage from './pages/UsuariosPage';
 import GestionAccesosPage from './pages/GestionAccesosPage';
 import ConfiguracionIaPage from './pages/ConfiguracionIaPage';
 import SeleccionAreaPage from './pages/SeleccionAreaPage';
+
+// El panel de decision arrastra leaflet y h3-js (~180 kB). Se carga al entrar a
+// /prediccion y no en cada sesion del backoffice (ISSUE-32).
+const PrediccionPage = lazy(() => import('./pages/PrediccionPage'));
 import {
   AlertasRevisionPage,
   CalidadRevisionPage,
@@ -45,6 +50,18 @@ export default function App() {
                             quien no puede ver el tablero estrategico cae en su
                             propia area (ISSUE-30). */}
                         <Route path="/" element={<InicioPorRol />} />
+                        <Route
+                          path="/prediccion"
+                          element={
+                            <RoleRoute>
+                              <Suspense
+                                fallback={<p className="p-6 text-sm text-arena">Cargando...</p>}
+                              >
+                                <PrediccionPage />
+                              </Suspense>
+                            </RoleRoute>
+                          }
+                        />
                         <Route
                           path="/revisar"
                           element={
