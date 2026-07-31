@@ -1,8 +1,15 @@
 import { spawnSync } from 'child_process';
+import { createRequire } from 'module';
 import { resolve } from 'path';
 
 const root = resolve(import.meta.dirname, '..');
-const cli = resolve(root, 'libs/common/node_modules/typeorm/cli.js');
+
+// El .npmrc usa node-linker=hoisted, asi que typeorm queda en el node_modules
+// raiz y libs/common/node_modules nunca se crea. Resolver el CLI por modulo (en
+// vez de una ruta fija) funciona con ambos layouts de pnpm.
+const cli = createRequire(import.meta.url).resolve('typeorm/cli.js', {
+  paths: [root, resolve(root, 'libs/common')],
+});
 
 const result = spawnSync(
   process.execPath,
