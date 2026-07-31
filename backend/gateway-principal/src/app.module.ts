@@ -11,6 +11,7 @@ import { IaController } from './ia.controller';
 import { AiConfigurationController } from './ai-configuration.controller';
 import { OperacionController } from './operacion.controller';
 import { GestionAccesosController } from './gestion-accesos.controller';
+import { PrediccionController } from './prediccion.controller';
 import { EventsModule } from './events/events.module';
 import { AiConfigurationGuard, BackofficeGuard } from './ai-access.guard';
 import { RolesGuard } from './roles.guard';
@@ -73,6 +74,7 @@ import { RolesGuard } from './roles.guard';
     AiConfigurationController,
     OperacionController,
     GestionAccesosController,
+    PrediccionController,
   ],
   providers: [BackofficeGuard, AiConfigurationGuard, RolesGuard],
 })
