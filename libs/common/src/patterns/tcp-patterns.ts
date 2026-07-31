@@ -28,6 +28,9 @@ export const TCP_PATTERNS = {
   ADMIN: {
     PING: 'admin.ping',
     LIST_PENDING: 'admin.list_pending',
+    LIST_REVIEW_ALERTS: 'admin.list_review_alerts',
+    LIST_REVIEW_HISTORY: 'admin.list_review_history',
+    GET_REJECTION_QUALITY: 'admin.get_rejection_quality',
     ACCEPT_REPORT: 'admin.accept_report',
     REJECT_REPORT: 'admin.reject_report',
     CREATE_GROUP: 'admin.create_group',

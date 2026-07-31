@@ -29,6 +29,16 @@ export class GrupoReporte {
   @Column({ type: 'smallint', default: 3 })
   prioridad: number;
 
+  /** Trazabilidad del cierre RechazadoCampo confirmado por Coordinación. */
+  @Column({ type: 'int', nullable: true })
+  categoria_rechazo_campo_id: number | null;
+
+  @Column({ type: 'int', nullable: true })
+  rechazado_campo_por_usuario_id: number | null;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  rechazado_campo_en: Date | null;
+
   @CreateDateColumn({ type: 'timestamptz' })
   creado_en: Date;
 }
