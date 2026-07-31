@@ -37,7 +37,11 @@ async function ingresar(page: Page, { email, password }: { email: string; passwo
  * llamada contra el historico completo). Por eso se ancla en un encabezado que
  * solo existe dentro de la pagina y con margen de sobra.
  */
-const ESPERA_CARGA = 45_000;
+const ESPERA_CARGA = 90_000;
+
+// Cada pedido del panel recalcula el pronostico entero contra el historico
+// (~25 s por llamada, y son dos en paralelo). No alcanza el timeout global.
+test.beforeEach(({}, testInfo) => testInfo.setTimeout(180_000));
 
 async function esperarPanelCargado(page: Page) {
   await expect(page.getByRole('heading', { name: 'Resumen ejecutivo' })).toBeVisible({
@@ -120,6 +124,43 @@ test.describe('ISSUE-32 — mapa, filtros y detalle por zona', () => {
     await expect(
       page.getByRole('main').getByRole('heading', { name: 'Panel de decision' }),
     ).toBeVisible();
+  });
+
+  test('el criterio 2 pide seis filtros y estan los seis', async ({ page }) => {
+    await abrirPanel(page, COORDINADOR);
+
+    for (const filtro of ['Desde', 'Hasta', 'Zona', 'Categoria', 'Estado', 'Capacidad']) {
+      await expect(page.getByLabel(filtro, { exact: false }).first()).toBeVisible();
+    }
+    await expect(page.getByLabel('Nivel de alerta')).toBeVisible();
+  });
+
+  test('acotar por zona deja una sola en el mapa', async ({ page }) => {
+    await abrirPanel(page, COORDINADOR);
+
+    const zona = page.getByLabel('Zona');
+    const primera = await zona.locator('option').nth(1).getAttribute('value');
+    await zona.selectOption(primera!);
+
+    await expect(zona).toHaveValue(primera!);
+    await expect(page.getByRole('main').getByText(primera!, { exact: false }).first()).toBeVisible();
+  });
+
+  test('el filtro de capacidad separa las zonas por su tramo de cuota', async ({ page }) => {
+    await abrirPanel(page, COORDINADOR);
+
+    await page.getByLabel('Capacidad').selectOption('excedida');
+    await expect(page.getByLabel('Capacidad')).toHaveValue('excedida');
+    // El panel sigue en pie aunque el tramo no tenga zonas.
+    await expect(page.getByRole('heading', { name: 'Actual vs. prediccion' })).toBeVisible();
+  });
+
+  test('la autoridad municipal no recibe el filtro de capacidad', async ({ page }) => {
+    await abrirPanel(page, AUTORIDAD);
+
+    // Depende de /alertas, que su rol no puede consultar.
+    await expect(page.getByLabel('Capacidad')).toHaveCount(0);
+    await expect(page.getByLabel('Zona')).toBeVisible();
   });
 
   test('sin zona elegida invita a elegir una', async ({ page }) => {

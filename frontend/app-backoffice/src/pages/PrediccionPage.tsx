@@ -50,6 +50,23 @@ const CAPAS: { id: CapaMapa; label: string }[] = [
   { id: 'diferencia', label: 'Diferencia' },
 ];
 
+/**
+ * Filtro de capacidad: en que punto de su cuota esta cada zona.
+ *
+ * Mide lo mismo que el nivel de alerta (el riesgo que calcula alertas.py), pero
+ * sirve para otra pregunta: el nivel responde "donde hay que actuar" y este
+ * responde "como esta repartida la carga", incluidas las zonas tranquilas, que
+ * no generan alerta y por eso no aparecen en el otro filtro.
+ */
+type ClaveCapacidad = 'todas' | 'holgada' | 'limite' | 'excedida';
+
+const CAPACIDADES: { valor: ClaveCapacidad; label: string; test: (riesgo: number) => boolean }[] = [
+  { valor: 'todas', label: 'Toda la ciudad', test: () => true },
+  { valor: 'holgada', label: 'Con holgura (< 80%)', test: (r) => r < 0.8 },
+  { valor: 'limite', label: 'Al limite (80-99%)', test: (r) => r >= 0.8 && r < 1 },
+  { valor: 'excedida', label: 'Excedida (>= 100%)', test: (r) => r >= 1 },
+];
+
 const ESTADOS_CASO = [
   'PendienteAsignacion',
   'PlanificadoVisita',
@@ -128,6 +145,8 @@ export default function PrediccionPage() {
   const [capa, setCapa] = useState<CapaMapa>('diferencia');
   const [zonaSeleccionada, setZonaSeleccionada] = useState<string | null>(null);
   const [nivelAlerta, setNivelAlerta] = useState<'todas' | 'apoyo' | 'preventiva'>('todas');
+  const [zonaFiltro, setZonaFiltro] = useState('');
+  const [capacidad, setCapacidad] = useState<ClaveCapacidad>('todas');
 
   const [enDecision, setEnDecision] = useState<Alerta | null>(null);
   const [guardando, setGuardando] = useState(false);
@@ -147,8 +166,10 @@ export default function PrediccionPage() {
 
     const peticiones: [Promise<Comparativa>, Promise<RespuestaAlertas | null>, Promise<void>] = [
       getComparativa({ desde, hasta, categoria_id: categoriaId || null, estado: estado || null }),
-      // La autoridad municipal no puede pedir alertas: el gateway responde 403.
-      esCoordinador ? getAlertas(true) : Promise.resolve(null),
+      // Se piden todas, no solo las criticas: el filtro de capacidad necesita
+      // el riesgo de las zonas tranquilas, que no generan alerta.
+      // La autoridad municipal no puede pedirlas: el gateway responde 403.
+      esCoordinador ? getAlertas(false) : Promise.resolve(null),
       cargarHistorial(),
     ];
 
@@ -166,14 +187,35 @@ export default function PrediccionPage() {
     };
   }, [desde, hasta, categoriaId, estado, esCoordinador, cargarHistorial]);
 
+  /** Riesgo de capacidad por zona, para los filtros que dependen de el. */
+  const riesgoPorZona = useMemo(() => {
+    const mapa = new Map<string, number>();
+    for (const alerta of alertas?.alertas ?? []) mapa.set(alerta.zona_h3, alerta.riesgo);
+    return mapa;
+  }, [alertas]);
+
+  // Los filtros de zona, capacidad y nivel se aplican sobre lo ya traido: el
+  // pronostico se recalcula entero en cada pedido (~13 s) y volver al servidor
+  // por un filtro que se puede resolver en memoria haria el panel inusable.
   const zonasFiltradas = useMemo(() => {
     if (!comparativa) return [];
-    if (nivelAlerta === 'todas' || !alertas) return comparativa.zonas;
-    const conNivel = new Set(
-      alertas.alertas.filter((a) => a.nivel === nivelAlerta).map((a) => a.zona_h3),
-    );
-    return comparativa.zonas.filter((z) => conNivel.has(z.zona_h3));
-  }, [comparativa, alertas, nivelAlerta]);
+    const capacidadElegida = CAPACIDADES.find((c) => c.valor === capacidad);
+    const conNivel =
+      nivelAlerta === 'todas' || !alertas
+        ? null
+        : new Set(alertas.alertas.filter((a) => a.nivel === nivelAlerta).map((a) => a.zona_h3));
+
+    return comparativa.zonas.filter((zona) => {
+      if (zonaFiltro && zona.zona_h3 !== zonaFiltro) return false;
+      if (conNivel && !conNivel.has(zona.zona_h3)) return false;
+      if (capacidad !== 'todas') {
+        const riesgo = riesgoPorZona.get(zona.zona_h3);
+        // Sin dato de riesgo no se puede afirmar en que tramo cae.
+        if (riesgo === undefined || !capacidadElegida?.test(riesgo)) return false;
+      }
+      return true;
+    });
+  }, [comparativa, alertas, nivelAlerta, zonaFiltro, capacidad, riesgoPorZona]);
 
   const detalleZona = useMemo(
     () => zonasFiltradas.find((z) => z.zona_h3 === zonaSeleccionada) ?? null,
@@ -268,6 +310,41 @@ export default function PrediccionPage() {
           ))}
         </select>
       </label>
+      <label className="text-xs text-arena">
+        Zona
+        <select
+          value={zonaFiltro}
+          onChange={(e) => {
+            setZonaFiltro(e.target.value);
+            // Si se acota a una zona, el detalle abierto de otra confunde.
+            if (e.target.value && zonaSeleccionada !== e.target.value) setZonaSeleccionada(null);
+          }}
+          className="mt-1 block min-h-11 max-w-[190px] rounded-3xl-2 border border-arcilla bg-perla px-3 py-2 text-sm text-tierra"
+        >
+          <option value="">Todas</option>
+          {(comparativa?.zonas ?? []).map((zona) => (
+            <option key={zona.zona_h3} value={zona.zona_h3}>
+              {zona.zona_h3}
+            </option>
+          ))}
+        </select>
+      </label>
+      {esCoordinador && (
+        <label className="text-xs text-arena">
+          Capacidad
+          <select
+            value={capacidad}
+            onChange={(e) => setCapacidad(e.target.value as ClaveCapacidad)}
+            className="mt-1 block min-h-11 rounded-3xl-2 border border-arcilla bg-perla px-3 py-2 text-sm text-tierra"
+          >
+            {CAPACIDADES.map(({ valor, label }) => (
+              <option key={valor} value={valor}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
       {esCoordinador && (
         <label className="text-xs text-arena">
           Nivel de alerta
