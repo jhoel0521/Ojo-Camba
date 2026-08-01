@@ -1,0 +1,438 @@
+{
+  "procedencia": {
+    "fuente": "Open-Meteo Archive API (ERA5)",
+    "url": "https://archive-api.open-meteo.com/v1/archive",
+    "licencia": "CC-BY 4.0",
+    "coordenadas": {
+      "lat": -17.7833,
+      "lng": -63.1821
+    },
+    "rango": {
+      "desde": "2024-12-30",
+      "hasta": "2026-07-27"
+    },
+    "extraido_en": "2026-07-31T02:48:26.554475+00:00",
+    "variables": [
+      "precipitation_sum",
+      "temperature_2m_mean"
+    ],
+    "dias_descargados": 575
+  },
+  "datos": [
+    {
+      "semana": "2024-12-30",
+      "precipitacion_mm": 52.7,
+      "temperatura_media": 26.62857142857143
+    },
+    {
+      "semana": "2025-01-06",
+      "precipitacion_mm": 108.6,
+      "temperatura_media": 24.357142857142858
+    },
+    {
+      "semana": "2025-01-13",
+      "precipitacion_mm": 53.7,
+      "temperatura_media": 26.357142857142858
+    },
+    {
+      "semana": "2025-01-20",
+      "precipitacion_mm": 58.5,
+      "temperatura_media": 24.7
+    },
+    {
+      "semana": "2025-01-27",
+      "precipitacion_mm": 12.0,
+      "temperatura_media": 26.814285714285713
+    },
+    {
+      "semana": "2025-02-03",
+      "precipitacion_mm": 34.900000000000006,
+      "temperatura_media": 26.25714285714286
+    },
+    {
+      "semana": "2025-02-10",
+      "precipitacion_mm": 21.8,
+      "temperatura_media": 25.214285714285715
+    },
+    {
+      "semana": "2025-02-17",
+      "precipitacion_mm": 19.1,
+      "temperatura_media": 25.514285714285712
+    },
+    {
+      "semana": "2025-02-24",
+      "precipitacion_mm": 27.7,
+      "temperatura_media": 25.642857142857142
+    },
+    {
+      "semana": "2025-03-03",
+      "precipitacion_mm": 80.0,
+      "temperatura_media": 24.3
+    },
+    {
+      "semana": "2025-03-10",
+      "precipitacion_mm": 49.400000000000006,
+      "temperatura_media": 23.685714285714287
+    },
+    {
+      "semana": "2025-03-17",
+      "precipitacion_mm": 38.4,
+      "temperatura_media": 25.228571428571428
+    },
+    {
+      "semana": "2025-03-24",
+      "precipitacion_mm": 59.699999999999996,
+      "temperatura_media": 23.728571428571428
+    },
+    {
+      "semana": "2025-03-31",
+      "precipitacion_mm": 22.7,
+      "temperatura_media": 21.0
+    },
+    {
+      "semana": "2025-04-07",
+      "precipitacion_mm": 19.3,
+      "temperatura_media": 22.97142857142857
+    },
+    {
+      "semana": "2025-04-14",
+      "precipitacion_mm": 41.1,
+      "temperatura_media": 24.042857142857144
+    },
+    {
+      "semana": "2025-04-21",
+      "precipitacion_mm": 66.39999999999999,
+      "temperatura_media": 23.62857142857143
+    },
+    {
+      "semana": "2025-04-28",
+      "precipitacion_mm": 18.7,
+      "temperatura_media": 22.47142857142857
+    },
+    {
+      "semana": "2025-05-05",
+      "precipitacion_mm": 34.6,
+      "temperatura_media": 23.62857142857143
+    },
+    {
+      "semana": "2025-05-12",
+      "precipitacion_mm": 6.4,
+      "temperatura_media": 22.728571428571428
+    },
+    {
+      "semana": "2025-05-19",
+      "precipitacion_mm": 30.9,
+      "temperatura_media": 22.457142857142856
+    },
+    {
+      "semana": "2025-05-26",
+      "precipitacion_mm": 11.1,
+      "temperatura_media": 17.442857142857143
+    },
+    {
+      "semana": "2025-06-02",
+      "precipitacion_mm": 2.4000000000000004,
+      "temperatura_media": 21.585714285714285
+    },
+    {
+      "semana": "2025-06-09",
+      "precipitacion_mm": 5.8,
+      "temperatura_media": 19.142857142857142
+    },
+    {
+      "semana": "2025-06-16",
+      "precipitacion_mm": 18.2,
+      "temperatura_media": 19.414285714285715
+    },
+    {
+      "semana": "2025-06-23",
+      "precipitacion_mm": 27.1,
+      "temperatura_media": 16.728571428571428
+    },
+    {
+      "semana": "2025-06-30",
+      "precipitacion_mm": 0.3,
+      "temperatura_media": 14.014285714285714
+    },
+    {
+      "semana": "2025-07-07",
+      "precipitacion_mm": 0.0,
+      "temperatura_media": 21.900000000000002
+    },
+    {
+      "semana": "2025-07-14",
+      "precipitacion_mm": 3.6,
+      "temperatura_media": 20.8
+    },
+    {
+      "semana": "2025-07-21",
+      "precipitacion_mm": 2.2,
+      "temperatura_media": 24.428571428571427
+    },
+    {
+      "semana": "2025-07-28",
+      "precipitacion_mm": 5.2,
+      "temperatura_media": 21.25714285714286
+    },
+    {
+      "semana": "2025-08-04",
+      "precipitacion_mm": 2.2,
+      "temperatura_media": 19.62857142857143
+    },
+    {
+      "semana": "2025-08-11",
+      "precipitacion_mm": 0.0,
+      "temperatura_media": 22.785714285714285
+    },
+    {
+      "semana": "2025-08-18",
+      "precipitacion_mm": 24.400000000000002,
+      "temperatura_media": 23.357142857142858
+    },
+    {
+      "semana": "2025-08-25",
+      "precipitacion_mm": 5.4,
+      "temperatura_media": 19.657142857142855
+    },
+    {
+      "semana": "2025-09-01",
+      "precipitacion_mm": 28.2,
+      "temperatura_media": 22.87142857142857
+    },
+    {
+      "semana": "2025-09-08",
+      "precipitacion_mm": 1.0,
+      "temperatura_media": 28.25714285714286
+    },
+    {
+      "semana": "2025-09-15",
+      "precipitacion_mm": 5.5,
+      "temperatura_media": 28.085714285714285
+    },
+    {
+      "semana": "2025-09-22",
+      "precipitacion_mm": 36.6,
+      "temperatura_media": 24.685714285714287
+    },
+    {
+      "semana": "2025-09-29",
+      "precipitacion_mm": 33.2,
+      "temperatura_media": 23.928571428571427
+    },
+    {
+      "semana": "2025-10-06",
+      "precipitacion_mm": 1.4,
+      "temperatura_media": 24.47142857142857
+    },
+    {
+      "semana": "2025-10-13",
+      "precipitacion_mm": 39.3,
+      "temperatura_media": 25.400000000000002
+    },
+    {
+      "semana": "2025-10-20",
+      "precipitacion_mm": 91.80000000000001,
+      "temperatura_media": 25.67142857142857
+    },
+    {
+      "semana": "2025-10-27",
+      "precipitacion_mm": 25.2,
+      "temperatura_media": 20.385714285714283
+    },
+    {
+      "semana": "2025-11-03",
+      "precipitacion_mm": 16.799999999999997,
+      "temperatura_media": 24.514285714285712
+    },
+    {
+      "semana": "2025-11-10",
+      "precipitacion_mm": 85.6,
+      "temperatura_media": 24.099999999999998
+    },
+    {
+      "semana": "2025-11-17",
+      "precipitacion_mm": 45.0,
+      "temperatura_media": 23.185714285714287
+    },
+    {
+      "semana": "2025-11-24",
+      "precipitacion_mm": 2.7,
+      "temperatura_media": 27.0
+    },
+    {
+      "semana": "2025-12-01",
+      "precipitacion_mm": 34.0,
+      "temperatura_media": 26.085714285714285
+    },
+    {
+      "semana": "2025-12-08",
+      "precipitacion_mm": 37.5,
+      "temperatura_media": 25.17142857142857
+    },
+    {
+      "semana": "2025-12-15",
+      "precipitacion_mm": 32.8,
+      "temperatura_media": 24.514285714285712
+    },
+    {
+      "semana": "2025-12-22",
+      "precipitacion_mm": 49.3,
+      "temperatura_media": 24.02857142857143
+    },
+    {
+      "semana": "2025-12-29",
+      "precipitacion_mm": 17.900000000000002,
+      "temperatura_media": 26.114285714285717
+    },
+    {
+      "semana": "2026-01-05",
+      "precipitacion_mm": 82.9,
+      "temperatura_media": 26.0
+    },
+    {
+      "semana": "2026-01-12",
+      "precipitacion_mm": 9.5,
+      "temperatura_media": 25.428571428571427
+    },
+    {
+      "semana": "2026-01-19",
+      "precipitacion_mm": 11.6,
+      "temperatura_media": 27.342857142857145
+    },
+    {
+      "semana": "2026-01-26",
+      "precipitacion_mm": 34.5,
+      "temperatura_media": 25.97142857142857
+    },
+    {
+      "semana": "2026-02-02",
+      "precipitacion_mm": 65.89999999999999,
+      "temperatura_media": 26.2
+    },
+    {
+      "semana": "2026-02-09",
+      "precipitacion_mm": 36.099999999999994,
+      "temperatura_media": 25.814285714285713
+    },
+    {
+      "semana": "2026-02-16",
+      "precipitacion_mm": 8.8,
+      "temperatura_media": 26.82857142857143
+    },
+    {
+      "semana": "2026-02-23",
+      "precipitacion_mm": 77.9,
+      "temperatura_media": 24.542857142857144
+    },
+    {
+      "semana": "2026-03-02",
+      "precipitacion_mm": 24.4,
+      "temperatura_media": 25.37142857142857
+    },
+    {
+      "semana": "2026-03-09",
+      "precipitacion_mm": 107.60000000000001,
+      "temperatura_media": 24.271428571428572
+    },
+    {
+      "semana": "2026-03-16",
+      "precipitacion_mm": 28.9,
+      "temperatura_media": 24.885714285714283
+    },
+    {
+      "semana": "2026-03-23",
+      "precipitacion_mm": 67.1,
+      "temperatura_media": 24.185714285714287
+    },
+    {
+      "semana": "2026-03-30",
+      "precipitacion_mm": 11.200000000000001,
+      "temperatura_media": 25.785714285714285
+    },
+    {
+      "semana": "2026-04-06",
+      "precipitacion_mm": 9.1,
+      "temperatura_media": 22.5
+    },
+    {
+      "semana": "2026-04-13",
+      "precipitacion_mm": 20.200000000000003,
+      "temperatura_media": 24.571428571428573
+    },
+    {
+      "semana": "2026-04-20",
+      "precipitacion_mm": 34.9,
+      "temperatura_media": 23.74285714285714
+    },
+    {
+      "semana": "2026-04-27",
+      "precipitacion_mm": 2.2,
+      "temperatura_media": 22.7
+    },
+    {
+      "semana": "2026-05-04",
+      "precipitacion_mm": 20.6,
+      "temperatura_media": 20.87142857142857
+    },
+    {
+      "semana": "2026-05-11",
+      "precipitacion_mm": 5.7,
+      "temperatura_media": 19.12857142857143
+    },
+    {
+      "semana": "2026-05-18",
+      "precipitacion_mm": 2.9000000000000004,
+      "temperatura_media": 15.799999999999999
+    },
+    {
+      "semana": "2026-05-25",
+      "precipitacion_mm": 1.0,
+      "temperatura_media": 20.928571428571427
+    },
+    {
+      "semana": "2026-06-01",
+      "precipitacion_mm": 18.400000000000002,
+      "temperatura_media": 22.900000000000002
+    },
+    {
+      "semana": "2026-06-08",
+      "precipitacion_mm": 38.6,
+      "temperatura_media": 19.32857142857143
+    },
+    {
+      "semana": "2026-06-15",
+      "precipitacion_mm": 3.8999999999999995,
+      "temperatura_media": 17.37142857142857
+    },
+    {
+      "semana": "2026-06-22",
+      "precipitacion_mm": 6.6,
+      "temperatura_media": 16.585714285714285
+    },
+    {
+      "semana": "2026-06-29",
+      "precipitacion_mm": 2.1,
+      "temperatura_media": 18.057142857142857
+    },
+    {
+      "semana": "2026-07-06",
+      "precipitacion_mm": 10.2,
+      "temperatura_media": 19.52857142857143
+    },
+    {
+      "semana": "2026-07-13",
+      "precipitacion_mm": 2.8,
+      "temperatura_media": 23.400000000000002
+    },
+    {
+      "semana": "2026-07-20",
+      "precipitacion_mm": 47.199999999999996,
+      "temperatura_media": 20.67142857142857
+    },
+    {
+      "semana": "2026-07-27",
+      "precipitacion_mm": 0.0,
+      "temperatura_media": 24.8
+    }
+  ]
+}

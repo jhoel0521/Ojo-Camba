@@ -60,9 +60,8 @@ docker/prod/volumes/
 # pnpm
 .pnpm-store/
 
-# ms-prediccion (ISSUE-31): modelo entrenado, cache de clima y artefactos de Python
-backend/ms-prediccion/modelos/
-backend/ms-prediccion/datos/
+# ms-prediccion: artefactos temporales de Python; modelos y datos sí se
+# versionan para poder incluirlos en la imagen de producción.
 backend/ms-prediccion/.pytest_cache/
 __pycache__/
 *.pyc

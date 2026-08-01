@@ -1,0 +1,129 @@
+{
+  "version_modelo": "20260731045336",
+  "version_dataset": "1.0.0",
+  "entrenado_en": "2026-07-31T04:53:36.331924+00:00",
+  "modelo_elegido": "regresion_lineal",
+  "justificacion": "Menor MAE en las 12 semanas no vistas (0.897 Casos de error medio). ajuste razonable: el error de prueba acompana al de entrenamiento.",
+  "corte_temporal": "2026-05-11",
+  "filas_entrenamiento": 7344,
+  "filas_prueba": 1296,
+  "columnas": [
+    "casos_abiertos_inicio",
+    "cuadrillas_activas",
+    "carga_por_cuadrilla",
+    "casos_lag_1",
+    "casos_lag_2",
+    "casos_lag_3",
+    "reportes_lag_1",
+    "reportes_lag_2",
+    "reportes_lag_3",
+    "dispositivos_lag_1",
+    "gravedad_lag_1",
+    "casos_media_4",
+    "reportes_media_4",
+    "mes",
+    "semana_del_anio",
+    "es_lluvias",
+    "precipitacion_mm",
+    "temperatura_media",
+    "categoria_id"
+  ],
+  "comparacion": [
+    {
+      "nombre": "regresion_lineal",
+      "entrenamiento": {
+        "mae": 0.7215698915610399,
+        "rmse": 0.9731741140447171,
+        "r2": 0.5509555990256594
+      },
+      "prueba": {
+        "mae": 0.8967835576986471,
+        "rmse": 1.2519113832706394,
+        "r2": 0.38544760502945896
+      },
+      "validacion_cruzada_mae": 0.7308868923274469,
+      "validacion_cruzada_desvio": 0.08697787967848493,
+      "diagnostico": "ajuste razonable: el error de prueba acompana al de entrenamiento"
+    },
+    {
+      "nombre": "arbol_decision",
+      "entrenamiento": {
+        "mae": 0.6335199457611321,
+        "rmse": 0.8575208180935205,
+        "r2": 0.6513436869106195
+      },
+      "prueba": {
+        "mae": 0.9578595845884079,
+        "rmse": 1.3666021935257457,
+        "r2": 0.26768831199996646
+      },
+      "validacion_cruzada_mae": 0.7532095785738311,
+      "validacion_cruzada_desvio": 0.08554201282363472,
+      "diagnostico": "sobreajuste moderado: la brecha entre entrenamiento y prueba es amplia"
+    },
+    {
+      "nombre": "random_forest",
+      "entrenamiento": {
+        "mae": 0.5063551190312214,
+        "rmse": 0.6742634523958524,
+        "r2": 0.7844403703756175
+      },
+      "prueba": {
+        "mae": 0.903766480377236,
+        "rmse": 1.2659601340259734,
+        "r2": 0.3715773958319224
+      },
+      "validacion_cruzada_mae": 0.7054680115739969,
+      "validacion_cruzada_desvio": 0.08482871305757787,
+      "diagnostico": "sobreajuste moderado: la brecha entre entrenamiento y prueba es amplia"
+    }
+  ],
+  "importancia_variables": {
+    "casos_media_4": 0.25725872690060114,
+    "casos_abiertos_inicio": 0.17039768533457655,
+    "reportes_media_4": 0.15657857300663597,
+    "casos_lag_1": 0.13608583136897245,
+    "dispositivos_lag_1": 0.04690581573657778,
+    "reportes_lag_1": 0.04690581573657769,
+    "es_lluvias": 0.03762162602503641,
+    "categoria_id": 0.028832987892657206,
+    "gravedad_lag_1": 0.02484099835999969,
+    "casos_lag_2": 0.01884627746069066,
+    "mes": 0.018117916626948796,
+    "semana_del_anio": 0.01731558317176568,
+    "reportes_lag_2": 0.017248968623927583,
+    "precipitacion_mm": 0.009819096123748108,
+    "casos_lag_3": 0.008109102800330273,
+    "reportes_lag_3": 0.0033659609533139064,
+    "temperatura_media": 0.0017490338776399148,
+    "carga_por_cuadrilla": 7.015232027190483e-17,
+    "cuadrillas_activas": 5.612185621752386e-17
+  },
+  "procedencia_datos": {
+    "casos_y_reportes": "simulador historico ISSUE-28 (sintetico)",
+    "clima": {
+      "fuente": "Open-Meteo Archive API (ERA5)",
+      "url": "https://archive-api.open-meteo.com/v1/archive",
+      "licencia": "CC-BY 4.0",
+      "coordenadas": {
+        "lat": -17.7833,
+        "lng": -63.1821
+      },
+      "rango": {
+        "desde": "2024-12-30",
+        "hasta": "2026-07-27"
+      },
+      "extraido_en": "2026-07-31T02:48:26.554475+00:00",
+      "variables": [
+        "precipitation_sum",
+        "temperature_2m_mean"
+      ],
+      "dias_descargados": 575
+    }
+  },
+  "limitaciones": [
+    "El historial de Casos proviene del simulador de ISSUE-28: es sintetico y sigue reglas conocidas (demanda creciente, factor estacional 1.25 en lluvias y 0.78 en seca, ruido acotado). Un R2 alto mide que el modelo aprendio esas reglas, no que anticipe la operacion municipal real.",
+    "La unica variable observada del dataset es el clima (Open-Meteo).",
+    "Antes de usarlo para decidir en produccion hace falta reentrenar con Casos reales y volver a publicar estas metricas."
+  ]
+}
