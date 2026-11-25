@@ -70,7 +70,7 @@ export class TriajeService {
 
     const temporada: Temporada = TEMPORADAS.includes(dto.temporada_forzada as Temporada)
       ? (dto.temporada_forzada as Temporada)
-      : temporadaDeFecha(new Date());
+      : temporadaDeFecha(new Date(dto.creado_en));
 
     const hechos = {
       tipo: tipoDesdeCategoria(categoriaId),
